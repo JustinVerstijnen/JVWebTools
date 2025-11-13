@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Color Picker Tool - justinverstijnen.nl</title>
+  <title>HTML Color Picker - justinverstijnen.nl</title>
 
-  <!-- Basisstijl in dezelfde look & feel -->
+  <!-- Base styling in the same look & feel -->
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -134,13 +134,13 @@
     }
 
     .ghost-btn {
-      background-color: #f4f4f4;
+      background-color: #E1A8A8;
       color: #333;
       border: 1px solid #ddd;
     }
 
     .ghost-btn:hover {
-      background-color: #e7e7e7;
+      background-color: #BC8A8A;
     }
 
     .copy-status {
@@ -235,42 +235,41 @@
     }
   </style>
 
-  <!-- Icons zoals in je bestaande tool -->
+  <!-- Icons same as your existing tool -->
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body>
   <div class="container">
     <div class="logo">
       <a href="https://justinverstijnen.nl" target="_blank" rel="noopener">
-        <!-- Vervang de src eventueel door je bestaande logo -->
         <img src="https://justinverstijnen.nl/wp-content/uploads/2025/04/Logo-2.0-Transparant.png"
              width="50" height="50" alt="Logo">
       </a>
     </div>
 
-    <h1>Color Picker Tool</h1>
+    <h1>HTML Color Picker</h1>
     <p class="subtitle">
-      Kies een kleur, kopieer de HEX of RGB waarde en gebruik <strong>Randomize</strong> voor inspiratie.
+      Pick a color, copy the HEX or RGB value, or use Randomize for inspiration.
     </p>
 
     <!-- Color input -->
     <div class="form-group">
-      <label for="colorInput">Kies een kleur</label>
+      <label for="colorInput">Select a color</label>
       <input type="color" id="colorInput" />
-      <small>Klik op het veld om een willekeurige kleur te kiezen.</small>
+      <small>Click the color box to select a color you like.</small>
     </div>
 
     <!-- HEX / RGB inputs -->
     <div class="form-group">
-      <label>Of vul zelf een waarde in</label>
+      <label>Enter manually</label>
       <div class="inline-inputs">
         <div class="field">
           <input type="text" id="hexInput" placeholder="#88B0DC" />
-          <small>HEX (bijv. #88B0DC)</small>
+          <small>HEX e.g. #88B0DC</small>
         </div>
         <div class="field">
-          <input type="text" id="rgbInput" placeholder="136, 176, 220 of rgb(136, 176, 220)" />
-          <small>RGB (0–255,0–255,0–255)</small>
+          <input type="text" id="rgbInput" placeholder="136, 176, 220 or rgb(136, 176, 220)" />
+          <small>RGB e.g. (0–255, 0–255, 0–255)</small>
         </div>
       </div>
       <div class="error-message" id="errorMsg"></div>
@@ -279,10 +278,10 @@
     <!-- Preview -->
     <div class="color-preview-wrapper">
       <div class="color-preview" id="colorPreview">
-        <div class="color-preview-text" id="textPreview">Voorbeeldtekst</div>
+        <div class="color-preview-text" id="textPreview">Text Preview</div>
       </div>
       <div class="preview-meta">
-        <span>Huidige kleur: <strong id="currentHex">#88B0DC</strong></span>
+        <span>Current color: <strong id="currentHex">#88B0DC</strong></span>
         <span> · </span>
         <span id="currentRgb">rgb(136, 176, 220)</span>
       </div>
@@ -293,12 +292,12 @@
       <button id="copyHexBtn">
         <i class="ph ph-copy-simple"></i>
         Copy HEX
-        <span class="copy-status" id="hexCopyStatus">Gekopieerd!</span>
+        <span class="copy-status" id="hexCopyStatus">Copied!</span>
       </button>
       <button id="copyRgbBtn">
         <i class="ph ph-copy-simple"></i>
         Copy RGB
-        <span class="copy-status" id="rgbCopyStatus">Gekopieerd!</span>
+        <span class="copy-status" id="rgbCopyStatus">Copied!</span>
       </button>
       <button id="randomBtn" class="orange-btn">
         <i class="ph ph-shuffle"></i>
@@ -312,7 +311,7 @@
 
     <!-- History -->
     <div class="history">
-      <div class="history-title">Laatste kleuren (klik om opnieuw te gebruiken):</div>
+      <div class="history-title">Recent colors (click color to reuse):</div>
       <div class="history-list" id="historyList"></div>
     </div>
   </div>
@@ -387,7 +386,6 @@
     }
 
     function getContrastTextColor({ r, g, b }) {
-      // Relatieve luminantie benadering
       const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
       return luminance > 0.6 ? '#000000' : '#FFFFFF';
     }
@@ -412,7 +410,7 @@
     function setColor(hex, pushToHistory = true) {
       const rgb = hexToRgb(hex);
       if (!rgb) {
-        showError('Ongeldige kleurwaarde.');
+        showError('Invalid color value.');
         return;
       }
 
@@ -455,10 +453,9 @@
         showError('');
         return;
       }
-      // Alleen valideren als het patroon klopt
       const match = value.match(/^#?[0-9A-Fa-f]{3}$|^#?[0-9A-Fa-f]{6}$/);
       if (!match) {
-        showError('Voer een geldige HEX in (bijv. #88B0DC).');
+        showError('Please enter a valid HEX value (e.g. #88B0DC).');
         return;
       }
       setColor(value);
@@ -472,7 +469,7 @@
       }
       const parsed = parseRgbString(value);
       if (!parsed) {
-        showError('Voer een geldige RGB in, bijv. "136,176,220" of "rgb(136,176,220)".');
+        showError('Please enter a valid RGB value, e.g. "136,176,220" or "rgb(136,176,220)".');
         return;
       }
       const hex = rgbToHex(parsed.r, parsed.g, parsed.b);
@@ -483,9 +480,9 @@
       if (navigator.clipboard && currentColor) {
         navigator.clipboard.writeText(currentColor)
           .then(() => flashCopyStatus(hexCopyStatus))
-          .catch(() => alert('Kopiëren mislukt.'));
+          .catch(() => alert('Copy failed.'));
       } else {
-        alert('Kopiëren wordt niet ondersteund door deze browser.');
+        alert('Clipboard not supported by this browser.');
       }
     });
 
@@ -494,9 +491,9 @@
       if (navigator.clipboard && text) {
         navigator.clipboard.writeText(text)
           .then(() => flashCopyStatus(rgbCopyStatus))
-          .catch(() => alert('Kopiëren mislukt.'));
+          .catch(() => alert('Copy failed.'));
       } else {
-        alert('Kopiëren wordt niet ondersteund door deze browser.');
+        alert('Clipboard not supported by this browser.');
       }
     });
 
@@ -510,7 +507,6 @@
       setColor('#88B0DC');
     });
 
-    // Init
     setColor(currentColor, false);
   </script>
 </body>
