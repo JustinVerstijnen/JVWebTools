@@ -1,0 +1,29 @@
+{
+  "routes": [
+    {
+      "route": "/",
+      "rewrite": "/index.html"
+    },
+    {
+      "route": "/DNSMegaTool",
+      "redirect": "/DNSMegaTool/"
+    },
+    {
+      "route": "/PortCheckerTool",
+      "redirect": "/PortCheckerTool/"
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": [
+      "/api/*",
+      "/*.css",
+      "/*.js",
+      "/*.png",
+      "/*.jpg",
+      "/*.ico",
+      "/DNSMegaTool/*",
+      "/PortCheckerTool/*"
+    ]
+  }
+}
