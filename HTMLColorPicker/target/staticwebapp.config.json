@@ -1,0 +1,16 @@
+{
+  "routes": [
+    {
+      "route": "/",
+      "rewrite": "/index.html"
+    },
+    {
+      "route": "/DNSMegaTool",
+      "redirect": "/DNSMegaTool/"
+    },
+    {
+      "route": "/PortCheckerTool",
+      "redirect": "/PortCheckerTool/"
+    }
+  ]
+}
