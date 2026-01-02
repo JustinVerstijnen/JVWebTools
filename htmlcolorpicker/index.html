@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HTML Color Picker - justinverstijnen.nl</title>
+  <meta name="description" content="Subnet calculator for IPv4, subnetmasks, CIDR nets and maximum amount of hosts." />
+  <link rel="stylesheet" href="htmlcolorpicker/assets/style.css" />
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4082816808518335" crossorigin="anonymous"></script>
+  <link rel="icon" type="image/png" href="https://justinverstijnen.nl/wp-content/uploads/2025/04/cropped-Logo-2.0-final.png">
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <a href="https://justinverstijnen.nl" target="_blank" rel="noopener">
+        <img src="https://justinverstijnen.nl/wp-content/uploads/2025/04/Logo-2.0-Transparant.png"
+             width="50" height="50" alt="Logo">
+      </a>
+    </div>
+
+    <h1>HTML Color Picker</h1>
+    <p class="subtitle">
+      Pick a color, copy the HEX or RGB value, or use Randomize for inspiration.
+    </p>
+
+    <!-- Color input -->
+    <div class="form-group">
+      <label for="colorInput">Select a color</label>
+      <input type="color" id="colorInput" />
+      <small>Click the color box to select a color you like.</small>
+    </div>
+
+    <!-- HEX / RGB inputs -->
+    <div class="form-group">
+      <label>Enter manually</label>
+      <div class="inline-inputs">
+        <div class="field">
+          <input type="text" id="hexInput" placeholder="#88B0DC" />
+          <small>HEX e.g. #88B0DC</small>
+        </div>
+        <div class="field">
+          <input type="text" id="rgbInput" placeholder="136, 176, 220 or rgb(136, 176, 220)" />
+          <small>RGB e.g. (0–255, 0–255, 0–255)</small>
+        </div>
+      </div>
+      <div class="error-message" id="errorMsg"></div>
+    </div>
+
+    <!-- Preview -->
+    <div class="color-preview-wrapper">
+      <div class="color-preview" id="colorPreview">
+        <div class="color-preview-text" id="textPreview">This is an example text on your selected color.</div>
+      </div>
+      <div class="preview-meta">
+        <span>Current color: <strong id="currentHex">#88B0DC</strong></span>
+        <span> · </span>
+        <span id="currentRgb">rgb(136, 176, 220)</span>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="buttons-row">
+      <button id="copyHexBtn">
+        <i class="ph ph-copy-simple"></i>
+        Copy HEX
+        <span class="copy-status" id="hexCopyStatus">Copied!</span>
+      </button>
+      <button id="copyRgbBtn">
+        <i class="ph ph-copy-simple"></i>
+        Copy RGB
+        <span class="copy-status" id="rgbCopyStatus">Copied!</span>
+      </button>
+      <button id="randomBtn" class="orange-btn">
+        <i class="ph ph-shuffle"></i>
+        Randomize
+      </button>
+      <button id="resetBtn" class="ghost-btn">
+        <i class="ph ph-arrow-counter-clockwise"></i>
+        Reset
+      </button>
+    </div>
+
+    <!-- History -->
+    <div class="history">
+      <div class="history-title">Recent colors (click color to reuse):</div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <a href="https://github.com/JustinVerstijnen/HTMLColorPicker" target="_blank" rel="noopener">© 2026 HTML Color Picker by Justin Verstijnen. Click here to visit GitHub project.</a>
+    </div>
+  </div>
+
+  <script src="htmlcolorpicker/assets/app.js"></script>
+</body>
+</html>
