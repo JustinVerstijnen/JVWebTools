@@ -1,16 +1,12 @@
 {
   "routes": [
-    {
-      "route": "/",
-      "rewrite": "/index.html"
-    },
-    {
-      "route": "/DNSMegaTool",
-      "redirect": "/DNSMegaTool/"
-    },
-    {
-      "route": "/PortCheckerTool",
-      "redirect": "/PortCheckerTool/"
-    }
+    { "route": "/", "rewrite": "/index.html" },
+    { "route": "/subnetcalculator", "redirect": "/subnetcalculator/" },
+    { "route": "/passwordgenerator", "redirect": "/passwordgenerator/" },
+    { "route": "/iplookuptool", "redirect": "/iplookuptool/" },
+    { "route": "/htmlcolorpicker", "redirect": "/htmlcolorpicker/" },
+    { "route": "/tenantlookuptool", "redirect": "/tenantlookuptool/" },
+    { "route": "/DNSMegaTool", "redirect": "/DNSMegaTool/" },
+    { "route": "/PortCheckerTool", "redirect": "/PortCheckerTool/" }
   ]
 }
