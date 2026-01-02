@@ -581,3 +581,9 @@ h2.section-title {
     .inline-two { grid-template-columns: 1fr; }
     input[type="text"] { width: 100%; }
 }
+
+.tool-header img {
+    max-width: 220px;
+    height: auto;
+    display: block;
+}
