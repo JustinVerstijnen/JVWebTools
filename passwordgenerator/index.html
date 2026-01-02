@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Easily generate secure passwords or secrets for your applications with options for customization.">
+    <title>Password Generator - justinverstijnen.nl</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="icon" type="image/png" href="https://justinverstijnen.nl/wp-content/uploads/2025/04/cropped-Logo-2.0-final.png">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4082816808518335" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="container">
+        <a href="https://justinverstijnen.nl/" target="_blank">
+            <img src="https://justinverstijnen.nl/wp-content/uploads/2025/04/cropped-Logo-2.0-Transparant.png" alt="Logo" class="logo">
+        </a>
+        <h1>Password Generator</h1>
+        <div class="subtitle">Easily generate secure passwords or secrets for your applications with options for customization.</div>
+
+        <div class="mode-select">
+            <label><input type="radio" name="mode" value="password" checked> Password</label>
+            <label><input type="radio" name="mode" value="secret"> Secret (PSK)</label>
+        </div>
+
+        <div id="customize" class="customize">
+            <label>Password Length (min 8 & max 256 characters):<input type="number" id="length" value="30" min="8" max="256"></label>
+            <label><input type="checkbox" id="uppercase" checked> Include Uppercase characters</label>
+            <label><input type="checkbox" id="lowercase" checked> Include Lowercase characters</label>
+            <label><input type="checkbox" id="numbers" checked> Include Numbers (0-9)</label>
+            <label><input type="checkbox" id="symbols" checked> Include Special characters </label>
+            <label><input type="checkbox" id="excludeSimilar" checked> Exclude Similar Characters</label>
+        </div>
+
+        <button id="generateBtn" class="generate-btn"><strong>⌨ Generate password</strong></button>
+
+       <div class="result-wrapper">
+            <input type="text" id="result" readonly placeholder="Your password will appear here">
+            <button class="copy-btn" id="copyBtn"><strong>🗐 Copy</strong></button>
+        </div>
+        <div class="footer">
+            <a href="https://github.com/JustinVerstijnen/PasswordGenerator">
+                &copy; <span id="copyright-year">2025</span> Password Generator tool by Justin Verstijnen. Click here to visit GitHub project.
+            </a>
+        </div>
+    </div>
+<script>
+  document.getElementById('copyright-year').textContent = new Date().getFullYear();
+</script>
+<script src="assets/script.js"></script>
+</body>
+</html>
