@@ -8,8 +8,8 @@ body {
 .container {
   background-color: #ffffff;
   max-width: 900px;
-  margin: auto;
-  padding: 30px;
+  margin: 20px auto;
+  padding: 20px;
   border-radius: 10px;
   box-shadow: 0 0 20px rgba(0,0,0,0.1);
   text-align: center;
@@ -216,7 +216,6 @@ button:active {
   border-color: rgba(0,0,0,0.35);
 }
 
-/* Footer (same look & feel as DNS MEGAtool) */
 .footer {
   text-align: center;
   font-size: 9px;
