@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="This is a simple and fast tool to generate and export Microsoft 365 DNS Records." />
+  <title>Microsoft 365 DNS Record Generator - justinverstijnen.nl</title>
+  <link rel="icon" type="image/png" href="https://justinverstijnen.nl/wp-content/uploads/2025/04/cropped-Logo-2.0-final.png" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4082816808518335" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="https://justinverstijnen.nl" target="_blank" rel="noopener noreferrer" title="Go to justinverstijnen.nl">
+        <img src="https://justinverstijnen.nl/wp-content/uploads/2025/04/cropped-Logo-2.0-Transparant.png" alt="Justin Verstijnen Logo" />
+      </a>
+      <h1 style="color:black;">Microsoft 365 Records Generator</h1>
+    </div>
+    <p class="description">
+      Quickly generate Microsoft 365 DNS records for your custom domains including MX, SPF, DKIM, DMARC, and MTA-STS.
+      Customize advanced settings and export your records for configuration and documentation.
+    </p>
+    <div class="form-grid" role="form" aria-label="Microsoft 365 DNS records generator">
+      <div class="field">
+        <label for="defaultDomainInput">Default Microsoft 365 tenant domain</label>
+        <div class="input-suffix-wrapper">
+          <input id="defaultDomainInput" type="text" placeholder="yourtenantname" aria-describedby="defaultDomainSuffix" />
+          <div class="input-suffix" id="defaultDomainSuffix">.onmicrosoft.com</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="customDomain">Your custom domain</label>
+        <input id="customDomain" type="text" placeholder="yourdomain.com" />
+      </div>
+    </div>
+    <div class="mode-toggle" aria-label="Select display mode">
+      <label><input type="radio" name="mode" value="extended" checked /> Extended</label>
+      <label><input type="radio" name="mode" value="simple" /> Simple</label>
+    </div>
+    <details class="customize" id="customizeDetails">
+      <summary>
+        <span>Customize</span>
+      </summary>
+      <div class="customize-grid" aria-label="Advanced settings">
+        <fieldset>
+          <legend>DMARC Settings</legend>
+
+          <div class="field">
+            <label for="dmarcPolicy">DMARC Policy</label>
+            <select id="dmarcPolicy" name="dmarcPolicy" aria-label="DMARC Policy">
+              <option value="reject" selected>Reject</option>
+              <option value="quarantine">Quarantine</option>
+              <option value="none">None</option>
+            </select>
+          </div>
+          <div class="inline-two">
+            <div class="field">
+              <label for="dmarcAdkim">DKIM Alignment (adkim)</label>
+              <select id="dmarcAdkim">
+                <option value="r">Relaxed (r)</option>
+                <option value="s" selected>Strict (s)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="dmarcAspf">SPF Alignment (aspf)</label>
+              <select id="dmarcAspf">
+                <option value="r">Relaxed (r)</option>
+                <option value="s" selected>Strict (s)</option>
+              </select>
+            </div>
+          </div>
+          <div class="inline-two">
+            <div class="field">
+              <label for="dmarcPct">Percentage (pct)</label>
+              <input id="dmarcPct" type="number" min="0" max="100" placeholder="100" />
+            </div>
+            <div class="field">
+              <label for="dmarcFo">Failure Options (fo)</label>
+              <input id="dmarcFo" type="text" placeholder="Example: 0, 1, d or s" />
+            </div>
+          </div>
+
+          <div class="inline-two">
+            <div class="field">
+              <label for="dmarcRf">Report Format (rf)</label>
+              <input id="dmarcRf" type="text" placeholder="Default: afrf" />
+            </div>
+            <div class="field">
+              <label for="dmarcRi">Report Interval (ri)</label>
+              <input id="dmarcRi" type="number" min="0" placeholder="Optional (seconds)" />
+            </div>
+          </div>
+
+          <div class="inline-two">
+            <div class="field">
+              <label for="dmarcRUA">DMARC Aggregation (RUA) email address</label>
+              <input id="dmarcRUA" type="email" placeholder="report@domain.com (optional)" />
+            </div>
+            <div class="field">
+              <label for="dmarcRUF">DMARC Forensics (RUF) email address</label>
+              <input id="dmarcRUF" type="email" placeholder="forensics@domain.com (optional)" />
+            </div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>SPF &amp; MTA-STS Settings</legend>
+
+          <div class="field">
+            <label>SPF Failure mode</label>
+            <div class="spf-options" role="radiogroup" aria-label="SPF failure mode">
+              <label><input type="radio" name="spfFail" value="hard" checked /> Hard Fail (-all)</label>
+              <label><input type="radio" name="spfFail" value="soft" /> Soft Fail (~all)</label>
+            </div>
+          </div>
+          <div class="inline-two">
+            <div class="field">
+              <label for="mtaStsDate">MTA-STS id date</label>
+              <input id="mtaStsDate" type="date" />
+            </div>
+            <div class="field">
+              <label for="mtaStsEmail">MTA-STS report email (rua)</label>
+              <input id="mtaStsEmail" type="email" placeholder="report@domain.com (optional)" />
+            </div>
+          </div>
+        </fieldset>
+      </div>
+    </details>
+    <div class="actions">
+      <button id="generateBtn" type="button">Generate records</button>
+      <button id="exportBtn" type="button" class="success" style="display:none;">Export to HTML</button>
+    </div>
+    <div class="results" id="results" tabindex="0" aria-live="polite"></div>
+  </div>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
