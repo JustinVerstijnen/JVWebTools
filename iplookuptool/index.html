@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Quick and easy tool to gather public IPv4 and IPv6 information.">
   <title>IP Lookup Tool - justinverstijnen.nl</title>
-  <link rel="stylesheet" href="IPLookupTool/assets/style.css">
+  <link rel="stylesheet" href="iplookuptool/assets/style.css">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <link rel="icon" type="image/png" href="https://justinverstijnen.nl/wp-content/uploads/2025/04/cropped-Logo-2.0-final.png">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4082816808518335" crossorigin="anonymous"></script>
@@ -103,7 +103,7 @@
         alert("No data to export.");
         return;
       }
-      const exportWindow = window.open("IPLookupTool/assets/export.html");
+      const exportWindow = window.open("iplookuptool/assets/export.html");
       exportWindow.onload = function() {
         exportWindow.postMessage(window.latestData, "*");
       }
