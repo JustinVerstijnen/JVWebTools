@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report IP Lookup - justinverstijnen.nl</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <a href="https://justinverstijnen.nl" target="_blank">
+        <img src="https://justinverstijnen.nl/wp-content/uploads/2025/04/cropped-Logo-2.0-Transparant.png" width="50" height="50" alt="Logo">
+      </a>
+    </div>
+    <h1 id="exportTitle">Export Result</h1>
+    <p class="subtitle">Report generated with <a href="https://iplookup.jvapp.nl" target="_blank">Justin Verstijnen IPLookupTool</a></p>
+    <div id="exportResult" class="result"></div>
+  </div>
+
+  <script>
+    window.addEventListener("message", function(event) {
+      const data = event.data;
+      if (!data) {
+        document.getElementById("exportResult").innerHTML = "No data received.";
+        return;
+      }
+
+      document.getElementById("exportTitle").innerText = `Export result for ${data.ip}`;
+
+      document.getElementById("exportResult").innerHTML = `
+        <table>
+          <tr><td><strong>IP:</strong></td><td>${data.ip}</td></tr>
+          <tr><td><strong>Type:</strong></td><td>${data.type}</td></tr>
+          <tr><td><strong>Continent:</strong></td><td>${data.continent} (${data.continent_code})</td></tr>
+          <tr><td><strong>Country:</strong></td><td>${data.country} (${data.country_code})</td></tr>
+          <tr><td><strong>Region:</strong></td><td>${data.region}</td></tr>
+          <tr><td><strong>City:</strong></td><td>${data.city}</td></tr>
+          <tr><td><strong>Latitude:</strong></td><td>${data.latitude}</td></tr>
+          <tr><td><strong>Longitude:</strong></td><td>${data.longitude}</td></tr>
+          <tr><td><strong>ASN:</strong></td><td>${data.asn}</td></tr>
+          <tr><td><strong>Org:</strong></td><td>${data.org}</td></tr>
+          <tr><td><strong>ISP:</strong></td><td>${data.isp}</td></tr>
+          <tr><td><strong>Timezone:</strong></td><td>${data.timezone}</td></tr>
+          <tr><td><strong>Currency:</strong></td><td>${data.currency}</td></tr>
+        </table>
+      `;
+    });
+  </script>
+</body>
+</html>
