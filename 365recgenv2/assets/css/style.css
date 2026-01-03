@@ -4,7 +4,7 @@
     /* Softer palette */
     --primary: #8EAFDA;
     --primary-hover: #7b9fcf;
-    --bg: #f6f7fb;
+    --bg: #f2f2f2;
     --card: #ffffff;
     --text: #111827;
     --muted: #6b7280;
@@ -746,4 +746,36 @@ h2.section-title {
 
 .footer a:hover {
     color: var(--text);
+}
+
+
+/* ===== Overrides requested (2026-01) ===== */
+body{background-color:#f2f2f2;}
+
+.copy-btn{background-color: var(--primary); color:#fff; border-color: transparent;}
+.copy-btn:hover{background-color: var(--primary-hover);}
+
+.export-wrap{margin-top:12px; display:flex; justify-content:flex-end;}
+
+/* Tab-like stepper */
+.stepper-track{grid-template-columns: repeat(4, 1fr); gap:8px; margin: 10px 0 12px 0;}
+.stepper-step{padding:8px 10px; border-radius:10px 10px 6px 6px; background:#ffffff; border:1px solid var(--border); box-shadow: 0 4px 10px rgba(17,24,39,0.05); }
+.stepper-index{width:22px; height:22px; font-size:12px;}
+.stepper-text{font-weight:700; font-size:0.9em;}
+
+/* Clear accordion affordance for Advanced DMARC */
+details.customize > summary{padding:10px 12px; border-radius:8px; background:#f8f9fa; border:1px solid var(--border);}
+details.customize > summary::after{content:"▸"; margin-left:auto; font-size:14px; opacity:0.8;}
+details.customize[open] > summary::after{content:"▾";}
+
+/* Learn more button */
+.learn-more-wrap{margin-top:12px; display:flex; justify-content:flex-start;}
+.learn-more-btn{display:inline-flex; align-items:center; gap:8px; background:#d84a4a; color:#fff; text-decoration:none; padding:10px 14px; border-radius:10px; font-weight:700; border:1px solid transparent;}
+.learn-more-btn:hover{filter: brightness(0.95);}
+.learn-more-btn .icon{line-height:1;}
+
+@media (max-width: 620px){
+  .stepper-track{grid-template-columns: 1fr; }
+  .export-wrap{justify-content:stretch;}
+  .export-wrap button{width:100%;}
 }

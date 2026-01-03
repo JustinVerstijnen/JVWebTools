@@ -17,7 +17,6 @@
       </a>
       <h1>Microsoft 365 Records Generator</h1>
       <p class="subtitle">Generate Microsoft 365 DNS records for your custom domain.</p>
-      <p class="description">Follow the steps below, then export a clean report where every value is one-click copyable.</p>
     </header>
 
     <div class="stepper" aria-label="Setup steps">
@@ -73,6 +72,8 @@
             </div>
           </div>
         </fieldset>
+
+        <div class="learn-more-wrap"><a class="learn-more-btn" href="https://justinverstijnen.nl/enhance-email-security-with-spf-dkim-dmarc/#spf" target="_blank" rel="noopener noreferrer" aria-label="Learn more about SPF"><span class="icon" aria-hidden="true">📘</span>Learn more</a></div>
 
         <div class="step-actions">
           <button class="nav" id="step2Back" type="button">← Back</button>
@@ -152,6 +153,8 @@
           </div>
         </details>
 
+        <div class="learn-more-wrap"><a class="learn-more-btn" href="https://justinverstijnen.nl/enhance-email-security-with-spf-dkim-dmarc/#dmarc" target="_blank" rel="noopener noreferrer" aria-label="Learn more about DMARC"><span class="icon" aria-hidden="true">📘</span>Learn more</a></div>
+
         <div class="step-actions">
           <button class="nav" id="step3Back" type="button">← Back</button>
           <button class="nav" id="step3Next" type="button">Next →</button>
@@ -182,14 +185,19 @@
           </div>
         </fieldset>
 
+        <div class="learn-more-wrap"><a class="learn-more-btn" href="https://justinverstijnen.nl/what-is-mta-sts-and-how-to-protect-your-email-flow/" target="_blank" rel="noopener noreferrer" aria-label="Learn more about MTA-STS"><span class="icon" aria-hidden="true">📘</span>Learn more</a></div>
+
         <div class="actions">
           <button class="nav" id="step4Back" type="button">← Back</button>
           <button id="generateBtn" type="button">Generate records</button>
-          <button id="exportBtn" type="button" class="success" style="display:none;">Export to HTML</button>
-        </div>
+</div>
       </div>
     </div>
     <div class="results" id="results" tabindex="0" aria-live="polite"></div>
+    <div class="export-wrap">
+      <button id="exportBtn" type="button" class="success" style="display:none;">Export to HTML</button>
+    </div>
+
   </div>
   <footer class="footer" aria-label="Footer">
     © <span id="footerYear">2025</span> DNS MEGAtool by Justin Verstijnen. <a href="https://github.com/JustinVerstijnen/DNSMegaTool" target="_blank" rel="noopener noreferrer">Click here to visit GitHub project.</a>

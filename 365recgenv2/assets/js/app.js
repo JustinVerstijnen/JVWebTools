@@ -231,8 +231,8 @@
 
     rows.forEach((r, idx) => {
       html += `<tr>
-        <td>${escapeHtml(r.section)}</td>
-      <td><strong>${escapeHtml(r.type)}</strong></td>
+        <td><strong>${escapeHtml(r.section)}</strong></td>
+        <td>${escapeHtml(r.type)}</td>
         <td>${escapeHtml(r.name)}</td>
         <td class="value-cell"><code>${escapeHtml(r.value)}</code></td>
         <td style="text-align:center;">
@@ -378,8 +378,8 @@
     rows.forEach(r => {
       const encoded = encodeURIComponent(r.value);
       bodyHtml += `<tr>
-        <td>${escapeHtml(r.section)}</td>
-        <td><strong>${escapeHtml(r.type)}</strong></td>
+        <td><strong>${escapeHtml(r.section)}</strong></td>
+        <td>${escapeHtml(r.type)}</td>
         <td>${escapeHtml(r.name)}</td>
         <td><code>${escapeHtml(r.value)}</code></td>
         <td style="text-align:center;">
