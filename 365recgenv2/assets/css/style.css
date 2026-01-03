@@ -30,6 +30,13 @@ body {
     margin-bottom: 10px;
 }
 
+/* Header logo size */
+.header img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+}
+
 h1 {
     text-align: center;
     margin: 10px 0;
@@ -455,6 +462,83 @@ ul {
 .actions button {
     width: 100%;
     margin: 10px 0 0 0;
+}
+
+/* =========================
+   Stepper
+   ========================= */
+.stepper {
+    margin-top: 8px;
+}
+
+.stepper-track {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 12px 0 14px 0;
+}
+
+.stepper-step {
+    height: auto;
+    padding: 12px;
+    margin: 0;
+    border-radius: 10px;
+    background: #f8f9fa;
+    color: #222;
+    border: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.stepper-step[aria-current="step"] {
+    background: #8EAFDA;
+    color: #fff;
+    border-color: transparent;
+}
+
+.stepper-index {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    background: rgba(0,0,0,0.08);
+}
+
+.stepper-step[aria-current="step"] .stepper-index {
+    background: rgba(255,255,255,0.25);
+}
+
+.stepper-text {
+    font-weight: 800;
+}
+
+.step-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.step-actions button {
+    width: 100%;
+    margin: 0;
+}
+
+.checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    color: #444;
+    cursor: pointer;
+}
+
+@media (max-width: 620px) {
+    .stepper-track { grid-template-columns: 1fr; }
 }
 
 button.secondary {

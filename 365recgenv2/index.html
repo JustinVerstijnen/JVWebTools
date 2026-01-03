@@ -18,35 +18,51 @@
       <h1 style="color:black;">Microsoft 365 Records Generator</h1>
     </div>
     <p class="description">
-      Quickly generate Microsoft 365 DNS records for your custom domains including MX, SPF, DKIM, DMARC, and MTA-STS.
-      Customize advanced settings and export your records for configuration and documentation.
+      Generate Microsoft 365 DNS records for your custom domain.
+      Follow the steps below, then export a clean report where every value is one-click copyable.
     </p>
-    <div class="form-grid" role="form" aria-label="Microsoft 365 DNS records generator">
-      <div class="field">
-        <label for="defaultDomainInput">Default Microsoft 365 tenant domain</label>
-        <div class="input-suffix-wrapper">
-          <input id="defaultDomainInput" type="text" placeholder="yourtenantname" aria-describedby="defaultDomainSuffix" />
-          <div class="input-suffix" id="defaultDomainSuffix">.onmicrosoft.com</div>
+
+    <div class="stepper" aria-label="Setup steps">
+      <div class="stepper-track" role="list">
+        <button class="stepper-step" type="button" role="listitem" data-step-jump="0" aria-current="step">
+          <span class="stepper-index">1</span>
+          <span class="stepper-text">Domains</span>
+        </button>
+        <button class="stepper-step" type="button" role="listitem" data-step-jump="1">
+          <span class="stepper-index">2</span>
+          <span class="stepper-text">DMARC policy</span>
+        </button>
+        <button class="stepper-step" type="button" role="listitem" data-step-jump="2">
+          <span class="stepper-index">3</span>
+          <span class="stepper-text">MTA-STS (optional)</span>
+        </button>
+      </div>
+
+      <div class="step" data-step="0" aria-label="Step 1: Domains">
+        <h2 class="section-title">Step 1 — Domains</h2>
+        <div class="form-grid" role="form" aria-label="Domain inputs">
+          <div class="field">
+            <label for="defaultDomainInput">Default Microsoft 365 tenant domain</label>
+            <div class="input-suffix-wrapper">
+              <input id="defaultDomainInput" type="text" placeholder="yourtenantname" aria-describedby="defaultDomainSuffix" />
+              <div class="input-suffix" id="defaultDomainSuffix">.onmicrosoft.com</div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="customDomain">Your custom domain</label>
+            <input id="customDomain" type="text" placeholder="yourdomain.com" />
+          </div>
+        </div>
+        <div class="step-actions">
+          <button class="secondary" id="step1Next" type="button">Next</button>
         </div>
       </div>
 
-      <div class="field">
-        <label for="customDomain">Your custom domain</label>
-        <input id="customDomain" type="text" placeholder="yourdomain.com" />
-      </div>
-    </div>
-    <div class="mode-toggle" aria-label="Select display mode">
-      <label><input type="radio" name="mode" value="extended" checked /> Extended</label>
-      <label><input type="radio" name="mode" value="simple" /> Simple</label>
-    </div>
-    <details class="customize" id="customizeDetails">
-      <summary>
-        <span>Customize</span>
-      </summary>
-      <div class="customize-grid" aria-label="Advanced settings">
-        <fieldset>
-          <legend>DMARC Settings</legend>
+      <div class="step" data-step="1" aria-label="Step 2: DMARC" hidden>
+        <h2 class="section-title">Step 2 — DMARC policy</h2>
 
+        <fieldset>
+          <legend>DMARC</legend>
           <div class="field">
             <label for="dmarcPolicy">DMARC Policy</label>
             <select id="dmarcPolicy" name="dmarcPolicy" aria-label="DMARC Policy">
@@ -55,58 +71,67 @@
               <option value="none">None</option>
             </select>
           </div>
-          <div class="inline-two">
-            <div class="field">
-              <label for="dmarcAdkim">DKIM Alignment (adkim)</label>
-              <select id="dmarcAdkim">
-                <option value="r">Relaxed (r)</option>
-                <option value="s" selected>Strict (s)</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="dmarcAspf">SPF Alignment (aspf)</label>
-              <select id="dmarcAspf">
-                <option value="r">Relaxed (r)</option>
-                <option value="s" selected>Strict (s)</option>
-              </select>
-            </div>
-          </div>
-          <div class="inline-two">
-            <div class="field">
-              <label for="dmarcPct">Percentage (pct)</label>
-              <input id="dmarcPct" type="number" min="0" max="100" placeholder="100" />
-            </div>
-            <div class="field">
-              <label for="dmarcFo">Failure Options (fo)</label>
-              <input id="dmarcFo" type="text" placeholder="Example: 0, 1, d or s" />
-            </div>
-          </div>
-
-          <div class="inline-two">
-            <div class="field">
-              <label for="dmarcRf">Report Format (rf)</label>
-              <input id="dmarcRf" type="text" placeholder="Default: afrf" />
-            </div>
-            <div class="field">
-              <label for="dmarcRi">Report Interval (ri)</label>
-              <input id="dmarcRi" type="number" min="0" placeholder="Optional (seconds)" />
-            </div>
-          </div>
-
-          <div class="inline-two">
-            <div class="field">
-              <label for="dmarcRUA">DMARC Aggregation (RUA) email address</label>
-              <input id="dmarcRUA" type="email" placeholder="report@domain.com (optional)" />
-            </div>
-            <div class="field">
-              <label for="dmarcRUF">DMARC Forensics (RUF) email address</label>
-              <input id="dmarcRUF" type="email" placeholder="forensics@domain.com (optional)" />
-            </div>
-          </div>
         </fieldset>
-        <fieldset>
-          <legend>SPF &amp; MTA-STS Settings</legend>
 
+        <details class="customize" id="dmarcAdvanced">
+          <summary>
+            <span>Advanced DMARC settings (optional)</span>
+          </summary>
+          <div class="customize-grid" aria-label="Advanced DMARC settings">
+            <div class="inline-two">
+              <div class="field">
+                <label for="dmarcAdkim">DKIM Alignment (adkim)</label>
+                <select id="dmarcAdkim">
+                  <option value="r">Relaxed (r)</option>
+                  <option value="s" selected>Strict (s)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="dmarcAspf">SPF Alignment (aspf)</label>
+                <select id="dmarcAspf">
+                  <option value="r">Relaxed (r)</option>
+                  <option value="s" selected>Strict (s)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="inline-two">
+              <div class="field">
+                <label for="dmarcPct">Percentage (pct)</label>
+                <input id="dmarcPct" type="number" min="0" max="100" placeholder="100" />
+              </div>
+              <div class="field">
+                <label for="dmarcFo">Failure Options (fo)</label>
+                <input id="dmarcFo" type="text" placeholder="Example: 0, 1, d or s" />
+              </div>
+            </div>
+
+            <div class="inline-two">
+              <div class="field">
+                <label for="dmarcRf">Report Format (rf)</label>
+                <input id="dmarcRf" type="text" placeholder="Default: afrf" />
+              </div>
+              <div class="field">
+                <label for="dmarcRi">Report Interval (ri)</label>
+                <input id="dmarcRi" type="number" min="0" placeholder="Optional (seconds)" />
+              </div>
+            </div>
+
+            <div class="inline-two">
+              <div class="field">
+                <label for="dmarcRUA">DMARC Aggregation (RUA) email address</label>
+                <input id="dmarcRUA" type="email" placeholder="report@domain.com (optional)" />
+              </div>
+              <div class="field">
+                <label for="dmarcRUF">DMARC Forensics (RUF) email address</label>
+                <input id="dmarcRUF" type="email" placeholder="forensics@domain.com (optional)" />
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <fieldset>
+          <legend>SPF</legend>
           <div class="field">
             <label>SPF Failure mode</label>
             <div class="spf-options" role="radiogroup" aria-label="SPF failure mode">
@@ -114,7 +139,27 @@
               <label><input type="radio" name="spfFail" value="soft" /> Soft Fail (~all)</label>
             </div>
           </div>
-          <div class="inline-two">
+        </fieldset>
+
+        <div class="step-actions">
+          <button class="secondary" id="step2Back" type="button">Back</button>
+          <button class="secondary" id="step2Next" type="button">Next</button>
+        </div>
+      </div>
+
+      <div class="step" data-step="2" aria-label="Step 3: MTA-STS" hidden>
+        <h2 class="section-title">Step 3 — MTA-STS (optional)</h2>
+
+        <fieldset>
+          <legend>MTA-STS</legend>
+          <div class="field">
+            <label class="checkbox">
+              <input id="mtaStsEnabled" type="checkbox" />
+              Enable MTA-STS DNS record
+            </label>
+          </div>
+
+          <div class="inline-two" id="mtaStsFields" aria-label="MTA-STS options">
             <div class="field">
               <label for="mtaStsDate">MTA-STS id date</label>
               <input id="mtaStsDate" type="date" />
@@ -125,11 +170,13 @@
             </div>
           </div>
         </fieldset>
+
+        <div class="actions">
+          <button class="secondary" id="step3Back" type="button">Back</button>
+          <button id="generateBtn" type="button">Generate records</button>
+          <button id="exportBtn" type="button" class="success" style="display:none;">Export to HTML</button>
+        </div>
       </div>
-    </details>
-    <div class="actions">
-      <button id="generateBtn" type="button">Generate records</button>
-      <button id="exportBtn" type="button" class="success" style="display:none;">Export to HTML</button>
     </div>
     <div class="results" id="results" tabindex="0" aria-live="polite"></div>
   </div>
