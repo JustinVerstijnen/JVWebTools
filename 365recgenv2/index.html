@@ -11,16 +11,14 @@
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <a href="https://justinverstijnen.nl" target="_blank" rel="noopener noreferrer" title="Go to justinverstijnen.nl">
+    <header class="header" aria-label="Tool header">
+      <a class="brand" href="https://justinverstijnen.nl" target="_blank" rel="noopener noreferrer" title="Go to justinverstijnen.nl">
         <img src="https://justinverstijnen.nl/wp-content/uploads/2025/04/cropped-Logo-2.0-Transparant.png" alt="Justin Verstijnen Logo" />
       </a>
-      <h1 style="color:black;">Microsoft 365 Records Generator</h1>
-    </div>
-    <p class="description">
-      Generate Microsoft 365 DNS records for your custom domain.
-      Follow the steps below, then export a clean report where every value is one-click copyable.
-    </p>
+      <h1>Microsoft 365 Records Generator</h1>
+      <p class="subtitle">Generate Microsoft 365 DNS records for your custom domain.</p>
+      <p class="description">Follow the steps below, then export a clean report where every value is one-click copyable.</p>
+    </header>
 
     <div class="stepper" aria-label="Setup steps">
       <div class="stepper-track" role="list">
@@ -30,10 +28,14 @@
         </button>
         <button class="stepper-step" type="button" role="listitem" data-step-jump="1">
           <span class="stepper-index">2</span>
-          <span class="stepper-text">DMARC policy</span>
+          <span class="stepper-text">SPF</span>
         </button>
         <button class="stepper-step" type="button" role="listitem" data-step-jump="2">
           <span class="stepper-index">3</span>
+          <span class="stepper-text">DMARC</span>
+        </button>
+        <button class="stepper-step" type="button" role="listitem" data-step-jump="3">
+          <span class="stepper-index">4</span>
           <span class="stepper-text">MTA-STS (optional)</span>
         </button>
       </div>
@@ -44,7 +46,7 @@
           <div class="field">
             <label for="defaultDomainInput">Default Microsoft 365 tenant domain</label>
             <div class="input-suffix-wrapper">
-              <input id="defaultDomainInput" type="text" placeholder="yourtenantname" aria-describedby="defaultDomainSuffix" />
+              <input id="defaultDomainInput" type="text" placeholder="yourtenantname (or yourtenantname.onmicrosoft.com)" aria-describedby="defaultDomainSuffix" />
               <div class="input-suffix" id="defaultDomainSuffix">.onmicrosoft.com</div>
             </div>
           </div>
@@ -54,12 +56,32 @@
           </div>
         </div>
         <div class="step-actions">
-          <button class="secondary" id="step1Next" type="button">Next</button>
+          <button class="nav" id="step1Next" type="button">Next →</button>
         </div>
       </div>
 
-      <div class="step" data-step="1" aria-label="Step 2: DMARC" hidden>
-        <h2 class="section-title">Step 2 — DMARC policy</h2>
+      <div class="step" data-step="1" aria-label="Step 2: SPF" hidden>
+        <h2 class="section-title">Step 2 — SPF</h2>
+
+        <fieldset>
+          <legend>SPF</legend>
+          <div class="field">
+            <label>SPF Failure mode</label>
+            <div class="spf-options" role="radiogroup" aria-label="SPF failure mode">
+              <label><input type="radio" name="spfFail" value="hard" checked /> Hard Fail (-all)</label>
+              <label><input type="radio" name="spfFail" value="soft" /> Soft Fail (~all)</label>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="step-actions">
+          <button class="nav" id="step2Back" type="button">← Back</button>
+          <button class="nav" id="step2Next" type="button">Next →</button>
+        </div>
+      </div>
+
+      <div class="step" data-step="2" aria-label="Step 3: DMARC" hidden>
+        <h2 class="section-title">Step 3 — DMARC</h2>
 
         <fieldset>
           <legend>DMARC</legend>
@@ -130,25 +152,14 @@
           </div>
         </details>
 
-        <fieldset>
-          <legend>SPF</legend>
-          <div class="field">
-            <label>SPF Failure mode</label>
-            <div class="spf-options" role="radiogroup" aria-label="SPF failure mode">
-              <label><input type="radio" name="spfFail" value="hard" checked /> Hard Fail (-all)</label>
-              <label><input type="radio" name="spfFail" value="soft" /> Soft Fail (~all)</label>
-            </div>
-          </div>
-        </fieldset>
-
         <div class="step-actions">
-          <button class="secondary" id="step2Back" type="button">Back</button>
-          <button class="secondary" id="step2Next" type="button">Next</button>
+          <button class="nav" id="step3Back" type="button">← Back</button>
+          <button class="nav" id="step3Next" type="button">Next →</button>
         </div>
       </div>
 
-      <div class="step" data-step="2" aria-label="Step 3: MTA-STS" hidden>
-        <h2 class="section-title">Step 3 — MTA-STS (optional)</h2>
+      <div class="step" data-step="3" aria-label="Step 4: MTA-STS" hidden>
+        <h2 class="section-title">Step 4 — MTA-STS (optional)</h2>
 
         <fieldset>
           <legend>MTA-STS</legend>
@@ -172,7 +183,7 @@
         </fieldset>
 
         <div class="actions">
-          <button class="secondary" id="step3Back" type="button">Back</button>
+          <button class="nav" id="step4Back" type="button">← Back</button>
           <button id="generateBtn" type="button">Generate records</button>
           <button id="exportBtn" type="button" class="success" style="display:none;">Export to HTML</button>
         </div>
@@ -180,6 +191,9 @@
     </div>
     <div class="results" id="results" tabindex="0" aria-live="polite"></div>
   </div>
+  <footer class="footer" aria-label="Footer">
+    © <span id="footerYear">2025</span> DNS MEGAtool by Justin Verstijnen. <a href="https://github.com/JustinVerstijnen/DNSMegaTool" target="_blank" rel="noopener noreferrer">Click here to visit GitHub project.</a>
+  </footer>
   <script src="365recgenv2/assets/js/app.js"></script>
 </body>
 </html>

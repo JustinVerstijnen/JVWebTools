@@ -1,10 +1,19 @@
 :root{
     --control-height: 44px;
+
+    /* Softer palette */
+    --primary: #8EAFDA;
+    --primary-hover: #7b9fcf;
+    --bg: #f6f7fb;
+    --card: #ffffff;
+    --text: #111827;
+    --muted: #6b7280;
+    --border: #d9dde6;
 }
 
 body {
     font-family: 'Segoe UI', sans-serif;
-    background-color: #f2f2f2;
+    background-color: var(--bg);
     margin: 0;
     padding: 0;
 }
@@ -14,24 +23,32 @@ body {
     max-width: 900px;
     margin: 40px auto;
     padding: 20px;
-    background-color: #fff;
+    background-color: var(--card);
     border-radius: 8px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    box-shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
 }
 
 /* =========================
    Header
    ========================= */
+/* New header layout: logo centered, title under it, subtitle under title */
 .header {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 15px;
-    margin-bottom: 10px;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Header logo size */
-.header img {
+.header .brand img {
     width: 50px;
     height: 50px;
     object-fit: contain;
@@ -39,14 +56,22 @@ body {
 
 h1 {
     text-align: center;
-    margin: 10px 0;
+    margin: 0;
+    color: var(--text);
+    font-weight: 700;
 }
 
 .subtitle {
     text-align: center;
     font-size: 0.9em;
-    color: #555;
-    margin-bottom: 20px;
+    color: var(--muted);
+    margin: 0;
+}
+
+.description{
+    text-align: center;
+    color: var(--muted);
+    margin: 0 0 10px 0;
 }
 
 .searchbox {
@@ -81,10 +106,11 @@ button {
     font-size: 16px;
     margin-left: 10px;
 
-    background-color: #8EAFDA;
-    color: #fff;
+    /* Neutral by default (less bright) */
+    background-color: #eef2f7;
+    color: var(--text);
 
-    border: 1px solid transparent; /* CRUCIAAL */
+    border: 1px solid var(--border);
     border-radius: 4px;
     box-sizing: border-box;
 
@@ -92,6 +118,32 @@ button {
     display: inline-flex;
     align-items: center;
     gap: 8px;
+}
+
+button:hover {
+    filter: brightness(0.98);
+}
+
+/* Back/Next buttons (requested blue) */
+button.nav {
+    background-color: var(--primary);
+    color: #fff;
+    border-color: transparent;
+}
+
+button.nav:hover {
+    background-color: var(--primary-hover);
+}
+
+/* Main action button */
+#generateBtn {
+    background-color: var(--primary);
+    color: #fff;
+    border-color: transparent;
+}
+
+#generateBtn:hover {
+    background-color: var(--primary-hover);
 }
 
 /* Icons inside buttons */
@@ -116,7 +168,7 @@ button svg {
 
 .spinner {
     border: 8px solid #f3f3f3;
-    border-top: 8px solid #8EAFDA;
+    border-top: 8px solid var(--primary);
     border-radius: 50%;
     width: 60px;
     height: 60px;
@@ -493,7 +545,7 @@ ul {
 }
 
 .stepper-step[aria-current="step"] {
-    background: #8EAFDA;
+    background: var(--primary);
     color: #fff;
     border-color: transparent;
 }
@@ -551,10 +603,12 @@ button.secondary:hover {
 }
 
 button.success {
-    background-color: #4CAF50;
+    background-color: #9ccfb0;
+    color: #0f172a;
+    border-color: transparent;
 }
 button.success:hover {
-    background-color: #3a9441;
+    background-color: #8abfa0;
 }
 
 details.customize {
@@ -670,4 +724,26 @@ h2.section-title {
     max-width: 220px;
     height: auto;
     display: block;
+}
+
+/* =========================
+   Footer
+   ========================= */
+.footer {
+    max-width: 900px;
+    margin: 14px auto 24px auto;
+    padding: 0 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.footer a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.footer a:hover {
+    color: var(--text);
 }

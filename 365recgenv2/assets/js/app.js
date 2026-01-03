@@ -7,6 +7,8 @@
     step2Back: document.getElementById('step2Back'),
     step2Next: document.getElementById('step2Next'),
     step3Back: document.getElementById('step3Back'),
+    step3Next: document.getElementById('step3Next'),
+    step4Back: document.getElementById('step4Back'),
 
     // Inputs
     defaultDomainInput: document.getElementById('defaultDomainInput'),
@@ -31,7 +33,8 @@
 
     generateBtn: document.getElementById('generateBtn'),
     exportBtn: document.getElementById('exportBtn'),
-    results: document.getElementById('results')
+    results: document.getElementById('results'),
+    footerYear: document.getElementById('footerYear')
   };
 
   const COPY_SVG = `
@@ -42,6 +45,23 @@
 
   let currentStep = 0;
   let lastGenerated = null;
+
+  // Footer year (same wording as dnsmegatool.justinverstijnen.nl)
+  if (els.footerYear) {
+    els.footerYear.textContent = String(new Date().getFullYear());
+  }
+
+  function normalizeTenantInput(input) {
+    // Accept: tenantname OR tenantname.onmicrosoft.com OR tenantname.onmicrosoft.com.onmicrosoft.com
+    let v = String(input || '').trim();
+    if (!v) return '';
+
+    // Remove ALL trailing .onmicrosoft.com occurrences, then add exactly one.
+    v = v.replace(/(\.onmicrosoft\.com)+$/i, '');
+    // If user pasted a full domain like tenant.onmicrosoft.com, keep only the left-most label(s)
+    // (we don't over-validate here; domain validation happens elsewhere).
+    return `${v}.onmicrosoft.com`;
+  }
 
   function escapeHtml(text) {
     return String(text).replace(/[&<>"']/g, c => ({
@@ -147,7 +167,12 @@
   }
 
   function validateStep2() {
-    // Policy select is always present; nothing to validate beyond optional emails.
+    // SPF step: nothing to validate (choice is always available)
+    return true;
+  }
+
+  function validateStep3() {
+    // DMARC step: validate optional email inputs
     const dmarcRUA = els.dmarcRUA?.value.trim() || '';
     const dmarcRUF = els.dmarcRUF?.value.trim() || '';
 
@@ -165,7 +190,7 @@
     return true;
   }
 
-  function validateStep3() {
+  function validateStep4() {
     const enabled = !!els.mtaStsEnabled?.checked;
     const mtaStsEmail = els.mtaStsEmail?.value.trim() || '';
 
@@ -207,7 +232,7 @@
     rows.forEach((r, idx) => {
       html += `<tr>
         <td>${escapeHtml(r.section)}</td>
-        <td>${escapeHtml(r.type)}</td>
+      <td><strong>${escapeHtml(r.type)}</strong></td>
         <td>${escapeHtml(r.name)}</td>
         <td class="value-cell"><code>${escapeHtml(r.value)}</code></td>
         <td style="text-align:center;">
@@ -230,7 +255,7 @@
   function generateRecords() {
     // Always validate inputs before calling.
     const defaultDomainInput = els.defaultDomainInput.value.trim();
-    const defaultDomain = defaultDomainInput ? `${defaultDomainInput}.onmicrosoft.com` : '';
+    const defaultDomain = normalizeTenantInput(defaultDomainInput);
     const customDomain = els.customDomain.value.trim();
 
     const spfFailType = getSelectedSPFFail();
@@ -354,7 +379,7 @@
       const encoded = encodeURIComponent(r.value);
       bodyHtml += `<tr>
         <td>${escapeHtml(r.section)}</td>
-        <td>${escapeHtml(r.type)}</td>
+        <td><strong>${escapeHtml(r.type)}</strong></td>
         <td>${escapeHtml(r.name)}</td>
         <td><code>${escapeHtml(r.value)}</code></td>
         <td style="text-align:center;">
@@ -409,6 +434,7 @@ ${bodyHtml}
     if (!validateStep1()) return;
     if (!validateStep2()) return;
     if (!validateStep3()) return;
+    if (!validateStep4()) return;
 
     const out = generateRecords();
     lastGenerated = out;
@@ -435,6 +461,12 @@ ${bodyHtml}
   });
 
   els.step3Back?.addEventListener('click', () => showStep(1));
+  els.step3Next?.addEventListener('click', () => {
+    if (!validateStep3()) return;
+    showStep(3);
+  });
+
+  els.step4Back?.addEventListener('click', () => showStep(2));
 
   // Stepper click (only allow jumping backwards freely; forwards requires validation)
   els.stepperSteps.forEach(btn => {
@@ -450,8 +482,16 @@ ${bodyHtml}
       // forward jumps: validate progressively
       if (target >= 1 && !validateStep1()) return;
       if (target >= 2 && !validateStep2()) return;
+      if (target >= 3 && !validateStep3()) return;
       showStep(target);
     });
+  });
+
+  // Auto-correct the tenant input so the suffix isn't duplicated visually
+  els.defaultDomainInput?.addEventListener('blur', () => {
+    const raw = (els.defaultDomainInput.value || '').trim();
+    if (!raw) return;
+    els.defaultDomainInput.value = raw.replace(/(\.onmicrosoft\.com)+$/i, '');
   });
 
   // MTA-STS toggle
@@ -491,7 +531,12 @@ ${bodyHtml}
       return;
     }
     if (currentStep === 2) {
+      els.step3Next?.click();
+      return;
+    }
+    if (currentStep === 3) {
       els.generateBtn?.click();
+      return;
     }
   });
 
