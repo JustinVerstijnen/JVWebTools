@@ -3,205 +3,217 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="This is a simple and fast tool to generate and export Microsoft 365 DNS Records." />
-  <title>Microsoft 365 DNS Record Generator - justinverstijnen.nl</title>
+  <meta name="description" content="Generate Microsoft 365 DNS Records (MX, SPF, DKIM, DMARC, MTA-STS) and export a clean report." />
+  <title>Microsoft 365 Records Generator - justinverstijnen.nl</title>
   <link rel="icon" type="image/png" href="https://justinverstijnen.nl/wp-content/uploads/2025/04/cropped-Logo-2.0-final.png" />
+
+  <!-- Font Awesome for icons (book-open) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+
   <link rel="stylesheet" href="365recgenv2/assets/css/style.css" />
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4082816808518335" crossorigin="anonymous"></script>
 </head>
 <body>
   <div class="container">
-    <header class="header" aria-label="Tool header">
+    <header class="header">
       <a class="brand" href="https://justinverstijnen.nl" target="_blank" rel="noopener noreferrer" title="Go to justinverstijnen.nl">
-        <img src="https://justinverstijnen.nl/wp-content/uploads/2025/04/cropped-Logo-2.0-Transparant.png" alt="Justin Verstijnen Logo" />
+        <img class="brand-logo" src="https://justinverstijnen.nl/wp-content/uploads/2025/04/Logo-2.0-Transparant.png" alt="Justin Verstijnen Logo" />
       </a>
-      <h1>Microsoft 365 Records Generator</h1>
-      <p class="subtitle">Generate Microsoft 365 DNS records for your custom domain.</p>
+      <h1 class="title">Microsoft 365 Records Generator</h1>
+      <p class="subtitle">Generate and export Microsoft 365 DNS records for your custom domains.</p>
     </header>
 
-    <div class="stepper" aria-label="Setup steps">
-      <div class="stepper-track" role="list">
-        <button class="stepper-step" type="button" role="listitem" data-step-jump="0" aria-current="step">
-          <span class="stepper-index">1</span>
-          <span class="stepper-text">Domains</span>
-        </button>
-        <button class="stepper-step" type="button" role="listitem" data-step-jump="1">
-          <span class="stepper-index">2</span>
-          <span class="stepper-text">SPF</span>
-        </button>
-        <button class="stepper-step" type="button" role="listitem" data-step-jump="2">
-          <span class="stepper-index">3</span>
-          <span class="stepper-text">DMARC</span>
-        </button>
-        <button class="stepper-step" type="button" role="listitem" data-step-jump="3">
-          <span class="stepper-index">4</span>
-          <span class="stepper-text">MTA-STS (optional)</span>
-        </button>
-      </div>
+    <nav class="tabs" aria-label="Steps">
+      <button class="tab active" type="button" data-tab="domains">Domains</button>
+      <button class="tab" type="button" data-tab="spf">SPF</button>
+      <button class="tab" type="button" data-tab="dmarc">DMARC</button>
+      <button class="tab" type="button" data-tab="mtasts">MTA-STS</button>
+      <button class="tab" type="button" data-tab="generate">Generate</button>
+    </nav>
 
-      <div class="step" data-step="0" aria-label="Step 1: Domains">
-        <h2 class="section-title">Step 1 — Domains</h2>
-        <div class="form-grid" role="form" aria-label="Domain inputs">
-          <div class="field">
-            <label for="defaultDomainInput">Default Microsoft 365 tenant domain</label>
-            <div class="input-suffix-wrapper">
-              <input id="defaultDomainInput" type="text" placeholder="yourtenantname (or yourtenantname.onmicrosoft.com)" aria-describedby="defaultDomainSuffix" />
-              <div class="input-suffix" id="defaultDomainSuffix">.onmicrosoft.com</div>
-            </div>
+    <!-- Step 1 -->
+    <section class="tab-panel active" id="tab-domains" data-tabpanel="domains" role="region" aria-label="Step 1: Domains">
+      <div class="panel-inner">
+        <h2 class="step-title">Step 1 — Domains</h2>
+
+        <div class="field">
+          <label for="defaultDomainInput">Default Microsoft 365 tenant domain</label>
+          <div class="input-suffix-wrapper">
+            <input id="defaultDomainInput" type="text" placeholder="yourtenantname" aria-describedby="defaultDomainSuffix" />
+            <div class="input-suffix" id="defaultDomainSuffix">.onmicrosoft.com</div>
           </div>
-          <div class="field">
-            <label for="customDomain">Your custom domain</label>
-            <input id="customDomain" type="text" placeholder="yourdomain.com" />
-          </div>
+          <p class="hint">Tip: you can paste the full tenant domain; it will be normalized automatically.</p>
         </div>
-        <div class="step-actions">
-          <button class="nav" id="step1Next" type="button">Next →</button>
+
+        <div class="field">
+          <label for="customDomain">Custom domain name</label>
+          <input id="customDomain" type="text" placeholder="example.com" />
+        </div>
+
+        <div class="field">
+          <label class="inline-label">Record preset</label>
+          <div class="radio-row" role="radiogroup" aria-label="Mode">
+            <label><input type="radio" name="mode" value="standard" checked /> Standard</label>
+            <label><input type="radio" name="mode" value="custom" /> Custom</label>
+          </div>
         </div>
       </div>
 
-      <div class="step" data-step="1" aria-label="Step 2: SPF" hidden>
-        <h2 class="section-title">Step 2 — SPF</h2>
+      <div class="step-nav">
+        <button class="nav-btn" type="button" data-nav="next">Next <span aria-hidden="true">→</span></button>
+      </div>
+    </section>
 
-        <fieldset>
-          <legend>SPF</legend>
-          <div class="field">
-            <label>SPF Failure mode</label>
-            <div class="spf-options" role="radiogroup" aria-label="SPF failure mode">
-              <label><input type="radio" name="spfFail" value="hard" checked /> Hard Fail (-all)</label>
-              <label><input type="radio" name="spfFail" value="soft" /> Soft Fail (~all)</label>
-            </div>
+    <!-- Step 2 -->
+    <section class="tab-panel" id="tab-spf" data-tabpanel="spf" role="region" aria-label="Step 2: SPF">
+      <div class="panel-inner">
+        <h2 class="step-title">Step 2 — SPF</h2>
+
+        <div class="field">
+          <label class="inline-label">SPF fail mode</label>
+          <div class="radio-row" role="radiogroup" aria-label="SPF fail mode">
+            <label><input type="radio" name="spfFail" value="hard" checked /> Hard Fail (-all)</label>
+            <label><input type="radio" name="spfFail" value="soft" /> Soft Fail (~all)</label>
           </div>
-        </fieldset>
-
-        <div class="learn-more-wrap"><a class="learn-more-btn" href="https://justinverstijnen.nl/enhance-email-security-with-spf-dkim-dmarc/#spf" target="_blank" rel="noopener noreferrer" aria-label="Learn more about SPF"><span class="icon" aria-hidden="true">📘</span>Learn more</a></div>
-
-        <div class="step-actions">
-          <button class="nav" id="step2Back" type="button">← Back</button>
-          <button class="nav" id="step2Next" type="button">Next →</button>
         </div>
+
+        <a class="learn-more" href="https://justinverstijnen.nl/enhance-email-security-with-spf-dkim-dmarc/#spf" target="_blank" rel="noopener noreferrer">
+          <i class="fas fa-book-open" aria-hidden="true"></i>
+          <span>Learn more</span>
+        </a>
       </div>
 
-      <div class="step" data-step="2" aria-label="Step 3: DMARC" hidden>
-        <h2 class="section-title">Step 3 — DMARC</h2>
+      <div class="step-nav">
+        <button class="nav-btn" type="button" data-nav="back"><span aria-hidden="true">←</span> Back</button>
+        <button class="nav-btn" type="button" data-nav="next">Next <span aria-hidden="true">→</span></button>
+      </div>
+    </section>
 
-        <fieldset>
-          <legend>DMARC</legend>
-          <div class="field">
-            <label for="dmarcPolicy">DMARC Policy</label>
-            <select id="dmarcPolicy" name="dmarcPolicy" aria-label="DMARC Policy">
-              <option value="reject" selected>Reject</option>
-              <option value="quarantine">Quarantine</option>
-              <option value="none">None</option>
-            </select>
-          </div>
-        </fieldset>
+    <!-- Step 3 -->
+    <section class="tab-panel" id="tab-dmarc" data-tabpanel="dmarc" role="region" aria-label="Step 3: DMARC">
+      <div class="panel-inner">
+        <h2 class="step-title">Step 3 — DMARC</h2>
 
-        <details class="customize" id="dmarcAdvanced">
+        <div class="field">
+          <label for="dmarcPolicy">DMARC policy</label>
+          <select id="dmarcPolicy">
+            <option value="none">none (monitor)</option>
+            <option value="quarantine">quarantine</option>
+            <option value="reject" selected>reject</option>
+          </select>
+        </div>
+
+        <details class="advanced" id="customizeDetails">
           <summary>
-            <span>Advanced DMARC settings (optional)</span>
+            <span>Advanced DMARC settings</span>
+            <span class="chev" aria-hidden="true">▾</span>
           </summary>
-          <div class="customize-grid" aria-label="Advanced DMARC settings">
+
+          <div class="advanced-body">
+            <div class="field">
+              <label for="dmarcRUA">Aggregate reports (rua)</label>
+              <input id="dmarcRUA" type="text" placeholder="mailto:dmarc@yourdomain.com (optional)" />
+            </div>
+            <div class="field">
+              <label for="dmarcRUF">Forensic reports (ruf)</label>
+              <input id="dmarcRUF" type="text" placeholder="mailto:forensic@yourdomain.com (optional)" />
+            </div>
+            <div class="field">
+              <label for="dmarcPct">Policy percentage (pct)</label>
+              <input id="dmarcPct" type="number" min="0" max="100" value="100" />
+            </div>
+
             <div class="inline-two">
               <div class="field">
-                <label for="dmarcAdkim">DKIM Alignment (adkim)</label>
+                <label for="dmarcAdkim">DKIM alignment (adkim)</label>
                 <select id="dmarcAdkim">
-                  <option value="r">Relaxed (r)</option>
-                  <option value="s" selected>Strict (s)</option>
+                  <option value="r" selected>relaxed (r)</option>
+                  <option value="s">strict (s)</option>
                 </select>
               </div>
               <div class="field">
-                <label for="dmarcAspf">SPF Alignment (aspf)</label>
+                <label for="dmarcAspf">SPF alignment (aspf)</label>
                 <select id="dmarcAspf">
-                  <option value="r">Relaxed (r)</option>
-                  <option value="s" selected>Strict (s)</option>
+                  <option value="r" selected>relaxed (r)</option>
+                  <option value="s">strict (s)</option>
                 </select>
-              </div>
-            </div>
-
-            <div class="inline-two">
-              <div class="field">
-                <label for="dmarcPct">Percentage (pct)</label>
-                <input id="dmarcPct" type="number" min="0" max="100" placeholder="100" />
-              </div>
-              <div class="field">
-                <label for="dmarcFo">Failure Options (fo)</label>
-                <input id="dmarcFo" type="text" placeholder="Example: 0, 1, d or s" />
-              </div>
-            </div>
-
-            <div class="inline-two">
-              <div class="field">
-                <label for="dmarcRf">Report Format (rf)</label>
-                <input id="dmarcRf" type="text" placeholder="Default: afrf" />
-              </div>
-              <div class="field">
-                <label for="dmarcRi">Report Interval (ri)</label>
-                <input id="dmarcRi" type="number" min="0" placeholder="Optional (seconds)" />
-              </div>
-            </div>
-
-            <div class="inline-two">
-              <div class="field">
-                <label for="dmarcRUA">DMARC Aggregation (RUA) email address</label>
-                <input id="dmarcRUA" type="email" placeholder="report@domain.com (optional)" />
-              </div>
-              <div class="field">
-                <label for="dmarcRUF">DMARC Forensics (RUF) email address</label>
-                <input id="dmarcRUF" type="email" placeholder="forensics@domain.com (optional)" />
               </div>
             </div>
           </div>
         </details>
 
-        <div class="learn-more-wrap"><a class="learn-more-btn" href="https://justinverstijnen.nl/enhance-email-security-with-spf-dkim-dmarc/#dmarc" target="_blank" rel="noopener noreferrer" aria-label="Learn more about DMARC"><span class="icon" aria-hidden="true">📘</span>Learn more</a></div>
-
-        <div class="step-actions">
-          <button class="nav" id="step3Back" type="button">← Back</button>
-          <button class="nav" id="step3Next" type="button">Next →</button>
-        </div>
+        <a class="learn-more" href="https://justinverstijnen.nl/enhance-email-security-with-spf-dkim-dmarc/#dmarc" target="_blank" rel="noopener noreferrer">
+          <i class="fas fa-book-open" aria-hidden="true"></i>
+          <span>Learn more</span>
+        </a>
       </div>
 
-      <div class="step" data-step="3" aria-label="Step 4: MTA-STS" hidden>
-        <h2 class="section-title">Step 4 — MTA-STS (optional)</h2>
+      <div class="step-nav">
+        <button class="nav-btn" type="button" data-nav="back"><span aria-hidden="true">←</span> Back</button>
+        <button class="nav-btn" type="button" data-nav="next">Next <span aria-hidden="true">→</span></button>
+      </div>
+    </section>
 
-        <fieldset>
-          <legend>MTA-STS</legend>
+    <!-- Step 4 -->
+    <section class="tab-panel" id="tab-mtasts" data-tabpanel="mtasts" role="region" aria-label="Step 4: MTA-STS">
+      <div class="panel-inner">
+        <h2 class="step-title">Step 4 — MTA-STS (optional)</h2>
+
+        <div class="field checkbox-row">
+          <label class="checkbox">
+            <input id="mtaStsEnabled" type="checkbox" checked />
+            <span>Enable MTA-STS records</span>
+          </label>
+        </div>
+
+        <div class="inline-two">
           <div class="field">
-            <label class="checkbox">
-              <input id="mtaStsEnabled" type="checkbox" />
-              Enable MTA-STS DNS record
-            </label>
+            <label for="mtaStsDate">MTA-STS id date</label>
+            <input id="mtaStsDate" type="date" />
           </div>
-
-          <div class="inline-two" id="mtaStsFields" aria-label="MTA-STS options">
-            <div class="field">
-              <label for="mtaStsDate">MTA-STS id date</label>
-              <input id="mtaStsDate" type="date" />
-            </div>
-            <div class="field">
-              <label for="mtaStsEmail">MTA-STS report email (rua)</label>
-              <input id="mtaStsEmail" type="email" placeholder="report@domain.com (optional)" />
-            </div>
+          <div class="field">
+            <label for="mtaStsEmail">MTA-STS report email (rua)</label>
+            <input id="mtaStsEmail" type="email" placeholder="report@domain.com (optional)" />
           </div>
-        </fieldset>
+        </div>
 
-        <div class="learn-more-wrap"><a class="learn-more-btn" href="https://justinverstijnen.nl/what-is-mta-sts-and-how-to-protect-your-email-flow/" target="_blank" rel="noopener noreferrer" aria-label="Learn more about MTA-STS"><span class="icon" aria-hidden="true">📘</span>Learn more</a></div>
+        <a class="learn-more" href="https://justinverstijnen.nl/what-is-mta-sts-and-how-to-protect-your-email-flow/" target="_blank" rel="noopener noreferrer">
+          <i class="fas fa-book-open" aria-hidden="true"></i>
+          <span>Learn more</span>
+        </a>
+      </div>
+
+      <div class="step-nav">
+        <button class="nav-btn" type="button" data-nav="back"><span aria-hidden="true">←</span> Back</button>
+        <button class="nav-btn" type="button" data-nav="next">Next <span aria-hidden="true">→</span></button>
+      </div>
+    </section>
+
+    <!-- Step 5 -->
+    <section class="tab-panel" id="tab-generate" data-tabpanel="generate" role="region" aria-label="Step 5: Generate">
+      <div class="panel-inner">
+        <h2 class="step-title">Step 5 — Generate</h2>
 
         <div class="actions">
-          <button class="nav" id="step4Back" type="button">← Back</button>
-          <button id="generateBtn" type="button">Generate records</button>
-</div>
-      </div>
-    </div>
-    <div class="results" id="results" tabindex="0" aria-live="polite"></div>
-    <div class="export-wrap">
-      <button id="exportBtn" type="button" class="success" style="display:none;">Export to HTML</button>
-    </div>
+          <button id="generateBtn" type="button" class="primary">Generate records</button>
+        </div>
 
+        <div class="results" id="results" tabindex="0" aria-live="polite"></div>
+
+        <div class="export-row">
+          <button id="exportBtn" type="button" class="success" style="display:none;">Export to HTML</button>
+        </div>
+
+        <footer class="footer" id="footer">
+          <span id="footerText"></span>
+        </footer>
+      </div>
+
+      <div class="step-nav">
+        <button class="nav-btn" type="button" data-nav="back"><span aria-hidden="true">←</span> Back</button>
+      </div>
+    </section>
   </div>
-  <footer class="footer" aria-label="Footer">
-    © <span id="footerYear">2025</span> DNS MEGAtool by Justin Verstijnen. <a href="https://github.com/JustinVerstijnen/DNSMegaTool" target="_blank" rel="noopener noreferrer">Click here to visit GitHub project.</a>
-  </footer>
+
   <script src="365recgenv2/assets/js/app.js"></script>
 </body>
 </html>
