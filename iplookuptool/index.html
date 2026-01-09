@@ -40,6 +40,12 @@
     </div>
 
     <div id="result" class="result"></div>
+
+    <div class="footer">
+      <a href="https://github.com/JustinVerstijnen/IPLookupTool" target="_blank" rel="noopener">
+        &copy; <span id="copyright-year">2025</span> IP Lookup Tool by Justin Verstijnen. Quick public IPv4/IPv6 lookup tool. Click here to view on GitHub.
+      </a>
+    </div>
   </div>
 
 
@@ -74,21 +80,25 @@
 
         resultDiv.innerHTML = `
           <div class="fade-in">
-          <table>
-            <tr><td><strong>IP:</strong></td><td>${data.ip}</td></tr>
-            <tr><td><strong>Type:</strong></td><td>${data.type}</td></tr>
-            <tr><td><strong>Continent:</strong></td><td>${data.continent} (${data.continent_code})</td></tr>
-            <tr><td><strong>Country:</strong></td><td>${data.country} (${data.country_code})</td></tr>
-            <tr><td><strong>Region:</strong></td><td>${data.region}</td></tr>
-            <tr><td><strong>City:</strong></td><td>${data.city}</td></tr>
-            <tr><td><strong>Latitude:</strong></td><td>${data.latitude}</td></tr>
-            <tr><td><strong>Longitude:</strong></td><td>${data.longitude}</td></tr>
-            <tr><td><strong>ASN:</strong></td><td>${data.asn}</td></tr>
-            <tr><td><strong>Org:</strong></td><td>${data.org}</td></tr>
-            <tr><td><strong>ISP:</strong></td><td>${data.isp}</td></tr>
-            <tr><td><strong>Timezone:</strong></td><td>${data.timezone}</td></tr>
-            <tr><td><strong>Currency:</strong></td><td>${data.currency}</td></tr>
-          </table>
+          <div class="table-wrapper">
+            <table>
+              <tbody>
+                <tr><td><strong>IP:</strong></td><td>${data.ip}</td></tr>
+                <tr><td><strong>Type:</strong></td><td>${data.type}</td></tr>
+                <tr><td><strong>Continent:</strong></td><td>${data.continent} (${data.continent_code})</td></tr>
+                <tr><td><strong>Country:</strong></td><td>${data.country} (${data.country_code})</td></tr>
+                <tr><td><strong>Region:</strong></td><td>${data.region}</td></tr>
+                <tr><td><strong>City:</strong></td><td>${data.city}</td></tr>
+                <tr><td><strong>Latitude:</strong></td><td>${data.latitude}</td></tr>
+                <tr><td><strong>Longitude:</strong></td><td>${data.longitude}</td></tr>
+                <tr><td><strong>ASN:</strong></td><td>${data.asn}</td></tr>
+                <tr><td><strong>Org:</strong></td><td>${data.org}</td></tr>
+                <tr><td><strong>ISP:</strong></td><td>${data.isp}</td></tr>
+                <tr><td><strong>Timezone:</strong></td><td>${data.timezone}</td></tr>
+                <tr><td><strong>Currency:</strong></td><td>${data.currency}</td></tr>
+              </tbody>
+            </table>
+          </div>
           </div>
         `;
 
@@ -110,6 +120,9 @@
     }
 
     window.addEventListener("load", async () => {
+      const yearEl = document.getElementById('copyright-year');
+      if (yearEl) yearEl.textContent = new Date().getFullYear();
+
       try {
         const res = await fetch("https://api.ipify.org?format=json&type=v4");
         const data = await res.json();

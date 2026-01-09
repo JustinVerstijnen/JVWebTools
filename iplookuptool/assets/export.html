@@ -30,7 +30,9 @@
       document.getElementById("exportTitle").innerText = `Export result for ${data.ip}`;
 
       document.getElementById("exportResult").innerHTML = `
+        <div class="table-wrapper">
         <table>
+          <tbody>
           <tr><td><strong>IP:</strong></td><td>${data.ip}</td></tr>
           <tr><td><strong>Type:</strong></td><td>${data.type}</td></tr>
           <tr><td><strong>Continent:</strong></td><td>${data.continent} (${data.continent_code})</td></tr>
@@ -44,7 +46,9 @@
           <tr><td><strong>ISP:</strong></td><td>${data.isp}</td></tr>
           <tr><td><strong>Timezone:</strong></td><td>${data.timezone}</td></tr>
           <tr><td><strong>Currency:</strong></td><td>${data.currency}</td></tr>
+          </tbody>
         </table>
+        </div>
       `;
     });
   </script>
