@@ -1,138 +1,120 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>IP Lookup Tool</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f6f9;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 420px;
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        input {
-            width: 100%;
-            padding: 10px;
-            font-size: 16px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            margin-bottom: 10px;
-        }
-
-        button {
-            width: 100%;
-            padding: 10px;
-            font-size: 16px;
-            border: none;
-            border-radius: 6px;
-            background: #0078d4;
-            color: white;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #005ea6;
-        }
-
-        .result {
-            margin-top: 20px;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .error {
-            color: red;
-            margin-top: 15px;
-        }
-
-        .spinner {
-            margin-top: 15px;
-            text-align: center;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Quick and easy tool to gather public IPv4 and IPv6 information.">
+  <title>IP Lookup Tool - justinverstijnen.nl</title>
+  <link rel="stylesheet" href="iplookuptool/assets/style.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link rel="icon" type="image/png" href="https://justinverstijnen.nl/wp-content/uploads/2025/04/cropped-Logo-2.0-final.png">
 </head>
 <body>
-
 <div class="container">
-    <h1>IP Lookup</h1>
+<div class="logo">
+<a href="https://justinverstijnen.nl" target="_blank">
+<img src="https://justinverstijnen.nl/wp-content/uploads/2025/04/cropped-Logo-2.0-Transparant.png" width="50" height="50">
+</a>
+</div>
 
-    <input type="text" id="ipInput" placeholder="Voer IP-adres in (bijv. 8.8.8.8)">
-    <button onclick="lookupIP()">Zoeken</button>
+<h1>IP Lookup Tool</h1>
+<p class="subtitle">Quick and easy tool to gather public IPv4 and IPv6 information.</p>
 
-    <div class="spinner" id="spinner" style="display:none;">
-        Bezig met ophalen...
-    </div>
+<div id="myIpShown" style="font-size:22px;font-weight:600;margin-bottom:10px;"></div>
 
-    <div class="result" id="result"></div>
-    <div class="error" id="error"></div>
+<div class="form-group">
+<input type="text" id="ipInput" placeholder="Enter IP address"/>
+
+<button onclick="lookupIP()"><i class="ph ph-magnifying-glass"></i> Lookup</button>
+<button id="useMyIpBtn" class="orange-btn"><i class="ph ph-crosshair"></i> Use my IP</button>
+<button onclick="exportResult()"><i class="ph ph-download"></i> Export</button>
+</div>
+
+<div id="result" class="result"></div>
+
+<div class="footer">
+<a href="https://github.com/JustinVerstijnen/IPLookupTool" target="_blank">
+&copy; <span id="copyright-year"></span> IP Lookup Tool by Justin Verstijnen
+</a>
+</div>
 </div>
 
 <script>
-async function lookupIP() {
-    const ip = document.getElementById("ipInput").value.trim();
-    const resultDiv = document.getElementById("result");
-    const errorDiv = document.getElementById("error");
-    const spinner = document.getElementById("spinner");
+document.getElementById("ipInput").addEventListener("keypress", e => {
+if(e.key === "Enter") lookupIP();
+});
 
-    resultDiv.innerHTML = "";
-    errorDiv.innerHTML = "";
+async function lookupIP(ipOverride=null){
 
-    if (!ip) {
-        errorDiv.innerText = "Vul een IP-adres in.";
-        return;
-    }
+const ip = ipOverride || document.getElementById("ipInput").value.trim();
+const resultDiv = document.getElementById("result");
 
-    spinner.style.display = "block";
-
-    try {
-        const response = await fetch(`https://ipwho.is/${ip}`);
-        const data = await response.json();
-
-        spinner.style.display = "none";
-
-        if (!data.success) {
-            errorDiv.innerText = "Ongeldig IP-adres.";
-            return;
-        }
-
-        resultDiv.innerHTML = `
-            <strong>IP:</strong> ${data.ip}<br>
-            <strong>Land:</strong> ${data.country} (${data.country_code})<br>
-            <strong>Regio:</strong> ${data.region}<br>
-            <strong>Stad:</strong> ${data.city}<br>
-            <strong>Postcode:</strong> ${data.postal}<br>
-            <strong>ISP:</strong> ${data.connection.isp}<br>
-            <strong>Organisatie:</strong> ${data.connection.org}<br>
-            <strong>ASN:</strong> ${data.connection.asn}
-        `;
-
-    } catch (error) {
-        spinner.style.display = "none";
-        errorDiv.innerText = "Netwerkfout of API niet bereikbaar.";
-        console.error(error);
-    }
+if(!ip){
+resultDiv.innerHTML="<div class='error'>Please enter IP.</div>";
+return;
 }
-</script>
 
+resultDiv.innerHTML="Loading...";
+
+try{
+
+const response = await fetch(`https://ipwho.is/${ip}`);
+const data = await response.json();
+
+if(!data.success){
+resultDiv.innerHTML="<div class='error'>Invalid IP.</div>";
+return;
+}
+
+resultDiv.innerHTML=`
+<div class="fade-in">
+<div class="table-wrapper">
+<table><tbody>
+<tr><td><strong>IP:</strong></td><td>${data.ip}</td></tr>
+<tr><td><strong>Type:</strong></td><td>${data.type}</td></tr>
+<tr><td><strong>Continent:</strong></td><td>${data.continent}</td></tr>
+<tr><td><strong>Country:</strong></td><td>${data.country}</td></tr>
+<tr><td><strong>Region:</strong></td><td>${data.region}</td></tr>
+<tr><td><strong>City:</strong></td><td>${data.city}</td></tr>
+<tr><td><strong>Latitude:</strong></td><td>${data.latitude}</td></tr>
+<tr><td><strong>Longitude:</strong></td><td>${data.longitude}</td></tr>
+<tr><td><strong>ASN:</strong></td><td>${data.connection.asn}</td></tr>
+<tr><td><strong>Org:</strong></td><td>${data.connection.org}</td></tr>
+<tr><td><strong>ISP:</strong></td><td>${data.connection.isp}</td></tr>
+<tr><td><strong>Timezone:</strong></td><td>${data.timezone.id}</td></tr>
+<tr><td><strong>Currency:</strong></td><td>${data.currency.code}</td></tr>
+</tbody></table>
+</div>
+</div>
+`;
+
+window.latestData=data;
+
+}catch(e){
+resultDiv.innerHTML="<div class='error'>API error.</div>";
+console.error(e);
+}
+}
+
+function exportResult(){
+if(!window.latestData){alert("No data.");return;}
+const w=window.open("iplookuptool/assets/export.html");
+w.onload=()=>w.postMessage(window.latestData,"*");
+}
+
+window.addEventListener("load",async()=>{
+document.getElementById("copyright-year").textContent=new Date().getFullYear();
+
+try{
+const r=await fetch("https://api.ipify.org?format=json");
+const d=await r.json();
+document.getElementById("myIpShown").textContent=`My IP: ${d.ip}`;
+document.getElementById("useMyIpBtn").onclick=()=>{
+document.getElementById("ipInput").value=d.ip;
+lookupIP(d.ip);
+};
+}catch{}
+});
+</script>
 </body>
 </html>
