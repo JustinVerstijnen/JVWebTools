@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Quick and easy tool to gather public IPv4 and IPv6 information.">
   <title>IP Lookup Tool - justinverstijnen.nl</title>
-  <link rel="stylesheet" href="iplookuptool/assets/style.css">
+  <link rel="stylesheet" href="assets/style.css">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <link rel="icon" type="image/png" href="https://justinverstijnen.nl/wp-content/uploads/2025/04/cropped-Logo-2.0-final.png">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4082816808518335" crossorigin="anonymous"></script>
@@ -59,7 +59,8 @@ resultDiv.innerHTML="Loading...";
 
 try{
 
-const response = await fetch(`https://ipwho.is/${ip}`);
+// Use same-origin backend proxy (Azure Static Web Apps Functions) to avoid browser CORS restrictions.
+const response = await fetch(`/api/iplookup?ip=${encodeURIComponent(ip)}`);
 const data = await response.json();
 
 if(!data.success){
@@ -99,7 +100,7 @@ console.error(e);
 
 function exportResult(){
 if(!window.latestData){alert("No data.");return;}
-const w=window.open("iplookuptool/assets/export.html");
+const w=window.open("assets/export.html");
 w.onload=()=>w.postMessage(window.latestData,"*");
 }
 

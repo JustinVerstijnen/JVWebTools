@@ -41,11 +41,11 @@
           <tr><td><strong>City:</strong></td><td>${data.city}</td></tr>
           <tr><td><strong>Latitude:</strong></td><td>${data.latitude}</td></tr>
           <tr><td><strong>Longitude:</strong></td><td>${data.longitude}</td></tr>
-          <tr><td><strong>ASN:</strong></td><td>${data.asn}</td></tr>
-          <tr><td><strong>Org:</strong></td><td>${data.org}</td></tr>
-          <tr><td><strong>ISP:</strong></td><td>${data.isp}</td></tr>
-          <tr><td><strong>Timezone:</strong></td><td>${data.timezone}</td></tr>
-          <tr><td><strong>Currency:</strong></td><td>${data.currency}</td></tr>
+          <tr><td><strong>ASN:</strong></td><td>${data.connection?.asn ?? ""}</td></tr>
+          <tr><td><strong>Org:</strong></td><td>${data.connection?.org ?? ""}</td></tr>
+          <tr><td><strong>ISP:</strong></td><td>${data.connection?.isp ?? ""}</td></tr>
+          <tr><td><strong>Timezone:</strong></td><td>${data.timezone?.id ?? ""}</td></tr>
+          <tr><td><strong>Currency:</strong></td><td>${data.currency?.code ?? ""}</td></tr>
           </tbody>
         </table>
         </div>
