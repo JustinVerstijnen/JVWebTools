@@ -59,11 +59,10 @@ resultDiv.innerHTML="Loading...";
 
 try{
 
-// Use same-origin backend proxy (Azure Static Web Apps Functions) to avoid browser CORS restrictions.
-const response = await fetch(`/api/iplookup?ip=${encodeURIComponent(ip)}`);
+const response = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`);
 const data = await response.json();
 
-if(!data.success){
+if(data.error){
 resultDiv.innerHTML="<div class='error'>Invalid IP.</div>";
 return;
 }
@@ -73,18 +72,15 @@ resultDiv.innerHTML=`
 <div class="table-wrapper">
 <table><tbody>
 <tr><td><strong>IP:</strong></td><td>${data.ip}</td></tr>
-<tr><td><strong>Type:</strong></td><td>${data.type}</td></tr>
-<tr><td><strong>Continent:</strong></td><td>${data.continent}</td></tr>
-<tr><td><strong>Country:</strong></td><td>${data.country}</td></tr>
+<tr><td><strong>Version:</strong></td><td>${data.version || "-"}</td></tr>
+<tr><td><strong>Country:</strong></td><td>${data.country_name}</td></tr>
 <tr><td><strong>Region:</strong></td><td>${data.region}</td></tr>
 <tr><td><strong>City:</strong></td><td>${data.city}</td></tr>
 <tr><td><strong>Latitude:</strong></td><td>${data.latitude}</td></tr>
 <tr><td><strong>Longitude:</strong></td><td>${data.longitude}</td></tr>
-<tr><td><strong>ASN:</strong></td><td>${data.connection.asn}</td></tr>
-<tr><td><strong>Org:</strong></td><td>${data.connection.org}</td></tr>
-<tr><td><strong>ISP:</strong></td><td>${data.connection.isp}</td></tr>
-<tr><td><strong>Timezone:</strong></td><td>${data.timezone.id}</td></tr>
-<tr><td><strong>Currency:</strong></td><td>${data.currency.code}</td></tr>
+<tr><td><strong>Org:</strong></td><td>${data.org}</td></tr>
+<tr><td><strong>Timezone:</strong></td><td>${data.timezone}</td></tr>
+<tr><td><strong>Currency:</strong></td><td>${data.currency}</td></tr>
 </tbody></table>
 </div>
 </div>
@@ -108,7 +104,7 @@ window.addEventListener("load",async()=>{
 document.getElementById("copyright-year").textContent=new Date().getFullYear();
 
 try{
-const r=await fetch("https://api.ipify.org?format=json");
+const r=await fetch("https://ipapi.co/json/");
 const d=await r.json();
 document.getElementById("myIpShown").textContent=`My IP: ${d.ip}`;
 document.getElementById("useMyIpBtn").onclick=()=>{
