@@ -1,16 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Quick and easy tool to gather public IPv4 and IPv6 information.">
-  <title>IP Lookup Tool - justinverstijnen.nl</title>
-  <link rel="stylesheet" href="iplookuptool/assets/style.css">
-  <script src="https://unpkg.com/@phosphor-icons/web"></script>
-  <link rel="icon" type="image/png" href="https://justinverstijnen.nl/wp-content/uploads/2025/04/cropped-Logo-2.0-final.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Quick and easy tool to gather public IPv4 and IPv6 information.">
+<title>IP Lookup Tool - justinverstijnen.nl</title>
+
+<link rel="stylesheet" href="iplookuptool/assets/style.css">
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+<link rel="icon" type="image/png"
+href="https://justinverstijnen.nl/wp-content/uploads/2025/04/cropped-Logo-2.0-final.png">
 </head>
+
 <body>
 <div class="container">
+
 <div class="logo">
 <a href="https://justinverstijnen.nl" target="_blank">
 <img src="https://justinverstijnen.nl/wp-content/uploads/2025/04/cropped-Logo-2.0-Transparant.png" width="50" height="50">
@@ -25,9 +30,17 @@
 <div class="form-group">
 <input type="text" id="ipInput" placeholder="Enter IP address"/>
 
-<button onclick="lookupIP()"><i class="ph ph-magnifying-glass"></i> Lookup</button>
-<button id="useMyIpBtn" class="orange-btn"><i class="ph ph-crosshair"></i> Use my IP</button>
-<button onclick="exportResult()"><i class="ph ph-download"></i> Export</button>
+<button onclick="lookupIP()">
+<i class="ph ph-magnifying-glass"></i> Lookup
+</button>
+
+<button id="useMyIpBtn" class="orange-btn">
+<i class="ph ph-crosshair"></i> Use my IP
+</button>
+
+<button onclick="exportResult()">
+<i class="ph ph-download"></i> Export
+</button>
 </div>
 
 <div id="result" class="result"></div>
@@ -37,84 +50,100 @@
 &copy; <span id="copyright-year"></span> IP Lookup Tool by Justin Verstijnen
 </a>
 </div>
+
 </div>
 
 <script>
 document.getElementById("ipInput").addEventListener("keypress", e => {
-if(e.key === "Enter") lookupIP();
+if (e.key === "Enter") lookupIP();
 });
 
-async function lookupIP(ipOverride=null){
+async function lookupIP(ipOverride = null) {
 
 const ip = ipOverride || document.getElementById("ipInput").value.trim();
 const resultDiv = document.getElementById("result");
 
-if(!ip){
-resultDiv.innerHTML="<div class='error'>Please enter IP.</div>";
+if (!ip) {
+resultDiv.innerHTML = "<div class='error'>Please enter IP.</div>";
 return;
 }
 
-resultDiv.innerHTML="Loading...";
+resultDiv.innerHTML = "Loading...";
 
-try{
+try {
 
-const response = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`);
+const response = await fetch(`https://api.ipapi.is/?q=${encodeURIComponent(ip)}`);
 const data = await response.json();
 
-if(!data.success){
-resultDiv.innerHTML="<div class='error'>Invalid IP.</div>";
+if (!data.ip) {
+resultDiv.innerHTML = "<div class='error'>Invalid IP.</div>";
 return;
 }
 
-resultDiv.innerHTML=`
+resultDiv.innerHTML = `
 <div class="fade-in">
 <div class="table-wrapper">
 <table><tbody>
 <tr><td><strong>IP:</strong></td><td>${data.ip}</td></tr>
-<tr><td><strong>Version:</strong></td><td>${data.type}</td></tr>
-<tr><td><strong>Country:</strong></td><td>${data.country}</td></tr>
-<tr><td><strong>Region:</strong></td><td>${data.region}</td></tr>
-<tr><td><strong>City:</strong></td><td>${data.city}</td></tr>
-<tr><td><strong>Latitude:</strong></td><td>${data.latitude}</td></tr>
-<tr><td><strong>Longitude:</strong></td><td>${data.longitude}</td></tr>
-<tr><td><strong>Org:</strong></td><td>${data.connection?.org || "-"}</td></tr>
-<tr><td><strong>Timezone:</strong></td><td>${data.timezone?.id || "-"}</td></tr>
-<tr><td><strong>Currency:</strong></td><td>${data.currency?.code || "-"}</td></tr>
+<tr><td><strong>Version:</strong></td><td>${data.version || "-"}</td></tr>
+<tr><td><strong>Country:</strong></td><td>${data.location?.country || "-"}</td></tr>
+<tr><td><strong>Region:</strong></td><td>${data.location?.region || "-"}</td></tr>
+<tr><td><strong>City:</strong></td><td>${data.location?.city || "-"}</td></tr>
+<tr><td><strong>Latitude:</strong></td><td>${data.location?.latitude || "-"}</td></tr>
+<tr><td><strong>Longitude:</strong></td><td>${data.location?.longitude || "-"}</td></tr>
+<tr><td><strong>Org:</strong></td><td>${data.company?.name || "-"}</td></tr>
+<tr><td><strong>Timezone:</strong></td><td>${data.location?.timezone || "-"}</td></tr>
 </tbody></table>
 </div>
 </div>
 `;
 
-window.latestData=data;
+window.latestData = data;
 
-}catch(e){
-resultDiv.innerHTML="<div class='error'>API error.</div>";
+} catch (e) {
+console.error(e);
+resultDiv.innerHTML = "<div class='error'>API error.</div>";
+}
+}
+
+function exportResult() {
+if (!window.latestData) {
+alert("No data.");
+return;
+}
+const w = window.open("assets/export.html");
+w.onload = () => w.postMessage(window.latestData, "*");
+}
+
+window.addEventListener("load", async () => {
+
+document.getElementById("copyright-year").textContent =
+new Date().getFullYear();
+
+try {
+
+// Cloudflare trace voor eigen IP
+const response = await fetch("https://www.cloudflare.com/cdn-cgi/trace");
+const text = await response.text();
+
+const match = text.match(/ip=(.*)/);
+if (!match) return;
+
+const ip = match[1];
+
+document.getElementById("myIpShown").textContent = `My IP: ${ip}`;
+
+document.getElementById("useMyIpBtn").onclick = () => {
+document.getElementById("ipInput").value = ip;
+lookupIP(ip);
+};
+
+} catch (e) {
 console.error(e);
 }
-}
 
-function exportResult(){
-if(!window.latestData){alert("No data.");return;}
-const w=window.open("assets/export.html");
-w.onload=()=>w.postMessage(window.latestData,"*");
-}
-
-window.addEventListener("load",async()=>{
-document.getElementById("copyright-year").textContent=new Date().getFullYear();
-
-try{
-const r=await fetch("https://ipwho.is/");
-const d=await r.json();
-
-if(d.success){
-document.getElementById("myIpShown").textContent=`My IP: ${d.ip}`;
-document.getElementById("useMyIpBtn").onclick=()=>{
-document.getElementById("ipInput").value=d.ip;
-lookupIP(d.ip);
-};
-}
-}catch{}
 });
 </script>
+
 </body>
 </html>
