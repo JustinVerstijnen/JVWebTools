@@ -1,6 +1,3 @@
-/* Styling aligned with DNS MEGAtool (container + table look & feel)
-   Keep changes minimal, but match the same dimensions and zebra table styling. */
-
 :root{
   --control-height: 44px;
 }
@@ -59,14 +56,13 @@ input[type="text"] {
   line-height: normal;
 }
 
-/* Buttons (same outer height as DNS MEGAtool) */
 button {
   height: var(--control-height);
   padding: 0 20px;
   font-size: 16px;
   background-color: #8EAFDA;
   color: #fff;
-  border: 1px solid transparent; /* keeps height consistent */
+  border: 1px solid transparent;
   border-radius: 4px;
   box-sizing: border-box;
   cursor: pointer;
@@ -91,7 +87,6 @@ button {
   margin-top: 20px;
 }
 
-/* Table wrapper + zebra styling (white/grey like DNS MEGAtool) */
 .table-wrapper {
   overflow-x: auto;
   margin-top: 20px;
@@ -189,7 +184,6 @@ tbody tr:nth-child(even) {
   opacity: 1;
 }
 
-/* Use-my-IP button (same dimensions as other buttons) */
 .orange-btn {
   background-color: #ffbc6a;
 }
@@ -198,7 +192,6 @@ tbody tr:nth-child(even) {
   filter: brightness(0.95);
 }
 
-/* Footer (same look as DNS MEGAtool) */
 .footer {
   text-align: center;
   font-size: 9px;
@@ -215,7 +208,7 @@ body::before {
     content: "";
     position: fixed;
     inset: 0;
-    background-image: url("https://justinverstijnen.nl/wp-content/uploads/2026/01/Tool_Background_Blurred.jpg");
+    background-image: url("https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/featured-background_blur.jpg");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
