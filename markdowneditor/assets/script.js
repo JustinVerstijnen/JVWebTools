@@ -135,11 +135,22 @@ function alertOptions(selected = "info") {
   return ALERTS.map(([value, label]) => `<option value="${value}" ${value === selected ? "selected" : ""}>${label}</option>`).join("");
 }
 
+function optionLabel(options, selected) {
+  return (options.find(([value]) => value === selected) || options[0] || [selected, selected])[1];
+}
+function blockDropdownHtml(type, options, selected) {
+  const label = optionLabel(options, selected);
+  const items = options.map(([value, text]) => `<button type="button" role="option" data-value="${escapeHtml(value)}" aria-selected="${value === selected ? "true" : "false"}">${escapeHtml(text)}</button>`).join("");
+  return `<div class="block-dropdown" contenteditable="false" data-dropdown-type="${escapeHtml(type)}" data-value="${escapeHtml(selected)}"><button type="button" class="block-dropdown-toggle" aria-haspopup="listbox" aria-expanded="false"><span>${escapeHtml(label)}</span></button><div class="block-dropdown-menu" role="listbox">${items}</div></div>`;
+}
+function languageDropdownHtml(selected = "powershell") { return blockDropdownHtml("language", LANGUAGES, selected); }
+function alertDropdownHtml(selected = "info") { return blockDropdownHtml("alert", ALERTS.map(([value, label]) => [value, label]), selected); }
+
 function codeBlockHtml(language = "powershell", code = "") {
-  return `<div class="code-block editable-card" contenteditable="false" data-language="${escapeHtml(language)}"><div class="block-settings" contenteditable="false"><span><i class="fa-solid fa-code"></i> Code block</span><label>Language <select class="code-language" contenteditable="false">${languageOptions(language)}</select></label></div><pre contenteditable="true" spellcheck="false"><code>${escapeHtml(code)}</code></pre></div><p><br></p>`;
+  return `<div class="code-block editable-card" contenteditable="false" data-language="${escapeHtml(language)}"><div class="block-settings" contenteditable="false"><span><i class="fa-solid fa-code"></i> Code block</span><label>Language ${languageDropdownHtml(language)}</label></div><pre contenteditable="true" spellcheck="false"><code>${escapeHtml(code)}</code></pre></div><p><br></p>`;
 }
 function docsyCodeBlockHtml(language = "bash", code = "") {
-  return `<div class="docsy-code-block editable-card" contenteditable="false" data-language="${escapeHtml(language)}"><div class="block-settings" contenteditable="false"><span><i class="fa-solid fa-file-code"></i> Docsy code card</span><label>Language <select class="code-language" contenteditable="false">${languageOptions(language)}</select></label></div><pre contenteditable="true" spellcheck="false"><code>${escapeHtml(code)}</code></pre></div><p><br></p>`;
+  return `<div class="docsy-code-block editable-card" contenteditable="false" data-language="${escapeHtml(language)}"><div class="block-settings" contenteditable="false"><span><i class="fa-solid fa-file-code"></i> Docsy code card</span><label>Language ${languageDropdownHtml(language)}</label></div><pre contenteditable="true" spellcheck="false"><code>${escapeHtml(code)}</code></pre></div><p><br></p>`;
 }
 function htmlBlockHtml() {
   return codeBlockHtml("html", `<section class="custom-block">\n  <h2>Custom HTML</h2>\n  <p>Edit this HTML block.</p>\n</section>`);
@@ -149,7 +160,7 @@ function alertBlockHtml(kind = "markdown", color = "info", text = "") {
   const cls = kind === "docsy" ? "docsy-alert-block" : "markdown-alert-block";
   const title = kind === "docsy" ? `Docsy ${label}` : `Markdown ${label}`;
   const icon = kind === "docsy" ? "fa-triangle-exclamation" : "fa-bell";
-  return `<div class="${cls} editable-card alert-${escapeHtml(color)}" contenteditable="false" data-color="${escapeHtml(color)}"><div class="block-settings" contenteditable="false"><span><i class="fa-solid ${icon}"></i> ${escapeHtml(title)}</span><label>Type <select class="alert-color" contenteditable="false">${alertOptions(color)}</select></label></div><div class="alert-content" contenteditable="true">${escapeHtml(text)}</div></div><p><br></p>`;
+  return `<div class="${cls} editable-card alert-${escapeHtml(color)}" contenteditable="false" data-color="${escapeHtml(color)}"><div class="block-settings" contenteditable="false"><span><i class="fa-solid ${icon}"></i> ${escapeHtml(title)}</span><label>Type ${alertDropdownHtml(color)}</label></div><div class="alert-content" contenteditable="true">${escapeHtml(text)}</div></div><p><br></p>`;
 }
 function shortcodeCard(title, shortcode) {
   return `<div class="shortcode-card editable-card" data-shortcode="true" contenteditable="false"><div class="block-settings"><span><i class="fa-solid fa-cube"></i> ${escapeHtml(title)}</span></div><textarea>${escapeHtml(shortcode)}</textarea></div><p><br></p>`;
@@ -725,23 +736,13 @@ function normalizeEditorContent() {
     block.contentEditable = "false";
     block.querySelectorAll(".block-settings").forEach(settings => { settings.contentEditable = "false"; });
     block.querySelectorAll("pre").forEach(pre => { pre.contentEditable = "true"; });
-    const select = block.querySelector(".code-language");
-    if (select) {
-      select.value = block.dataset.language || "text";
-      syncSelectSelectedAttributes(select);
-      bindEmbeddedSelect(select);
-    }
+    ensureBlockDropdown(block, "language");
   });
   els.visualEditor.querySelectorAll(".docsy-alert-block, .markdown-alert-block").forEach(block => {
     block.contentEditable = "false";
     block.querySelectorAll(".block-settings").forEach(settings => { settings.contentEditable = "false"; });
     block.querySelectorAll(".alert-content").forEach(content => { content.contentEditable = "true"; });
-    const select = block.querySelector(".alert-color");
-    if (select) {
-      select.value = block.dataset.color || "info";
-      syncSelectSelectedAttributes(select);
-      bindEmbeddedSelect(select);
-    }
+    ensureBlockDropdown(block, "alert");
     refreshAlertBlockAppearance(block);
   });
   addInlineBlockControls();
@@ -843,6 +844,7 @@ function insertSlashSelection() {
   insertBlock(block.id);
 }
 function handleEditorKeydown(event) {
+  if (handleBlockDropdownKeydown(event)) return;
   if (handleSlashMenuKey(event)) return;
   if (event.key !== "Enter") return;
   const selection = window.getSelection();
@@ -910,6 +912,94 @@ function handlePaste(event) {
     event.preventDefault();
     insertHtmlAtCursor(`<a href="${escapeHtml(text)}" target="_blank" rel="noreferrer">${escapeHtml(text)}</a>&nbsp;`);
   }
+}
+
+function closeAllBlockDropdowns(except = null) {
+  document.querySelectorAll(".block-dropdown.open").forEach(dropdown => {
+    if (dropdown === except) return;
+    dropdown.classList.remove("open");
+    dropdown.querySelector(".block-dropdown-toggle")?.setAttribute("aria-expanded", "false");
+  });
+}
+function refreshBlockDropdown(dropdown, value) {
+  const type = dropdown.dataset.dropdownType;
+  const options = type === "alert" ? ALERTS.map(([v, label]) => [v, label]) : LANGUAGES;
+  const label = optionLabel(options, value);
+  dropdown.dataset.value = value;
+  const labelNode = dropdown.querySelector(".block-dropdown-toggle span");
+  if (labelNode) labelNode.textContent = label;
+  dropdown.querySelectorAll(".block-dropdown-menu button").forEach(button => button.setAttribute("aria-selected", button.dataset.value === value ? "true" : "false"));
+}
+function ensureBlockDropdown(block, type) {
+  const label = block.querySelector(".block-settings label");
+  if (!label) return;
+  let dropdown = label.querySelector(`.block-dropdown[data-dropdown-type="${type}"]`);
+  const nativeSelect = type === "alert" ? label.querySelector("select.alert-color") : label.querySelector("select.code-language");
+  const value = nativeSelect?.value || (type === "alert" ? (block.dataset.color || "info") : (block.dataset.language || "text"));
+  if (!dropdown) {
+    if (nativeSelect) nativeSelect.remove();
+    label.insertAdjacentHTML("beforeend", type === "alert" ? alertDropdownHtml(value) : languageDropdownHtml(value));
+    dropdown = label.querySelector(`.block-dropdown[data-dropdown-type="${type}"]`);
+  }
+  refreshBlockDropdown(dropdown, value);
+}
+function applyBlockDropdownValue(dropdown, value) {
+  const block = dropdown.closest(".code-block, .docsy-code-block, .docsy-alert-block, .markdown-alert-block");
+  if (!block) return;
+  if (dropdown.dataset.dropdownType === "language") {
+    block.dataset.language = value;
+    refreshBlockDropdown(dropdown, value);
+  } else {
+    block.dataset.color = value;
+    refreshBlockDropdown(dropdown, value);
+    refreshAlertBlockAppearance(block);
+  }
+  closeAllBlockDropdowns();
+  saveProject();
+}
+function handleBlockDropdownClick(event) {
+  const toggle = event.target.closest(".block-dropdown-toggle");
+  const option = event.target.closest(".block-dropdown-menu button");
+  if (!toggle && !option) return false;
+  const dropdown = event.target.closest(".block-dropdown");
+  if (!dropdown) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  if (toggle) {
+    const isOpen = dropdown.classList.contains("open");
+    closeAllBlockDropdowns(dropdown);
+    dropdown.classList.toggle("open", !isOpen);
+    toggle.setAttribute("aria-expanded", !isOpen ? "true" : "false");
+    return true;
+  }
+  if (option) applyBlockDropdownValue(dropdown, option.dataset.value);
+  return true;
+}
+function handleBlockDropdownKeydown(event) {
+  const dropdown = event.target.closest?.(".block-dropdown");
+  if (!dropdown) return false;
+  if (!["ArrowDown", "ArrowUp", "Enter", " ", "Escape"].includes(event.key)) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const buttons = Array.from(dropdown.querySelectorAll(".block-dropdown-menu button"));
+  const selectedIndex = Math.max(0, buttons.findIndex(button => button.getAttribute("aria-selected") === "true"));
+  if (event.key === "Escape") { closeAllBlockDropdowns(); return true; }
+  if (!dropdown.classList.contains("open")) {
+    dropdown.classList.add("open");
+    dropdown.querySelector(".block-dropdown-toggle")?.setAttribute("aria-expanded", "true");
+    buttons[selectedIndex]?.focus();
+    return true;
+  }
+  if (event.key === "Enter" || event.key === " ") {
+    const active = document.activeElement?.closest?.(".block-dropdown-menu button");
+    applyBlockDropdownValue(dropdown, active?.dataset.value || buttons[selectedIndex]?.dataset.value);
+    dropdown.querySelector(".block-dropdown-toggle")?.focus();
+    return true;
+  }
+  const nextIndex = event.key === "ArrowDown" ? (selectedIndex + 1) % buttons.length : (selectedIndex - 1 + buttons.length) % buttons.length;
+  refreshBlockDropdown(dropdown, buttons[nextIndex].dataset.value);
+  buttons[nextIndex]?.focus();
+  return true;
 }
 
 function syncSelectSelectedAttributes(select) {
@@ -991,6 +1081,7 @@ els.visualEditor.addEventListener("change", event => {
   if (event.target.matches(".alert-color")) updateAlertColorSelect(event.target);
 });
 els.visualEditor.addEventListener("click", event => {
+  if (handleBlockDropdownClick(event)) return;
   const removeButton = event.target.closest(".block-remove-button");
   if (removeButton) {
     event.preventDefault();
@@ -1028,7 +1119,10 @@ document.addEventListener("keydown", event => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); saveProject(); showToast("Project saved"); }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "e") { event.preventDefault(); exportMarkdown(); }
 });
-document.addEventListener("click", event => { if (!els.slashMenu.contains(event.target) && !els.visualEditor.contains(event.target)) hideSlashMenu(); });
+document.addEventListener("click", event => {
+  if (!event.target.closest?.(".block-dropdown")) closeAllBlockDropdowns();
+  if (!els.slashMenu.contains(event.target) && !els.visualEditor.contains(event.target)) hideSlashMenu();
+});
 
 loadProject();
 render();

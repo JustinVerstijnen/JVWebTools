@@ -653,3 +653,15 @@ select:hover,
   appearance: auto !important;
   -webkit-appearance: menulist !important;
 }
+
+/* v13: real custom dropdowns for embedded block controls */
+.editable-card { overflow: visible !important; }
+.code-block pre, .docsy-code-block pre { border-radius: 0 0 18px 18px; }
+.block-settings { position: relative; z-index: 20; overflow: visible; padding-right: 12px !important; }
+.block-remove-button { top: -12px !important; right: -12px !important; z-index: 60 !important; }
+.block-dropdown { position: relative; display: inline-block; min-width: 150px; z-index: 80; }
+.block-dropdown-toggle { appearance: none !important; -webkit-appearance: none !important; }
+.block-dropdown-menu { z-index: 9999 !important; }
+.block-dropdown.open { z-index: 9998; }
+.block-dropdown.open .block-dropdown-menu { display: grid !important; }
+.block-settings select.code-language, .block-settings select.alert-color { display: none !important; }
