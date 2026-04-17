@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Markdown Editor - justinverstijnen.nl</title>
+  <meta name="description" content="Markdown Editor is a browser-based visual editor for writing Markdown, inserting Docsy shortcodes, saving drafts locally, and exporting clean .md files for Docsy and GitHub Pages." />
+  <meta name="robots" content="index, follow" />
+  <meta name="author" content="Justin Verstijnen" />
+  <meta property="og:title" content="Markdown Editor" />
+  <meta property="og:description" content="Write visually, add Docsy blocks, save locally in your browser, and export clean Markdown for Docsy and GitHub Pages." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://justinverstijnen.nl/markdowneditor/" />
+  <meta property="og:image" content="https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/logo.svg" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Markdown Editor" />
+  <meta name="twitter:description" content="A visual Markdown editor with Docsy blocks, local browser saving, and Markdown export." />
+  <link rel="canonical" href="https://justinverstijnen.nl/markdowneditor/" />
+  <link rel="icon" href="https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/logo.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <a class="site-logo" href="https://justinverstijnen.nl" target="_blank" rel="noreferrer" aria-label="Open Justin Verstijnen website">
+        <img src="https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/logo.svg" alt="Justin Verstijnen" width="50" height="50" />
+      </a>
+      <div class="brand">
+        <h1>Markdown Editor</h1>
+        <p>Write visually, drag blocks, export clean Markdown for Docsy and GitHub Pages.</p>
+      </div>
+      <div class="view-switch" aria-label="Editor view">
+        <button class="pill active" id="editorBtn" type="button"><i class="fa-solid fa-pen-to-square"></i> Editor</button>
+        <button class="pill" id="codeBtn" type="button"><i class="fa-solid fa-code"></i> Markdown</button>
+      </div>
+      <div class="top-actions">
+        <button class="pill" id="postInfoBtn" type="button"><i class="fa-solid fa-circle-info"></i> Post Information</button>
+        <button class="pill" id="importBtn" type="button"><i class="fa-solid fa-file-import"></i> Import .md</button>
+        <input id="importFile" type="file" accept=".md,.markdown,text/markdown,text/plain" hidden />
+        <button class="pill primary" id="exportBtn" type="button"><i class="fa-solid fa-file-export"></i> Export .md</button>
+        <button class="pill danger" id="resetBtn" type="button"><i class="fa-solid fa-trash"></i> Reset</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <aside class="sidebar">
+        <h2>Blocks</h2>
+        <p class="sidebar-copy">Drag a block into the editor, click it, or type <strong>/</strong> inside the editor to open the command menu.</p>
+        <div class="gallery-preview" id="blockGallery"></div>
+      </aside>
+
+      <section class="workspace">
+        <div class="workspace-head">
+          <input id="projectName" type="text" placeholder="Project or file name" />
+          <span class="hint" id="saveStatus">Not saved yet</span>
+        </div>
+
+        <div class="editor-toolbar" id="editorToolbar" aria-label="Formatting toolbar">
+          <select id="headingSelect" aria-label="Heading level">
+            <option value="">Paragraph</option>
+            <option value="h2">Heading 2</option>
+            <option value="h3">Heading 3</option>
+            <option value="h4">Heading 4</option>
+            <option value="h5">Heading 5</option>
+            <option value="h6">Heading 6</option>
+          </select>
+          <button type="button" data-format="bold"><i class="fa-solid fa-bold"></i> Bold</button>
+          <button type="button" data-format="italic"><i class="fa-solid fa-italic"></i> Italic</button>
+          <button type="button" data-format="link"><i class="fa-solid fa-link"></i> Link</button>
+          <button type="button" data-format="image"><i class="fa-solid fa-image"></i> Image</button>
+          <button type="button" data-format="table"><i class="fa-solid fa-table"></i> Table</button>
+          <button type="button" data-format="align-left"><i class="fa-solid fa-align-left"></i> Table left</button>
+          <button type="button" data-format="align-center"><i class="fa-solid fa-align-center"></i> Table center</button>
+          <button type="button" data-format="table-add-row"><i class="fa-solid fa-table-rows"></i> Add row</button>
+          <button type="button" data-format="table-remove-row"><i class="fa-solid fa-trash-can"></i> Remove row</button>
+          <button type="button" data-format="table-add-column"><i class="fa-solid fa-table-columns"></i> Add column</button>
+          <button type="button" data-format="table-remove-column"><i class="fa-solid fa-trash-can"></i> Remove column</button>
+          <button type="button" data-format="buttondocsy"><i class="fa-solid fa-square-up-right"></i> Docsy button</button>
+          <button type="button" data-format="code"><i class="fa-solid fa-code"></i> Code</button>
+          <button type="button" data-format="codedocsy"><i class="fa-solid fa-file-code"></i> Docsy code</button>
+          <button type="button" data-format="separator"><i class="fa-solid fa-minus"></i> Separator</button>
+          <button type="button" data-format="delete-block"><i class="fa-solid fa-trash-can"></i> Remove block</button>
+        </div>
+
+        <div class="workspace-body">
+          <article id="visualEditor" class="visual-editor" contenteditable="true" spellcheck="true" aria-label="Editable document"></article>
+          <textarea id="markdownEditor" class="code-textarea" spellcheck="false" aria-label="Markdown code editor"></textarea>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <aside class="metadata-drawer" id="metadataDrawer" aria-label="Post Information">
+    <div class="drawer-head">
+      <h2>Post Information</h2>
+      <button class="icon-btn" id="closePostInfoBtn" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="field"><label for="fmTitle">Title</label><input id="fmTitle" type="text" placeholder="For example: Getting started" /></div>
+    <div class="field"><label for="fmDate">Date</label><input id="fmDate" type="date" /></div>
+    <div class="field"><label for="fmDescription">Description</label><textarea id="fmDescription" placeholder="Short SEO or Docsy description"></textarea></div>
+    <div class="field"><label for="fmTags">Tags</label><input id="fmTags" type="text" placeholder="comma, separated, tags" /><div class="field-help">Exported as a YAML array.</div></div>
+    <div class="field"><label for="fmCategories">Categories</label><input id="fmCategories" type="text" placeholder="docs, guide" /></div>
+    <div class="field"><label for="fmWeight">Weight</label><input id="fmWeight" type="number" placeholder="1" /></div>
+    <div class="field"><label for="fmType">Type / layout</label><input id="fmType" type="text" placeholder="docs" /></div>
+    <div class="field"><label for="fmHidden">Hidden</label><select id="fmHidden"><option value="false">false</option><option value="true">true</option></select></div>
+    <button class="pill primary" id="savePostInfoBtn" type="button">Save</button>
+  </aside>
+
+  <div class="modal-panel" id="imagePanel" role="dialog" aria-label="Insert image">
+    <div class="modal-card panel-animate">
+      <h2>Insert image</h2>
+      <p>Paste an image URL. The alt text will automatically be renaed to the filename, but you can change it to your own value.</p>
+      <div class="field"><label for="imageUrl">Image URL</label><input id="imageUrl" type="url" placeholder="https://example.com/image.jpg" /></div>
+      <div class="field"><label for="imageAlt">Alt text</label><input id="imageAlt" type="text" placeholder="Alt text" /></div>
+      <div class="panel-actions"><button class="pill" id="cancelImageBtn" type="button">Cancel</button><button class="pill primary" id="insertImageBtn" type="button">Insert image</button></div>
+    </div>
+  </div>
+
+  <div class="modal-panel" id="tablePanel" role="dialog" aria-label="Insert table">
+    <div class="modal-card panel-animate">
+      <h2>Insert table</h2>
+      <p>Choose the number of columns and body rows. A header row is added automatically above those rows.</p>
+      <div class="field"><label for="tableColumns">Columns</label><input id="tableColumns" type="number" min="1" max="12" value="3" placeholder="Number of columns" /></div>
+      <div class="field"><label for="tableRows">Body rows</label><input id="tableRows" type="number" min="1" max="30" value="3" placeholder="Number of body rows" /><div class="field-help">Example: 3 body rows creates 1 header row + 3 editable rows.</div></div>
+      <div class="field"><label for="tableAlign">Alignment</label><select id="tableAlign" aria-label="Table alignment"><option value="left">Left aligned</option><option value="center">Centered</option></select></div>
+      <div class="panel-actions"><button class="pill" id="cancelTableBtn" type="button">Cancel</button><button class="pill primary" id="insertTableBtn" type="button">Insert table</button></div>
+    </div>
+  </div>
+
+  <div class="slash-menu" id="slashMenu" role="listbox" aria-label="Command menu"></div>
+  <div class="toast" id="toast"></div>
+
+  <div class="ad-footer" aria-label="Advertisement">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4082816808518335" crossorigin="anonymous"></script>
+    <ins class="adsbygoogle" style="display:block; text-align:center;" data-ad-layout="in-article" data-ad-format="fluid" data-ad-client="ca-pub-4082816808518335" data-ad-slot="9865066433"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  </div>
+  
+  <script src="assets/script.js"></script>
+</body>
+</html>
