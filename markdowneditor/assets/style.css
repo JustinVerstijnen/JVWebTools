@@ -681,3 +681,49 @@ select:hover,
 .visual-editor ul[data-checklist="true"] { list-style: none; padding-left: 0; }
 .visual-editor ul[data-checklist="true"] li { display: flex; align-items: flex-start; gap: 0.5rem; }
 .shortcode-card textarea, .raw-html-card textarea { width: 100%; min-height: 140px; border: 0; background: transparent; padding: 14px; resize: vertical; outline: none; }
+
+
+/* v14: richer Docsy button styling and nested list polish */
+.visual-editor a.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.72rem 1.15rem;
+  border-radius: 999px;
+  font-weight: 800;
+  text-decoration: none;
+  line-height: 1.2;
+  border: 1px solid transparent;
+  box-shadow: 0 10px 24px rgba(15, 30, 50, 0.12);
+  transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+.visual-editor a.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(15, 30, 50, 0.16);
+}
+.visual-editor a.btn.btn-primary,
+.visual-editor a.btn.btn-lg.btn-primary {
+  background: linear-gradient(180deg, #5ba0d1, #3d84b8);
+  color: white;
+}
+.visual-editor a.btn.btn-secondary {
+  background: linear-gradient(180deg, #eef4f8, #dde8f0);
+  color: #173247;
+  border-color: rgba(18, 32, 51, 0.12);
+}
+.visual-editor a.btn.btn-outline-primary {
+  background: rgba(255,255,255,0.9);
+  color: #256a99;
+  border-color: rgba(79, 148, 199, 0.55);
+}
+.visual-editor a.btn.btn-lg {
+  padding: 0.9rem 1.45rem;
+  font-size: 1.04rem;
+}
+.visual-editor li > ul,
+.visual-editor li > ol {
+  margin-top: 0.35em;
+  margin-bottom: 0.35em;
+}
+.visual-editor .image-link { display: block; }
