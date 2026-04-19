@@ -1,5 +1,5 @@
-const STORAGE_KEY = "markdown-editor-project-v11";
-const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
+const STORAGE_KEY = "markdown-editor-project-v12";
+const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
 
 const LANGUAGES = [
   ["powershell", "PowerShell"], ["cmd", "cmd"], ["bash", "Bash"], ["json", "JSON"], ["csv", "CSV"],
@@ -88,6 +88,8 @@ let lastSelectionSavedAt = 0;
 let pendingPanelInsertOptions = {};
 let pendingInsertAnchorBlock = null;
 let pendingButtonEditAnchor = null;
+let pendingImageEditFigure = null;
+let pendingTableEditTarget = null;
 let normalizeFrame = 0;
 let normalizeTimer = 0;
 let lastSlashQuery = null;
@@ -505,6 +507,35 @@ function isHtmlBlockLine(line) {
 function htmlBlockToCard(lines) {
   return rawHtmlCard("Raw HTML", lines.join("\n").trim());
 }
+function markdownQuoteToHtml(lines, startIndex) {
+  const quoteLines = [];
+  let index = startIndex;
+  while (index < lines.length) {
+    const rawLine = lines[index];
+    if (!/^>\s?/.test(rawLine.trim())) break;
+    quoteLines.push(rawLine);
+    index += 1;
+  }
+  const firstLine = quoteLines[0]?.trim() || "";
+  const alertMatch = firstLine.match(/^>\s*\[!(NOTE|TIP|WARNING|CAUTION)\]\s*$/i);
+  if (alertMatch) {
+    const keyword = alertMatch[1].toUpperCase();
+    const colorMap = { NOTE: "info", TIP: "success", WARNING: "warning", CAUTION: "danger" };
+    const color = colorMap[keyword] || "info";
+    const body = quoteLines
+      .slice(1)
+      .map(line => line.replace(/^>\s?/, ""))
+      .join("\n")
+      .trim();
+    return { html: alertBlockHtml("markdown", color, body), nextIndex: Math.max(startIndex, index - 1) };
+  }
+
+  const body = quoteLines.map(line => line.replace(/^>\s?/, "")).join("\n").trim();
+  return {
+    html: `<blockquote>${body.split("\n").map(line => line ? inlineMarkdown(line) : '<br>').join('<br>')}</blockquote><p><br></p>`,
+    nextIndex: Math.max(startIndex, index - 1)
+  };
+}
 function getListLineInfo(rawLine = "") {
   const raw = String(rawLine || "");
   const indentMatch = raw.match(/^(	+| +)/);
@@ -611,6 +642,12 @@ function markdownToHtml(markdown) {
     if (/^!\[[^\]]*\]\([^)]+\)/.test(line.trim())) {
       const match = line.trim().match(/^!\[([^\]]*)\]\(([^)]+)\)/);
       html.push(imageHtml(match[2], match[1], "Optional caption", match[2]));
+      continue;
+    }
+    if (/^>\s?/.test(line.trim())) {
+      const quoteResult = markdownQuoteToHtml(lines, index);
+      html.push(quoteResult.html);
+      index = quoteResult.nextIndex;
       continue;
     }
     if (/^(?:[-*+]\s+|\d+\.\s+)/.test(line.trim())) {
@@ -820,6 +857,40 @@ function insertBlock(blockId, options = {}) {
   showToast(`${block.name} inserted`);
 }
 
+
+function getManagedBlockHost(node) {
+  if (!node) return null;
+  if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+  if (!node || !node.closest) return null;
+  const direct = node.closest('.editable-card, figure.image-block, table');
+  if (direct && els.visualEditor.contains(direct)) return direct;
+  const buttonParagraph = node.closest('p');
+  if (buttonParagraph && els.visualEditor.contains(buttonParagraph) && buttonParagraph.querySelector(':scope > a.btn')) return buttonParagraph;
+  return null;
+}
+function getManagedBlocks(root = els.visualEditor) {
+  const blocks = [];
+  const pushUnique = item => {
+    if (item && item !== els.visualEditor && !blocks.includes(item)) blocks.push(item);
+  };
+  if (root.matches?.('.editable-card, figure.image-block, table')) pushUnique(root);
+  if (root.matches?.('p') && root.querySelector?.(':scope > a.btn')) pushUnique(root);
+  root.querySelectorAll?.('.editable-card, figure.image-block, table').forEach(pushUnique);
+  root.querySelectorAll?.('p').forEach(p => {
+    if (p.querySelector(':scope > a.btn')) pushUnique(p);
+  });
+  return blocks;
+}
+function isTableHost(block) {
+  return !!block?.matches?.('table');
+}
+function isImageHost(block) {
+  return !!block?.matches?.('figure.image-block');
+}
+function isButtonHost(block) {
+  return !!block?.matches?.('p') && !!block.querySelector?.(':scope > a.btn');
+}
+
 function getDeletableBlockFromNode(node) {
   if (!node) return null;
   if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
@@ -843,31 +914,28 @@ function deleteCurrentBlock() {
 function addInlineBlockControls(scope = els.visualEditor) {
   const root = getScopeRoot(scope);
   if (!root || !root.querySelectorAll) return;
-  const selector = ".editable-card, figure.image-block, table";
-  const blocksWithControls = [];
-  if (root.matches?.(selector)) blocksWithControls.push(root);
-  root.querySelectorAll(selector).forEach(block => blocksWithControls.push(block));
+  const blocksWithControls = getManagedBlocks(root);
   blocksWithControls.forEach(block => {
-    let button = null;
+    let controls = null;
     try {
-      button = block.querySelector(":scope > .block-remove-button");
+      controls = block.querySelector(":scope > .block-inline-controls");
     } catch (error) {
-      button = Array.from(block.children).find(child => child.classList?.contains("block-remove-button")) || null;
+      controls = Array.from(block.children).find(child => child.classList?.contains("block-inline-controls")) || null;
     }
-    if (!button) {
-      button = document.createElement("button");
-      button.type = "button";
-      button.className = "block-remove-button";
-      button.contentEditable = "false";
-      button.title = "Remove block";
-      button.setAttribute("aria-label", "Remove block");
-      button.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-      block.insertBefore(button, block.firstChild);
+    if (!controls) {
+      controls = document.createElement("div");
+      controls.className = "block-inline-controls";
+      controls.contentEditable = "false";
+      controls.innerHTML = `
+        <button type="button" class="block-edit-button" title="Edit block" aria-label="Edit block"><i class="fa-solid fa-pen"></i></button>
+        <button type="button" class="block-remove-button" title="Remove block" aria-label="Remove block"><i class="fa-solid fa-xmark"></i></button>
+      `;
+      block.insertBefore(controls, block.firstChild);
     }
   });
-  root.querySelectorAll(".block-remove-button").forEach(button => {
-    const host = button.parentElement;
-    if (!host?.matches?.(selector)) button.remove();
+  root.querySelectorAll(".block-inline-controls").forEach(controls => {
+    const host = controls.parentElement;
+    if (!getManagedBlockHost(host)) controls.remove();
   });
 }
 
@@ -1076,7 +1144,8 @@ function handlePanelKeydown(event) {
 function openImagePanel(options = {}) {
   pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false };
   const currentRange = getCurrentEditorRange();
-  pendingInsertAnchorBlock = getBlockAnchorFromRange(currentRange) || (hasFreshSavedRange() ? getBlockAnchorFromRange(savedRange) : null);
+  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(currentRange) || (hasFreshSavedRange() ? getBlockAnchorFromRange(savedRange) : null);
+  pendingImageEditFigure = options.editFigure || null;
   if (currentRange) {
     savedRange = currentRange;
     lastSelectionSavedAt = Date.now();
@@ -1085,9 +1154,12 @@ function openImagePanel(options = {}) {
     lastSelectionSavedAt = Date.now();
     pendingPanelInsertOptions.allowOldSelection = true;
   }
-  els.imageUrl.value = "";
-  els.imageAlt.value = "";
-  els.imageLink.value = "";
+  const figure = options.editFigure || null;
+  const img = figure?.querySelector?.("img") || null;
+  const anchor = figure?.querySelector?.(":scope > a.image-link") || figure?.querySelector?.("a.image-link") || null;
+  els.imageUrl.value = img?.getAttribute?.("src") || "";
+  els.imageAlt.value = img?.getAttribute?.("alt") || "";
+  els.imageLink.value = figure?.getAttribute?.("data-link") || anchor?.getAttribute?.("href") || img?.getAttribute?.("src") || "";
   els.imagePanel.classList.add("open");
   setTimeout(() => els.imageUrl.focus(), 80);
 }
@@ -1097,9 +1169,34 @@ function insertImageFromPanel() {
   const link = els.imageLink.value.trim() || url;
   if (!url) { showToast("Paste an image URL first"); return; }
   els.imagePanel.classList.remove("open");
-  insertHtmlAtCursor(imageHtml(url, alt || "Image", "Optional caption", link), { ...pendingPanelInsertOptions, anchorBlock: pendingInsertAnchorBlock });
+  if (pendingImageEditFigure && pendingImageEditFigure.isConnected) {
+    let anchor = pendingImageEditFigure.querySelector(":scope > a.image-link") || pendingImageEditFigure.querySelector("a.image-link");
+    let img = pendingImageEditFigure.querySelector("img");
+    if (!img) img = document.createElement("img");
+    img.setAttribute("src", url);
+    img.setAttribute("alt", alt || "Image");
+    if (!anchor) {
+      anchor = document.createElement("a");
+      anchor.className = "image-link";
+      pendingImageEditFigure.insertBefore(anchor, pendingImageEditFigure.firstChild);
+    }
+    anchor.setAttribute("href", link);
+    anchor.setAttribute("target", "_blank");
+    anchor.setAttribute("rel", "noreferrer");
+    if (!anchor.contains(img)) {
+      anchor.innerHTML = "";
+      anchor.appendChild(img);
+    }
+    pendingImageEditFigure.setAttribute("data-link", link);
+    normalizeEditorContent(pendingImageEditFigure);
+    saveProject();
+    showToast("Image updated");
+  } else {
+    insertHtmlAtCursor(imageHtml(url, alt || "Image", "Optional caption", link), { ...pendingPanelInsertOptions, anchorBlock: pendingInsertAnchorBlock });
+    showToast("Image inserted");
+  }
   pendingInsertAnchorBlock = null;
-  showToast("Image inserted");
+  pendingImageEditFigure = null;
 }
 function openButtonPanel(options = {}) {
   pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false };
@@ -1148,7 +1245,8 @@ function saveButtonFromPanel() {
 function openTablePanel(options = {}) {
   pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false };
   const currentRange = getCurrentEditorRange();
-  pendingInsertAnchorBlock = getBlockAnchorFromRange(currentRange) || (hasFreshSavedRange() ? getBlockAnchorFromRange(savedRange) : null);
+  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(currentRange) || (hasFreshSavedRange() ? getBlockAnchorFromRange(savedRange) : null);
+  pendingTableEditTarget = options.editTable || null;
   if (currentRange) {
     savedRange = currentRange;
     lastSelectionSavedAt = Date.now();
@@ -1157,17 +1255,49 @@ function openTablePanel(options = {}) {
     lastSelectionSavedAt = Date.now();
     pendingPanelInsertOptions.allowOldSelection = true;
   }
-  els.tableColumns.value = 3;
-  els.tableRows.value = 3;
-  els.tableAlign.value = "left";
+  const editTable = options.editTable || null;
+  els.tableColumns.value = editTable?.querySelector?.("tr")?.children?.length || 3;
+  els.tableRows.value = editTable?.querySelectorAll?.("tbody tr")?.length || 3;
+  els.tableAlign.value = editTable?.getAttribute?.("data-align") || "left";
+  els.insertTableBtn.textContent = editTable ? "Update table" : "Insert table";
   els.tablePanel.classList.add("open");
   setTimeout(() => els.tableColumns.focus(), 80);
 }
+function copyTableContent(sourceTable, targetTable) {
+  if (!sourceTable || !targetTable) return;
+  const sourceRows = Array.from(sourceTable.querySelectorAll("tr"));
+  const targetRows = Array.from(targetTable.querySelectorAll("tr"));
+  targetRows.forEach((targetRow, rowIndex) => {
+    const sourceRow = sourceRows[rowIndex];
+    if (!sourceRow) return;
+    Array.from(targetRow.children).forEach((targetCell, cellIndex) => {
+      const sourceCell = sourceRow.children[cellIndex];
+      if (!sourceCell) return;
+      targetCell.innerHTML = sourceCell.innerHTML;
+    });
+  });
+}
 function insertTableFromPanel() {
   els.tablePanel.classList.remove("open");
-  insertHtmlAtCursor(tableHtml(els.tableColumns.value, els.tableRows.value, els.tableAlign.value), { ...pendingPanelInsertOptions, anchorBlock: pendingInsertAnchorBlock });
+  const html = tableHtml(els.tableColumns.value, els.tableRows.value, els.tableAlign.value);
+  if (pendingTableEditTarget && pendingTableEditTarget.isConnected) {
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = html;
+    const newTable = wrapper.querySelector("table");
+    if (newTable) {
+      copyTableContent(pendingTableEditTarget, newTable);
+      pendingTableEditTarget.replaceWith(newTable);
+      normalizeEditorContent(newTable);
+      saveProject();
+      showToast("Table updated");
+    }
+  } else {
+    insertHtmlAtCursor(html, { ...pendingPanelInsertOptions, anchorBlock: pendingInsertAnchorBlock });
+    showToast("Table inserted");
+  }
   pendingInsertAnchorBlock = null;
-  showToast("Table inserted");
+  pendingTableEditTarget = null;
+  els.insertTableBtn.textContent = "Insert table";
 }
 
 function fillPostInfoForm() {
@@ -1790,12 +1920,35 @@ els.visualEditor.addEventListener("click", event => {
   if (removeButton) {
     event.preventDefault();
     event.stopPropagation();
-    const block = removeButton.closest(".editable-card, figure.image-block, table");
+    const block = getManagedBlockHost(removeButton);
     if (block) {
       block.remove();
       saveProject();
       showToast("Block removed");
     }
+    return;
+  }
+  const editButton = event.target.closest(".block-edit-button");
+  if (editButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    const block = getManagedBlockHost(editButton);
+    if (isImageHost(block)) {
+      openImagePanel({ editFigure: block, anchorBlock: block, allowOldSelection: true });
+      return;
+    }
+    if (isButtonHost(block)) {
+      const anchor = block.querySelector(':scope > a.btn');
+      openButtonPanel({ editAnchor: anchor, anchorBlock: block, allowOldSelection: true });
+      return;
+    }
+    if (isTableHost(block)) {
+      openTablePanel({ editTable: block, anchorBlock: block, allowOldSelection: true });
+      return;
+    }
+    const textarea = block?.querySelector?.('textarea');
+    const editable = textarea || block?.querySelector?.('[contenteditable="true"]');
+    editable?.focus?.();
     return;
   }
   updateTableToolbarVisibility();
@@ -1829,7 +1982,7 @@ els.markdownEditor.addEventListener("input", () => {
   }, 120);
 });
 els.editorToolbar.querySelectorAll("button[data-format]").forEach(button => button.addEventListener("click", () => execFormat(button.dataset.format)));
-els.cancelImageBtn.addEventListener("click", () => { els.imagePanel.classList.remove("open"); pendingInsertAnchorBlock = null; });
+els.cancelImageBtn.addEventListener("click", () => { els.imagePanel.classList.remove("open"); pendingInsertAnchorBlock = null; pendingImageEditFigure = null; });
 els.insertImageBtn.addEventListener("click", insertImageFromPanel);
 els.cancelButtonBtn.addEventListener("click", () => { els.buttonPanel.classList.remove("open"); pendingInsertAnchorBlock = null; pendingButtonEditAnchor = null; });
 els.insertButtonBtn.addEventListener("click", saveButtonFromPanel);
@@ -1840,13 +1993,13 @@ els.imageUrl.addEventListener("input", () => {
     els.imageLink.dataset.autoValue = els.imageUrl.value.trim();
   }
 });
-els.imagePanel.addEventListener("click", event => { if (event.target === els.imagePanel) { els.imagePanel.classList.remove("open"); pendingInsertAnchorBlock = null; } });
+els.imagePanel.addEventListener("click", event => { if (event.target === els.imagePanel) { els.imagePanel.classList.remove("open"); pendingInsertAnchorBlock = null; pendingImageEditFigure = null; } });
 els.imagePanel.addEventListener("keydown", handlePanelKeydown);
 els.buttonPanel.addEventListener("click", event => { if (event.target === els.buttonPanel) { els.buttonPanel.classList.remove("open"); pendingInsertAnchorBlock = null; pendingButtonEditAnchor = null; } });
 els.buttonPanel.addEventListener("keydown", handlePanelKeydown);
-els.cancelTableBtn.addEventListener("click", () => { els.tablePanel.classList.remove("open"); pendingInsertAnchorBlock = null; });
+els.cancelTableBtn.addEventListener("click", () => { els.tablePanel.classList.remove("open"); pendingInsertAnchorBlock = null; pendingTableEditTarget = null; els.insertTableBtn.textContent = "Insert table"; });
 els.insertTableBtn.addEventListener("click", insertTableFromPanel);
-els.tablePanel.addEventListener("click", event => { if (event.target === els.tablePanel) { els.tablePanel.classList.remove("open"); pendingInsertAnchorBlock = null; } });
+els.tablePanel.addEventListener("click", event => { if (event.target === els.tablePanel) { els.tablePanel.classList.remove("open"); pendingInsertAnchorBlock = null; pendingTableEditTarget = null; els.insertTableBtn.textContent = "Insert table"; } });
 els.tablePanel.addEventListener("keydown", handlePanelKeydown);
 document.addEventListener("keydown", event => {
   const active = document.activeElement;
