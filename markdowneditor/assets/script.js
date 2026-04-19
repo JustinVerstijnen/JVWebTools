@@ -467,27 +467,58 @@ function buildListHtml(lines, startIndex) {
   let index = startIndex;
   let ordered = false;
   let checklist = false;
+
   while (index < lines.length) {
-    const line = lines[index].trim();
+    const rawLine = lines[index] || "";
+    const line = rawLine.trim();
+
+    if (!line) {
+      let probe = index + 1;
+      while (probe < lines.length && !String(lines[probe] || "").trim()) probe += 1;
+      if (probe < lines.length && /^(?:[-*+]\s+|\d+\.\s+)/.test(String(lines[probe] || "").trim())) {
+        index = probe;
+        continue;
+      }
+      break;
+    }
+
     const match = line.match(/^(?:([-*+])|(\d+)\.)\s+(.*)$/);
     if (!match) break;
     if (!items.length) ordered = Boolean(match[2]);
     if (Boolean(match[2]) !== ordered) break;
+
     let itemBody = match[3] || "";
+    let probe = index + 1;
+    while (probe < lines.length) {
+      const continuationRaw = lines[probe] || "";
+      const continuation = continuationRaw.trim();
+      if (!continuation) {
+        let nextNonEmpty = probe + 1;
+        while (nextNonEmpty < lines.length && !String(lines[nextNonEmpty] || "").trim()) nextNonEmpty += 1;
+        if (nextNonEmpty < lines.length && /^(?:[-*+]\s+|\d+\.\s+)/.test(String(lines[nextNonEmpty] || "").trim())) break;
+        probe += 1;
+        continue;
+      }
+      if (/^(?:[-*+]\s+|\d+\.\s+)/.test(continuation)) break;
+      itemBody += `<br>${inlineMarkdown(continuation)}`;
+      probe += 1;
+    }
+
     const taskMatch = itemBody.match(/^\[( |x|X)\]\s+(.*)$/);
     if (taskMatch) {
       checklist = true;
       itemBody = taskMatch[2];
-      items.push(`<li><input type="checkbox" ${/[xX]/.test(taskMatch[1]) ? "checked" : ""}> ${inlineMarkdown(itemBody)}</li>`);
+      items.push(`<li><input type="checkbox" ${/[xX]/.test(taskMatch[1]) ? "checked" : ""}> ${itemBody}</li>`);
     } else {
       items.push(`<li>${inlineMarkdown(itemBody)}</li>`);
     }
-    index += 1;
+    index = probe;
   }
+
   const tag = ordered ? "ol" : "ul";
   return {
     html: `<${tag}${checklist ? ' data-checklist="true"' : ""}>${items.join("")}</${tag}><p><br></p>`,
-    nextIndex: index - 1
+    nextIndex: Math.max(startIndex, index - 1)
   };
 }
 
@@ -557,7 +588,11 @@ function markdownToHtml(markdown) {
   return html.join("\n").replace(/__TOKEN_(\d+)__/g, (_, number) => tokens[Number(number)] || "");
 }
 function inlineMarkdown(value) {
-  return escapeHtml(value)
+  const normalizedValue = String(value || "")
+    .replace(/\\([<>])/g, "$1")
+    .replace(/\\[([^\]]+)\\]\(([^)]+)\)/g, "[$1]($2)");
+
+  return escapeHtml(normalizedValue)
     .replace(/&lt;a\s+([^&]*)&gt;([\s\S]*?)&lt;\/a&gt;/gi, (_, attrs, body) => {
       const hrefMatch = attrs.match(/href="([^"]+)"/i);
       const classMatch = attrs.match(/class="([^"]+)"/i);
