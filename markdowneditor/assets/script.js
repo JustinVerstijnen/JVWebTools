@@ -165,9 +165,7 @@ function rawHtmlDocsyBlockHtml(html = `<section class="custom-block">
   <h2>Custom HTML</h2>
   <p>Edit this raw HTML block.</p>
 </section>`) {
-  return shortcodeCard("Docsy Raw HTML", `{{< rawhtml >}}
-${html}
-{{< /rawhtml >}}`);
+  return rawHtmlCard("Raw HTML", html);
 }
 function alertBlockHtml(kind = "markdown", color = "info", text = "") {
   const label = ALERTS.find(([value]) => value === color)?.[1] || "Info";
@@ -178,6 +176,9 @@ function alertBlockHtml(kind = "markdown", color = "info", text = "") {
 }
 function shortcodeCard(title, shortcode) {
   return `<div class="shortcode-card editable-card" data-shortcode="true" contenteditable="false"><div class="block-settings"><span><i class="fa-solid fa-cube"></i> ${escapeHtml(title)}</span></div><textarea>${escapeHtml(shortcode)}</textarea></div><p><br></p>`;
+}
+function rawHtmlCard(title, html) {
+  return `<div class="raw-html-card editable-card" data-raw-html="true" contenteditable="false"><div class="block-settings"><span><i class="fa-brands fa-html5"></i> ${escapeHtml(title)}</span></div><textarea>${escapeHtml(html)}</textarea></div><p><br></p>`;
 }
 function imageHtml(src, alt = "Image", caption = "Optional caption") {
   return `<figure class="image-block" data-resizable="true"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"><figcaption contenteditable="true">${escapeHtml(caption)}</figcaption></figure><p><br></p>`;
@@ -217,7 +218,7 @@ const blocks = [
   { id: "code", command: "/code", icon: "fa-code", category: "Code", sidebar: true, name: "Code", description: "Generic fenced code block", html: codeBlockHtml() },
   { id: "codedocsy", command: "/codedocsy", icon: "fa-file-code", category: "Docsy", sidebar: true, name: "Docsy Code", description: "Docsy card code shortcode", html: docsyCodeBlockHtml() },
   { id: "html", command: "/html", icon: "fa-brands fa-html5", category: "Code", sidebar: true, name: "HTML", description: "HTML code block", html: htmlBlockHtml() },
-  { id: "htmldocsy", command: "/htmldocsy", icon: "fa-brands fa-html5", category: "Docsy", sidebar: true, name: "Docsy Raw HTML", description: "Insert raw HTML shortcode", html: rawHtmlDocsyBlockHtml() },
+  { id: "htmldocsy", command: "/htmldocsy", icon: "fa-brands fa-html5", category: "Docsy", sidebar: true, name: "Docsy Raw HTML", description: "Insert raw HTML", html: rawHtmlDocsyBlockHtml() },
   { id: "alert", command: "/alert", icon: "fa-bell", category: "Alerts", sidebar: true, name: "Alert", description: "Markdown alert", html: alertBlockHtml("markdown", "info") },
   { id: "info", command: "/info", icon: "fa-circle-info", category: "Alerts", sidebar: false, name: "Info", description: "Markdown info alert", html: alertBlockHtml("markdown", "info") },
   { id: "warning", command: "/warning", icon: "fa-triangle-exclamation", category: "Alerts", sidebar: true, name: "Warning", description: "Markdown warning alert", html: alertBlockHtml("markdown", "warning") },
@@ -362,6 +363,7 @@ function nodeToMarkdown(node) {
   if (node.nodeType === Node.TEXT_NODE) return node.textContent.replace(/\u00a0/g, " ");
   if (node.nodeType !== Node.ELEMENT_NODE) return "";
   if (node.matches(".shortcode-card")) return `\n\n${node.querySelector("textarea")?.value.trim() || ""}\n\n`;
+  if (node.matches(".raw-html-card")) return `\n\n${node.querySelector("textarea")?.value.trim() || ""}\n\n`;
   if (node.matches(".markdown-alert-block")) {
     const color = node.dataset.color || "info";
     const alert = ALERTS.find(([v]) => v === color) || ALERTS[0];
@@ -398,7 +400,19 @@ function nodeToMarkdown(node) {
     case "em": case "i": return `_${content}_`;
     case "input": return node.type === "checkbox" ? (node.checked ? "[x] " : "[ ] ") : "";
     case "button": return "";
-    case "a": return `[${content || node.getAttribute("href")}](${node.getAttribute("href") || ""})`;
+    case "a": {
+      const href = node.getAttribute("href") || "";
+      const classes = (node.getAttribute("class") || "").trim();
+      if (classes.includes("btn")) {
+        const target = node.getAttribute("target");
+        const rel = node.getAttribute("rel");
+        const attrs = [`class="${escapeHtml(classes)}"`, `href="${escapeHtml(href)}"`];
+        if (target) attrs.push(`target="${escapeHtml(target)}"`);
+        if (rel) attrs.push(`rel="${escapeHtml(rel)}"`);
+        return `<a ${attrs.join(" ")}>${content || href}</a>`;
+      }
+      return `[${content || href}](${href})`;
+    }
     case "img": return `\n![${node.getAttribute("alt") || ""}](${node.getAttribute("src") || ""})\n\n`;
     case "figure": return figureToMarkdown(node);
     case "br": return "\n";
@@ -441,6 +455,42 @@ function tableToMarkdown(table) {
   return `\n${[toRow(normalized[0]), toRow(separator), ...normalized.slice(1).map(toRow)].join("\n")}\n\n`;
 }
 
+function isHtmlBlockLine(line) {
+  const trimmed = line.trim();
+  return /^<([a-z][\w:-]*)(?:\s[^>]*)?>/i.test(trimmed) || /^<\/[a-z][\w:-]*>$/i.test(trimmed);
+}
+function htmlBlockToCard(lines) {
+  return rawHtmlCard("Raw HTML", lines.join("\n").trim());
+}
+function buildListHtml(lines, startIndex) {
+  const items = [];
+  let index = startIndex;
+  let ordered = false;
+  let checklist = false;
+  while (index < lines.length) {
+    const line = lines[index].trim();
+    const match = line.match(/^(?:([-*+])|(\d+)\.)\s+(.*)$/);
+    if (!match) break;
+    if (!items.length) ordered = Boolean(match[2]);
+    if (Boolean(match[2]) !== ordered) break;
+    let itemBody = match[3] || "";
+    const taskMatch = itemBody.match(/^\[( |x|X)\]\s+(.*)$/);
+    if (taskMatch) {
+      checklist = true;
+      itemBody = taskMatch[2];
+      items.push(`<li><input type="checkbox" ${/[xX]/.test(taskMatch[1]) ? "checked" : ""}> ${inlineMarkdown(itemBody)}</li>`);
+    } else {
+      items.push(`<li>${inlineMarkdown(itemBody)}</li>`);
+    }
+    index += 1;
+  }
+  const tag = ordered ? "ol" : "ul";
+  return {
+    html: `<${tag}${checklist ? ' data-checklist="true"' : ""}>${items.join("")}</${tag}><p><br></p>`,
+    nextIndex: index - 1
+  };
+}
+
 function markdownToHtml(markdown) {
   let text = String(markdown || "").replace(/^---\n[\s\S]*?\n---\n?/, "");
   const tokens = [];
@@ -480,6 +530,21 @@ function markdownToHtml(markdown) {
       html.push(imageHtml(match[2], match[1], "Optional caption"));
       continue;
     }
+    if (/^(?:[-*+]\s+|\d+\.\s+)/.test(line.trim())) {
+      const listResult = buildListHtml(lines, index);
+      html.push(listResult.html);
+      index = listResult.nextIndex;
+      continue;
+    }
+    if (isHtmlBlockLine(line)) {
+      const htmlLines = [line];
+      while (index + 1 < lines.length && lines[index + 1].trim() && isHtmlBlockLine(lines[index + 1])) {
+        index += 1;
+        htmlLines.push(lines[index]);
+      }
+      html.push(htmlBlockToCard(htmlLines));
+      continue;
+    }
     if (/^\|.*\|$/.test(line.trim())) {
       const tableLines = [];
       while (index < lines.length && /^\|.*\|$/.test(lines[index].trim())) { tableLines.push(lines[index]); index++; }
@@ -493,9 +558,22 @@ function markdownToHtml(markdown) {
 }
 function inlineMarkdown(value) {
   return escapeHtml(value)
+    .replace(/&lt;a\s+([^&]*)&gt;([\s\S]*?)&lt;\/a&gt;/gi, (_, attrs, body) => {
+      const hrefMatch = attrs.match(/href="([^"]+)"/i);
+      const classMatch = attrs.match(/class="([^"]+)"/i);
+      const targetMatch = attrs.match(/target="([^"]+)"/i);
+      const relMatch = attrs.match(/rel="([^"]+)"/i);
+      const attrsOut = [];
+      if (classMatch) attrsOut.push(`class="${classMatch[1]}"`);
+      if (hrefMatch) attrsOut.push(`href="${hrefMatch[1]}"`);
+      attrsOut.push(`target="${targetMatch ? targetMatch[1] : "_blank"}"`);
+      attrsOut.push(`rel="${relMatch ? relMatch[1] : "noreferrer"}"`);
+      return `<a ${attrsOut.join(" ")}>${body}</a>`;
+    })
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/_([^_]+)_/g, "<em>$1</em>")
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "<a href=\"$2\" target=\"_blank\" rel=\"noreferrer\">$1</a>");
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
+    .replace(/&lt;(https?:\/\/[^\s<>]+)&gt;/gi, '<a href="$1" target="_blank" rel="noreferrer">$1</a>');
 }
 function markdownTableToHtml(lines) {
   const rows = lines.map(row => row.split("|").slice(1, -1).map(cell => cell.trim()));

@@ -123,7 +123,7 @@ button:active { transform: translateY(0); }
   white-space: nowrap;
 }
 .block-chip.dragging { opacity: 0.56; }
-.workspace { min-height: 0; overflow: hidden; display: grid; grid-template-rows: auto auto 1fr; }
+.workspace { min-height: 0; overflow: visible; display: grid; grid-template-rows: auto auto 1fr; }
 .workspace-head {
   display: flex;
   align-items: center;
@@ -149,7 +149,11 @@ button:active { transform: translateY(0); }
   flex-wrap: wrap;
   padding: 11px 16px;
   border-bottom: 1px solid rgba(18, 32, 51, 0.08);
-  background: rgba(255, 255, 255, 0.40);
+  background: rgba(255, 255, 255, 0.78);
+  position: sticky;
+  top: 74px;
+  z-index: 30;
+  backdrop-filter: blur(14px);
 }
 .editor-toolbar button,
 .editor-toolbar select,
@@ -670,3 +674,10 @@ select:hover,
 .slash-item:focus, .slash-item:focus-visible { outline: none; box-shadow: none; }
 .visual-editor table { table-layout: fixed; }
 .visual-editor th, .visual-editor td { position: relative; }
+
+.workspace-head { position: sticky; top: 0; z-index: 31; backdrop-filter: blur(14px); }
+.visual-editor ul, .visual-editor ol { margin: 0 0 1em; padding-left: 1.5rem; }
+.visual-editor li { margin: 0.25em 0; }
+.visual-editor ul[data-checklist="true"] { list-style: none; padding-left: 0; }
+.visual-editor ul[data-checklist="true"] li { display: flex; align-items: flex-start; gap: 0.5rem; }
+.shortcode-card textarea, .raw-html-card textarea { width: 100%; min-height: 140px; border: 0; background: transparent; padding: 14px; resize: vertical; outline: none; }
