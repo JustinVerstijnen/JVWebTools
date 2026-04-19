@@ -130,6 +130,17 @@
     </div>
   </div>
 
+  <div class="modal-panel" id="buttonPanel" role="dialog" aria-label="Insert Docsy button">
+    <div class="modal-card panel-animate">
+      <h2>Docsy button</h2>
+      <p>Set the button text and link. You can also edit an existing Docsy button later.</p>
+      <div class="field"><label for="buttonText">Button text</label><input id="buttonText" type="text" placeholder="Read the documentation" /></div>
+      <div class="field"><label for="buttonUrl">Button link</label><input id="buttonUrl" type="url" placeholder="https://example.com/docs" /></div>
+      <div class="field"><label for="buttonStyle">Style</label><select id="buttonStyle"><option value="btn btn-primary">Primary</option><option value="btn btn-secondary">Secondary</option><option value="btn btn-outline-primary">Outline primary</option><option value="btn btn-lg btn-primary">Large primary</option></select></div>
+      <div class="panel-actions"><button class="pill" id="cancelButtonBtn" type="button">Cancel</button><button class="pill primary" id="insertButtonBtn" type="button">Save button</button></div>
+    </div>
+  </div>
+
   <div class="slash-menu" id="slashMenu" role="listbox" aria-label="Command menu"></div>
   <div class="toast" id="toast"></div>
 

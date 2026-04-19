@@ -51,6 +51,12 @@ const els = {
   tableAlign: document.getElementById("tableAlign"),
   cancelTableBtn: document.getElementById("cancelTableBtn"),
   insertTableBtn: document.getElementById("insertTableBtn"),
+  buttonPanel: document.getElementById("buttonPanel"),
+  buttonText: document.getElementById("buttonText"),
+  buttonUrl: document.getElementById("buttonUrl"),
+  buttonStyle: document.getElementById("buttonStyle"),
+  cancelButtonBtn: document.getElementById("cancelButtonBtn"),
+  insertButtonBtn: document.getElementById("insertButtonBtn"),
   slashMenu: document.getElementById("slashMenu"),
   toast: document.getElementById("toast")
 };
@@ -80,6 +86,7 @@ let slashRange = null;
 let lastSelectionSavedAt = 0;
 let pendingPanelInsertOptions = {};
 let pendingInsertAnchorBlock = null;
+let pendingButtonEditAnchor = null;
 let normalizeFrame = 0;
 let normalizeTimer = 0;
 let lastSlashQuery = null;
@@ -181,7 +188,10 @@ function rawHtmlCard(title, html) {
   return `<div class="raw-html-card editable-card" data-raw-html="true" contenteditable="false"><div class="block-settings"><span><i class="fa-brands fa-html5"></i> ${escapeHtml(title)}</span></div><textarea>${escapeHtml(html)}</textarea></div><p><br></p>`;
 }
 function imageHtml(src, alt = "Image", caption = "Optional caption") {
-  return `<figure class="image-block" data-resizable="true"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"><figcaption contenteditable="true">${escapeHtml(caption)}</figcaption></figure><p><br></p>`;
+  return `<figure class="image-block" data-resizable="true"><a class="image-link" href="${escapeHtml(src)}" target="_blank" rel="noreferrer"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"></a><figcaption contenteditable="true">${escapeHtml(caption)}</figcaption></figure><p><br></p>`;
+}
+function docsyButtonHtml(text = "Read the documentation", href = "/docs/", classes = "btn btn-primary") {
+  return `<p><a class="${escapeHtml(classes)}" href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${escapeHtml(text)}</a></p>`;
 }
 function guessAltTextFromUrl(url = "") {
   const clean = String(url || "").trim().split("#")[0].split("?")[0];
@@ -763,6 +773,7 @@ function insertBlock(blockId, options = {}) {
   const useOldSelection = !options.fromSidebar || (Date.now() - lastSelectionSavedAt < 60000);
   if (block.action === "image") { openImagePanel({ allowOldSelection: useOldSelection }); return; }
   if (block.action === "table") { openTablePanel({ allowOldSelection: useOldSelection }); return; }
+  if (block.action === "buttondocsy") { openButtonPanel({ allowOldSelection: useOldSelection }); return; }
   insertHtmlAtCursor(block.html, { allowOldSelection: useOldSelection });
   showToast(`${block.name} inserted`);
 }
@@ -1017,6 +1028,7 @@ function handlePanelKeydown(event) {
   if (event.key !== "Enter") return;
   event.preventDefault();
   if (panel === els.imagePanel) insertImageFromPanel();
+  if (panel === els.buttonPanel) saveButtonFromPanel();
   if (panel === els.tablePanel) insertTableFromPanel();
 }
 function openImagePanel(options = {}) {
@@ -1044,6 +1056,50 @@ function insertImageFromPanel() {
   insertHtmlAtCursor(imageHtml(url, alt || "Image", "Optional caption"), { ...pendingPanelInsertOptions, anchorBlock: pendingInsertAnchorBlock });
   pendingInsertAnchorBlock = null;
   showToast("Image inserted");
+}
+function openButtonPanel(options = {}) {
+  pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false };
+  const currentRange = getCurrentEditorRange();
+  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(currentRange) || (hasFreshSavedRange() ? getBlockAnchorFromRange(savedRange) : null);
+  pendingButtonEditAnchor = options.editAnchor || null;
+  if (currentRange) {
+    savedRange = currentRange;
+    lastSelectionSavedAt = Date.now();
+  } else if (options.allowOldSelection === false || !hasFreshSavedRange()) {
+    savedRange = createEndRange();
+    lastSelectionSavedAt = Date.now();
+    pendingPanelInsertOptions.allowOldSelection = true;
+  }
+  const anchor = options.editAnchor || null;
+  els.buttonText.value = anchor?.textContent?.trim() || "Go back to Blog homepage";
+  els.buttonUrl.value = anchor?.getAttribute?.("href") || "/blog/";
+  const currentClass = (anchor?.getAttribute?.("class") || "").trim();
+  const fallbackClass = "btn btn-primary";
+  const hasExactOption = Array.from(els.buttonStyle.options).some(option => option.value === currentClass);
+  els.buttonStyle.value = hasExactOption ? currentClass : fallbackClass;
+  els.buttonPanel.classList.add("open");
+  setTimeout(() => els.buttonText.focus(), 80);
+}
+function saveButtonFromPanel() {
+  const textValue = els.buttonText.value.trim() || "Go back to Blog homepage";
+  const hrefValue = els.buttonUrl.value.trim() || "/blog/";
+  const classValue = els.buttonStyle.value || "btn btn-primary";
+  els.buttonPanel.classList.remove("open");
+  if (pendingButtonEditAnchor && pendingButtonEditAnchor.isConnected) {
+    pendingButtonEditAnchor.textContent = textValue;
+    pendingButtonEditAnchor.setAttribute("href", hrefValue);
+    pendingButtonEditAnchor.setAttribute("class", classValue);
+    pendingButtonEditAnchor.setAttribute("target", "_blank");
+    pendingButtonEditAnchor.setAttribute("rel", "noreferrer");
+    normalizeEditorContent(pendingButtonEditAnchor.closest("p") || pendingButtonEditAnchor);
+    saveProject();
+    showToast("Docsy button updated");
+  } else {
+    insertHtmlAtCursor(docsyButtonHtml(textValue, hrefValue, classValue), { ...pendingPanelInsertOptions, anchorBlock: pendingInsertAnchorBlock });
+    showToast("Docsy button inserted");
+  }
+  pendingInsertAnchorBlock = null;
+  pendingButtonEditAnchor = null;
 }
 function openTablePanel(options = {}) {
   pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false };
@@ -1157,6 +1213,27 @@ function normalizeEditorContent(scope = els.visualEditor) {
 
   if (root.matches?.("figure")) ensureFigureBlock(root);
   root.querySelectorAll?.("figure").forEach(ensureFigureBlock);
+  const figures = [];
+  if (root.matches?.("figure.image-block")) figures.push(root);
+  root.querySelectorAll?.("figure.image-block").forEach(figure => figures.push(figure));
+  figures.forEach(figure => {
+    const img = figure.querySelector("img");
+    if (!img) return;
+    let anchor = figure.querySelector(":scope > a.image-link");
+    if (!anchor) {
+      anchor = document.createElement("a");
+      anchor.className = "image-link";
+      anchor.href = img.getAttribute("src") || "";
+      anchor.target = "_blank";
+      anchor.rel = "noreferrer";
+      img.replaceWith(anchor);
+      anchor.appendChild(img);
+    } else {
+      anchor.href = img.getAttribute("src") || anchor.getAttribute("href") || "";
+      anchor.target = "_blank";
+      anchor.rel = "noreferrer";
+    }
+  });
 
   const standaloneImages = [];
   if (root.matches?.("img") && !root.closest("figure")) standaloneImages.push(root);
@@ -1293,9 +1370,72 @@ function insertSlashSelection() {
   hideSlashMenu();
   insertBlock(block.id);
 }
+function normalizeMarkdownListSpacing(markdown) {
+  const lines = String(markdown || "").split("\n");
+  const output = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    const current = lines[i];
+    const trimmed = current.trim();
+    const next = i + 1 < lines.length ? lines[i + 1].trim() : "";
+    const prev = output.length ? output[output.length - 1].trim() : "";
+    const currentIsList = /^(?:[-*+]\s+|\d+\.\s+|\[(?: |x|X)\]\s+)/.test(trimmed);
+    const nextIsList = /^(?:[-*+]\s+|\d+\.\s+|\[(?: |x|X)\]\s+)/.test(next);
+    const prevIsList = /^(?:[-*+]\s+|\d+\.\s+|\[(?: |x|X)\]\s+)/.test(prev);
+    if (!trimmed && prevIsList && nextIsList) continue;
+    output.push(current);
+  }
+  return output.join("\n");
+}
+function getCurrentParagraphBlock() {
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return null;
+  let node = selection.getRangeAt(0).commonAncestorContainer;
+  if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+  return node?.closest?.("p") || null;
+}
+function convertParagraphToList(block, ordered = false) {
+  if (!block || !els.visualEditor.contains(block)) return false;
+  const rawText = (block.textContent || "").replace(/ /g, " ");
+  const match = rawText.match(ordered ? /^\s*(\d+)\.\s+(.*)$/ : /^\s*[-*+]\s+(.*)$/);
+  if (!match) return false;
+  const content = ordered ? match[2] : match[1];
+  const list = document.createElement(ordered ? "ol" : "ul");
+  const li = document.createElement("li");
+  li.innerHTML = content && content.trim() ? inlineMarkdown(content.trim()) : "<br>";
+  list.appendChild(li);
+  const trailingParagraph = document.createElement("p");
+  trailingParagraph.innerHTML = "<br>";
+  block.replaceWith(list, trailingParagraph);
+  normalizeEditorContent(list);
+  const range = document.createRange();
+  range.selectNodeContents(li);
+  range.collapse(false);
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+  saveSelection();
+  saveProject();
+  return true;
+}
+function maybeAutoCreateList(event) {
+  if (event.key !== " ") return false;
+  const block = getCurrentParagraphBlock();
+  if (!block) return false;
+  const text = (block.textContent || "").replace(/ /g, " ");
+  if (/^\s*[-*+]$/.test(text)) {
+    event.preventDefault();
+    return convertParagraphToList(block, false);
+  }
+  if (/^\s*\d+\.$/.test(text)) {
+    event.preventDefault();
+    return convertParagraphToList(block, true);
+  }
+  return false;
+}
 function handleEditorKeydown(event) {
   if (handleBlockDropdownKeydown(event)) return;
   if (handleSlashMenuKey(event)) return;
+  if (maybeAutoCreateList(event)) return;
   if (event.key !== "Enter") return;
   const selection = window.getSelection();
   if (!selection.rangeCount) return;
@@ -1551,9 +1691,23 @@ els.visualEditor.addEventListener("click", event => {
     return;
   }
   updateTableToolbarVisibility();
-  if (event.target.closest("a") && (event.ctrlKey || event.metaKey)) window.open(event.target.closest("a").href, "_blank", "noopener");
+  const anchor = event.target.closest("a");
+  if (anchor?.classList.contains("btn") && !event.ctrlKey && !event.metaKey) {
+    event.preventDefault();
+    event.stopPropagation();
+    openButtonPanel({ editAnchor: anchor, anchorBlock: anchor.closest("p") || null, allowOldSelection: true });
+    return;
+  }
+  if (anchor && (event.ctrlKey || event.metaKey || anchor.classList.contains("image-link"))) window.open(anchor.href, "_blank", "noopener");
 });
 els.markdownEditor.addEventListener("input", () => {
+  const normalized = normalizeMarkdownListSpacing(els.markdownEditor.value);
+  if (normalized !== els.markdownEditor.value) {
+    const start = els.markdownEditor.selectionStart;
+    const end = els.markdownEditor.selectionEnd;
+    els.markdownEditor.value = normalized;
+    els.markdownEditor.setSelectionRange(Math.min(start, normalized.length), Math.min(end, normalized.length));
+  }
   state.markdownCache = els.markdownEditor.value;
   const { frontMatter } = splitMarkdownFrontMatter(els.markdownEditor.value);
   if (frontMatter) {
@@ -1569,12 +1723,16 @@ els.markdownEditor.addEventListener("input", () => {
 els.editorToolbar.querySelectorAll("button[data-format]").forEach(button => button.addEventListener("click", () => execFormat(button.dataset.format)));
 els.cancelImageBtn.addEventListener("click", () => { els.imagePanel.classList.remove("open"); pendingInsertAnchorBlock = null; });
 els.insertImageBtn.addEventListener("click", insertImageFromPanel);
+els.cancelButtonBtn.addEventListener("click", () => { els.buttonPanel.classList.remove("open"); pendingInsertAnchorBlock = null; pendingButtonEditAnchor = null; });
+els.insertButtonBtn.addEventListener("click", saveButtonFromPanel);
 els.imageUrl.addEventListener("input", () => {
   if (els.imageAlt.value.trim()) return;
   els.imageAlt.value = guessAltTextFromUrl(els.imageUrl.value);
 });
 els.imagePanel.addEventListener("click", event => { if (event.target === els.imagePanel) { els.imagePanel.classList.remove("open"); pendingInsertAnchorBlock = null; } });
 els.imagePanel.addEventListener("keydown", handlePanelKeydown);
+els.buttonPanel.addEventListener("click", event => { if (event.target === els.buttonPanel) { els.buttonPanel.classList.remove("open"); pendingInsertAnchorBlock = null; pendingButtonEditAnchor = null; } });
+els.buttonPanel.addEventListener("keydown", handlePanelKeydown);
 els.cancelTableBtn.addEventListener("click", () => { els.tablePanel.classList.remove("open"); pendingInsertAnchorBlock = null; });
 els.insertTableBtn.addEventListener("click", insertTableFromPanel);
 els.tablePanel.addEventListener("click", event => { if (event.target === els.tablePanel) { els.tablePanel.classList.remove("open"); pendingInsertAnchorBlock = null; } });
