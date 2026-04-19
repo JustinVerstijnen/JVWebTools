@@ -590,7 +590,7 @@ function markdownToHtml(markdown) {
 function inlineMarkdown(value) {
   const normalizedValue = String(value || "")
     .replace(/\\([<>])/g, "$1")
-    .replace(/\\[([^\]]+)\\]\(([^)]+)\)/g, "[$1]($2)");
+    .replace(/\\\[([^\]]+)\\\]\(([^)]+)\)/g, "[$1]($2)");
 
   return escapeHtml(normalizedValue)
     .replace(/&lt;a\s+([^&]*)&gt;([\s\S]*?)&lt;\/a&gt;/gi, (_, attrs, body) => {
