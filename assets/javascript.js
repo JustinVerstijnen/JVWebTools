@@ -75,7 +75,7 @@ const tools = [
     title: "Markdown Editor",
     description: "The Markdown Editor tool which can be used to write articles, documentation and other information into clear readable text.",
     toolUrl: "https://tools.justinverstijnen.nl/markdowneditor",
-    shortcut: "https://markdowneditor.jvapp.nl",
+    shortcut: "https://markdown.jvapp.nl",
     github: "https://github.com/JustinVerstijnen/MarkdownEditor",
     image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-markdowneditor.png"
   }
