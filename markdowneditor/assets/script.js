@@ -88,6 +88,7 @@ let slashRange = null;
 let lastSelectionSavedAt = 0;
 let pendingPanelInsertOptions = {};
 let pendingInsertAnchorBlock = null;
+let pendingInsertMarker = null;
 let pendingButtonEditAnchor = null;
 let pendingImageEditFigure = null;
 let pendingTableEditTarget = null;
@@ -845,12 +846,33 @@ function focusFirstEditableIn(nodes) {
   lastSelectionSavedAt = Date.now();
   return true;
 }
+function isEffectivelyEmptyTextBlock(block) {
+  if (!block || !block.matches?.("p, h1, h2, h3, h4, h5, h6, blockquote")) return false;
+  const clone = block.cloneNode(true);
+  clone.querySelectorAll(".slash-insert-marker, br").forEach(node => node.remove());
+  return !clone.textContent.trim() && !clone.querySelector("img, a, table, figure, .editable-card, pre, code, input, select, button");
+}
+function insertFragmentAtMarker(fragment, marker) {
+  if (!marker || !marker.isConnected || !els.visualEditor.contains(marker)) return false;
+  const host = getBlockAnchorFromNode(marker);
+  if (host && host !== els.visualEditor) {
+    host.after(fragment);
+    marker.remove();
+    if (isEffectivelyEmptyTextBlock(host)) host.remove();
+    return true;
+  }
+  marker.replaceWith(fragment);
+  return true;
+}
 function insertHtmlAtCursor(html, options = {}) {
   const fragment = document.createRange().createContextualFragment(html);
   const insertedNodes = Array.from(fragment.childNodes);
   const lastNode = insertedNodes[insertedNodes.length - 1];
+  const preferredMarker = options.marker && options.marker.isConnected ? options.marker : null;
   const preferredAnchor = options.anchorBlock && options.anchorBlock.isConnected ? options.anchorBlock : null;
-  if (preferredAnchor) {
+  if (preferredMarker && insertFragmentAtMarker(fragment, preferredMarker)) {
+    // Inserted at the exact slash-command marker.
+  } else if (preferredAnchor) {
     preferredAnchor.after(fragment);
   } else {
     restoreSelection(options);
@@ -873,7 +895,8 @@ function insertBlock(blockId, options = {}) {
   const useOldSelection = !options.fromSidebar || (Date.now() - lastSelectionSavedAt < 15000);
   const insertionOptions = {
     allowOldSelection: useOldSelection,
-    anchorBlock: options.anchorBlock && options.anchorBlock.isConnected ? options.anchorBlock : null
+    anchorBlock: options.anchorBlock && options.anchorBlock.isConnected ? options.anchorBlock : null,
+    marker: options.marker && options.marker.isConnected ? options.marker : null
   };
   if (block.action === "image") { openImagePanel(insertionOptions); return; }
   if (block.action === "table") { openTablePanel(insertionOptions); return; }
@@ -1154,6 +1177,8 @@ function handlePanelKeydown(event) {
     event.preventDefault();
     panel.classList.remove("open");
     pendingInsertAnchorBlock = null;
+    if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove();
+    pendingInsertMarker = null;
     restoreSelection();
     return;
   }
@@ -1164,8 +1189,9 @@ function handlePanelKeydown(event) {
   if (panel === els.tablePanel) insertTableFromPanel();
 }
 function openImagePanel(options = {}) {
-  pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false };
+  pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false, marker: options.marker && options.marker.isConnected ? options.marker : null };
   const insertionRange = getPanelInsertionRange(options);
+  pendingInsertMarker = options.marker && options.marker.isConnected ? options.marker : null;
   pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(insertionRange);
   pendingImageEditFigure = options.editFigure || null;
   if (insertionRange) {
@@ -1184,6 +1210,39 @@ function openImagePanel(options = {}) {
   els.imageLink.value = figure?.getAttribute?.("data-link") || anchor?.getAttribute?.("href") || img?.getAttribute?.("src") || "";
   els.imagePanel.classList.add("open");
   setTimeout(() => els.imageUrl.focus(), 80);
+}
+function getImageSourceFromClipboard(event) {
+  const clipboard = event.clipboardData;
+  if (!clipboard) return null;
+  const text = clipboard.getData("text/plain") || "";
+  if (text.trim() && (isImageUrl(text) || /^data:image\//i.test(text.trim()))) return { type: "text", value: text.trim() };
+  const html = clipboard.getData("text/html") || "";
+  const match = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+  if (match?.[1]) return { type: "text", value: match[1] };
+  const imageItem = Array.from(clipboard.items || []).find(item => item.kind === "file" && /^image\//i.test(item.type));
+  if (imageItem) return { type: "file", value: imageItem.getAsFile() };
+  return null;
+}
+function handleImagePanelPaste(event) {
+  const source = getImageSourceFromClipboard(event);
+  if (!source) return;
+  event.preventDefault();
+  if (source.type === "text") {
+    els.imageUrl.value = source.value;
+    if (!els.imageLink.value.trim()) els.imageLink.value = source.value;
+    return;
+  }
+  if (source.type === "file" && source.value) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || "");
+      els.imageUrl.value = dataUrl;
+      if (!els.imageAlt.value.trim()) els.imageAlt.value = source.value.name || "Image";
+      if (!els.imageLink.value.trim()) els.imageLink.value = dataUrl;
+      showToast("Image ready to insert");
+    };
+    reader.readAsDataURL(source.value);
+  }
 }
 function insertImageFromPanel() {
   const url = els.imageUrl.value.trim();
@@ -1214,15 +1273,17 @@ function insertImageFromPanel() {
     saveProject();
     showToast("Image updated");
   } else {
-    insertHtmlAtCursor(imageHtml(url, alt || "Image", "Optional caption", link), { ...pendingPanelInsertOptions, anchorBlock: pendingInsertAnchorBlock });
+    insertHtmlAtCursor(imageHtml(url, alt || "Image", "Optional caption", link), { ...pendingPanelInsertOptions, marker: pendingInsertMarker, anchorBlock: pendingInsertAnchorBlock });
     showToast("Image inserted");
   }
   pendingInsertAnchorBlock = null;
+  pendingInsertMarker = null;
   pendingImageEditFigure = null;
 }
 function openButtonPanel(options = {}) {
-  pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false };
+  pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false, marker: options.marker && options.marker.isConnected ? options.marker : null };
   const insertionRange = getPanelInsertionRange(options);
+  pendingInsertMarker = options.marker && options.marker.isConnected ? options.marker : null;
   pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(insertionRange);
   pendingButtonEditAnchor = options.editAnchor || null;
   if (insertionRange) {
@@ -1258,15 +1319,17 @@ function saveButtonFromPanel() {
     saveProject();
     showToast("Docsy button updated");
   } else {
-    insertHtmlAtCursor(docsyButtonHtml(textValue, hrefValue, classValue), { ...pendingPanelInsertOptions, anchorBlock: pendingInsertAnchorBlock });
+    insertHtmlAtCursor(docsyButtonHtml(textValue, hrefValue, classValue), { ...pendingPanelInsertOptions, marker: pendingInsertMarker, anchorBlock: pendingInsertAnchorBlock });
     showToast("Docsy button inserted");
   }
   pendingInsertAnchorBlock = null;
+  pendingInsertMarker = null;
   pendingButtonEditAnchor = null;
 }
 function openTablePanel(options = {}) {
-  pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false };
+  pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false, marker: options.marker && options.marker.isConnected ? options.marker : null };
   const insertionRange = getPanelInsertionRange(options);
+  pendingInsertMarker = options.marker && options.marker.isConnected ? options.marker : null;
   pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(insertionRange);
   pendingTableEditTarget = options.editTable || null;
   if (insertionRange) {
@@ -1314,10 +1377,11 @@ function insertTableFromPanel() {
       showToast("Table updated");
     }
   } else {
-    insertHtmlAtCursor(html, { ...pendingPanelInsertOptions, anchorBlock: pendingInsertAnchorBlock });
+    insertHtmlAtCursor(html, { ...pendingPanelInsertOptions, marker: pendingInsertMarker, anchorBlock: pendingInsertAnchorBlock });
     showToast("Table inserted");
   }
   pendingInsertAnchorBlock = null;
+  pendingInsertMarker = null;
   pendingTableEditTarget = null;
   els.insertTableBtn.textContent = "Insert table";
 }
@@ -1567,10 +1631,22 @@ function insertSlashSelection() {
   selection.removeAllRanges();
   selection.addRange(slashRange);
   slashRange.deleteContents();
+
+  let marker = null;
+  if (block.action === "image" || block.action === "table" || block.action === "buttondocsy") {
+    marker = document.createElement("span");
+    marker.className = "slash-insert-marker";
+    marker.setAttribute("data-slash-insert-marker", "true");
+    marker.style.display = "none";
+    slashRange.insertNode(marker);
+    slashRange.setStartAfter(marker);
+    slashRange.collapse(true);
+  }
+
   savedRange = slashRange.cloneRange();
   lastSelectionSavedAt = Date.now();
   hideSlashMenu();
-  insertBlock(block.id, { anchorBlock });
+  insertBlock(block.id, { anchorBlock, marker });
 }
 function normalizeMarkdownListSpacing(markdown) {
   const lines = String(markdown || "").split("\n");
@@ -1932,6 +2008,7 @@ els.visualEditor.addEventListener("keyup", event => {
 els.visualEditor.addEventListener("mouseup", () => { saveSelection(); updateTableToolbarVisibility(); });
 els.visualEditor.addEventListener("focus", () => { saveSelection(); updateTableToolbarVisibility(); });
 els.visualEditor.addEventListener("paste", handlePaste);
+els.imagePanel.addEventListener("paste", handleImagePanelPaste);
 els.visualEditor.addEventListener("input", event => {
   if (event.target.matches(".code-language")) updateCodeLanguageSelect(event.target);
   if (event.target.matches(".alert-color")) updateAlertColorSelect(event.target);
@@ -2005,9 +2082,9 @@ els.markdownEditor.addEventListener("input", () => {
   }, 120);
 });
 els.editorToolbar.querySelectorAll("button[data-format]").forEach(button => button.addEventListener("click", () => execFormat(button.dataset.format)));
-els.cancelImageBtn.addEventListener("click", () => { els.imagePanel.classList.remove("open"); pendingInsertAnchorBlock = null; pendingImageEditFigure = null; });
+els.cancelImageBtn.addEventListener("click", () => { els.imagePanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingImageEditFigure = null; });
 els.insertImageBtn.addEventListener("click", insertImageFromPanel);
-els.cancelButtonBtn.addEventListener("click", () => { els.buttonPanel.classList.remove("open"); pendingInsertAnchorBlock = null; pendingButtonEditAnchor = null; });
+els.cancelButtonBtn.addEventListener("click", () => { els.buttonPanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingButtonEditAnchor = null; });
 els.insertButtonBtn.addEventListener("click", saveButtonFromPanel);
 els.imageUrl.addEventListener("input", () => {
   if (!els.imageAlt.value.trim()) els.imageAlt.value = guessAltTextFromUrl(els.imageUrl.value);
@@ -2016,13 +2093,13 @@ els.imageUrl.addEventListener("input", () => {
     els.imageLink.dataset.autoValue = els.imageUrl.value.trim();
   }
 });
-els.imagePanel.addEventListener("click", event => { if (event.target === els.imagePanel) { els.imagePanel.classList.remove("open"); pendingInsertAnchorBlock = null; pendingImageEditFigure = null; } });
+els.imagePanel.addEventListener("click", event => { if (event.target === els.imagePanel) { els.imagePanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingImageEditFigure = null; } });
 els.imagePanel.addEventListener("keydown", handlePanelKeydown);
-els.buttonPanel.addEventListener("click", event => { if (event.target === els.buttonPanel) { els.buttonPanel.classList.remove("open"); pendingInsertAnchorBlock = null; pendingButtonEditAnchor = null; } });
+els.buttonPanel.addEventListener("click", event => { if (event.target === els.buttonPanel) { els.buttonPanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingButtonEditAnchor = null; } });
 els.buttonPanel.addEventListener("keydown", handlePanelKeydown);
-els.cancelTableBtn.addEventListener("click", () => { els.tablePanel.classList.remove("open"); pendingInsertAnchorBlock = null; pendingTableEditTarget = null; els.insertTableBtn.textContent = "Insert table"; });
+els.cancelTableBtn.addEventListener("click", () => { els.tablePanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingTableEditTarget = null; els.insertTableBtn.textContent = "Insert table"; });
 els.insertTableBtn.addEventListener("click", insertTableFromPanel);
-els.tablePanel.addEventListener("click", event => { if (event.target === els.tablePanel) { els.tablePanel.classList.remove("open"); pendingInsertAnchorBlock = null; pendingTableEditTarget = null; els.insertTableBtn.textContent = "Insert table"; } });
+els.tablePanel.addEventListener("click", event => { if (event.target === els.tablePanel) { els.tablePanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingTableEditTarget = null; els.insertTableBtn.textContent = "Insert table"; } });
 els.tablePanel.addEventListener("keydown", handlePanelKeydown);
 document.addEventListener("keydown", event => {
   const active = document.activeElement;
