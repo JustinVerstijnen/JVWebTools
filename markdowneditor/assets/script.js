@@ -67,6 +67,7 @@ const state = {
   projectName: "markdown-page",
   html: "",
   markdownCache: "",
+  rawFrontMatter: "",
   metadata: {
     title: "New Markdown page",
     date: new Date().toISOString().slice(0, 10),
@@ -253,6 +254,9 @@ const blocks = [
 const sidebarCategoryOrder = ["Text", "Lists", "Media", "Content", "Code", "Alerts", "Docsy"];
 
 function buildFrontMatter() {
+  if (typeof state.rawFrontMatter === "string" && state.rawFrontMatter.trim()) {
+    return `---\n${state.rawFrontMatter.replace(/^\s*---\s*\r?\n?|\r?\n?---\s*$/g, "").trim()}\n---`;
+  }
   const m = state.metadata;
   const lines = ["---"];
   lines.push(`title: "${yamlEscape(m.title || state.projectName)}"`);
@@ -267,6 +271,9 @@ function buildFrontMatter() {
   return lines.join("\n");
 }
 function buildMarkdown() { return `${buildFrontMatter()}\n\n${htmlToMarkdown(els.visualEditor.innerHTML).trim()}\n`; }
+function rememberRawFrontMatter(frontMatter) {
+  state.rawFrontMatter = String(frontMatter || "").trim();
+}
 function splitMarkdownFrontMatter(text) {
   const value = String(text || "");
   const match = value.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
@@ -306,7 +313,12 @@ function importMarkdownFile(file) {
   if (!file) return;
   file.text().then(text => {
     const match = String(text || "").match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
-    if (match) applyParsedFrontMatter(match[1]);
+    if (match) {
+      rememberRawFrontMatter(match[1]);
+      applyParsedFrontMatter(match[1]);
+    } else {
+      rememberRawFrontMatter("");
+    }
     const body = match ? text.slice(match[0].length) : text;
     state.projectName = (file.name || "markdown-page").replace(/\.(md|markdown)$/i, "") || "markdown-page";
     els.projectName.value = state.projectName;
@@ -788,6 +800,15 @@ function getCurrentEditorRange() {
 function hasFreshSavedRange(maxAge = 60000) {
   return savedRange && els.visualEditor.contains(savedRange.commonAncestorContainer) && Date.now() - lastSelectionSavedAt < maxAge;
 }
+function getFreshSavedRange(maxAge = 15000) {
+  return hasFreshSavedRange(maxAge) ? savedRange.cloneRange() : null;
+}
+function getPanelInsertionRange(options = {}) {
+  const currentRange = getCurrentEditorRange();
+  if (currentRange) return currentRange;
+  if (options.allowOldSelection !== false) return getFreshSavedRange(15000);
+  return null;
+}
 function restoreSelection(options = {}) {
   els.visualEditor.focus({ preventScroll: true });
   const selection = window.getSelection();
@@ -849,7 +870,7 @@ function insertHtmlAtCursor(html, options = {}) {
 function insertBlock(blockId, options = {}) {
   const block = blocks.find(item => item.id === blockId);
   if (!block) return;
-  const useOldSelection = !options.fromSidebar || (Date.now() - lastSelectionSavedAt < 60000);
+  const useOldSelection = !options.fromSidebar || (Date.now() - lastSelectionSavedAt < 15000);
   if (block.action === "image") { openImagePanel({ allowOldSelection: useOldSelection }); return; }
   if (block.action === "table") { openTablePanel({ allowOldSelection: useOldSelection }); return; }
   if (block.action === "buttondocsy") { openButtonPanel({ allowOldSelection: useOldSelection }); return; }
@@ -947,10 +968,7 @@ function setView(view) {
     const markdownValue = els.markdownEditor.value.trim();
     if (markdownValue && els.markdownEditor.style.display === "block") {
       const { frontMatter, body } = splitMarkdownFrontMatter(markdownValue);
-      if (frontMatter) {
-        applyParsedFrontMatter(frontMatter);
-        fillPostInfoForm();
-      }
+      rememberRawFrontMatter(frontMatter);
       els.visualEditor.innerHTML = markdownToHtml(body);
     }
     els.visualEditor.style.display = "block";
@@ -1143,16 +1161,16 @@ function handlePanelKeydown(event) {
 }
 function openImagePanel(options = {}) {
   pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false };
-  const currentRange = getCurrentEditorRange();
-  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(currentRange) || (hasFreshSavedRange() ? getBlockAnchorFromRange(savedRange) : null);
+  const insertionRange = getPanelInsertionRange(options);
+  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(insertionRange);
   pendingImageEditFigure = options.editFigure || null;
-  if (currentRange) {
-    savedRange = currentRange;
+  if (insertionRange) {
+    savedRange = insertionRange.cloneRange();
     lastSelectionSavedAt = Date.now();
-  } else if (options.allowOldSelection === false || !hasFreshSavedRange()) {
+  } else {
     savedRange = createEndRange();
     lastSelectionSavedAt = Date.now();
-    pendingPanelInsertOptions.allowOldSelection = true;
+    pendingPanelInsertOptions.allowOldSelection = false;
   }
   const figure = options.editFigure || null;
   const img = figure?.querySelector?.("img") || null;
@@ -1200,16 +1218,16 @@ function insertImageFromPanel() {
 }
 function openButtonPanel(options = {}) {
   pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false };
-  const currentRange = getCurrentEditorRange();
-  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(currentRange) || (hasFreshSavedRange() ? getBlockAnchorFromRange(savedRange) : null);
+  const insertionRange = getPanelInsertionRange(options);
+  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(insertionRange);
   pendingButtonEditAnchor = options.editAnchor || null;
-  if (currentRange) {
-    savedRange = currentRange;
+  if (insertionRange) {
+    savedRange = insertionRange.cloneRange();
     lastSelectionSavedAt = Date.now();
-  } else if (options.allowOldSelection === false || !hasFreshSavedRange()) {
+  } else {
     savedRange = createEndRange();
     lastSelectionSavedAt = Date.now();
-    pendingPanelInsertOptions.allowOldSelection = true;
+    pendingPanelInsertOptions.allowOldSelection = false;
   }
   const anchor = options.editAnchor || null;
   els.buttonText.value = anchor?.textContent?.trim() || "Go back to Blog homepage";
@@ -1244,16 +1262,16 @@ function saveButtonFromPanel() {
 }
 function openTablePanel(options = {}) {
   pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false };
-  const currentRange = getCurrentEditorRange();
-  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(currentRange) || (hasFreshSavedRange() ? getBlockAnchorFromRange(savedRange) : null);
+  const insertionRange = getPanelInsertionRange(options);
+  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(insertionRange);
   pendingTableEditTarget = options.editTable || null;
-  if (currentRange) {
-    savedRange = currentRange;
+  if (insertionRange) {
+    savedRange = insertionRange.cloneRange();
     lastSelectionSavedAt = Date.now();
-  } else if (options.allowOldSelection === false || !hasFreshSavedRange()) {
+  } else {
     savedRange = createEndRange();
     lastSelectionSavedAt = Date.now();
-    pendingPanelInsertOptions.allowOldSelection = true;
+    pendingPanelInsertOptions.allowOldSelection = false;
   }
   const editTable = options.editTable || null;
   els.tableColumns.value = editTable?.querySelector?.("tr")?.children?.length || 3;
@@ -1312,6 +1330,7 @@ function fillPostInfoForm() {
   els.fmHidden.value = m.hidden === "true" ? "true" : "false";
 }
 function savePostInfoForm() {
+  state.rawFrontMatter = "";
   state.metadata = {
     title: els.fmTitle.value.trim(),
     date: els.fmDate.value,
@@ -1345,6 +1364,8 @@ function resetProject() {
   localStorage.removeItem(STORAGE_KEY);
   state.projectName = "markdown-page";
   state.html = "";
+  state.markdownCache = "";
+  state.rawFrontMatter = "";
   state.metadata = { title: "New Markdown page", date: new Date().toISOString().slice(0, 10), description: "", tags: [], categories: [], weight: "", type: "docs", hidden: "false" };
   render();
   showToast("Project reset");
@@ -1971,10 +1992,7 @@ els.markdownEditor.addEventListener("input", () => {
   }
   state.markdownCache = els.markdownEditor.value;
   const { frontMatter } = splitMarkdownFrontMatter(els.markdownEditor.value);
-  if (frontMatter) {
-    applyParsedFrontMatter(frontMatter);
-    fillPostInfoForm();
-  }
+  rememberRawFrontMatter(frontMatter);
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
