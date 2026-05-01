@@ -871,10 +871,14 @@ function insertBlock(blockId, options = {}) {
   const block = blocks.find(item => item.id === blockId);
   if (!block) return;
   const useOldSelection = !options.fromSidebar || (Date.now() - lastSelectionSavedAt < 15000);
-  if (block.action === "image") { openImagePanel({ allowOldSelection: useOldSelection }); return; }
-  if (block.action === "table") { openTablePanel({ allowOldSelection: useOldSelection }); return; }
-  if (block.action === "buttondocsy") { openButtonPanel({ allowOldSelection: useOldSelection }); return; }
-  insertHtmlAtCursor(block.html, { allowOldSelection: useOldSelection });
+  const insertionOptions = {
+    allowOldSelection: useOldSelection,
+    anchorBlock: options.anchorBlock && options.anchorBlock.isConnected ? options.anchorBlock : null
+  };
+  if (block.action === "image") { openImagePanel(insertionOptions); return; }
+  if (block.action === "table") { openTablePanel(insertionOptions); return; }
+  if (block.action === "buttondocsy") { openButtonPanel(insertionOptions); return; }
+  insertHtmlAtCursor(block.html, insertionOptions);
   showToast(`${block.name} inserted`);
 }
 
@@ -1558,6 +1562,7 @@ function handleSlashMenuKey(event) {
 function insertSlashSelection() {
   const block = slashMatches[activeSlashIndex];
   if (!block || !slashRange) return;
+  const anchorBlock = getBlockAnchorFromRange(slashRange);
   const selection = window.getSelection();
   selection.removeAllRanges();
   selection.addRange(slashRange);
@@ -1565,7 +1570,7 @@ function insertSlashSelection() {
   savedRange = slashRange.cloneRange();
   lastSelectionSavedAt = Date.now();
   hideSlashMenu();
-  insertBlock(block.id);
+  insertBlock(block.id, { anchorBlock });
 }
 function normalizeMarkdownListSpacing(markdown) {
   const lines = String(markdown || "").split("\n");
