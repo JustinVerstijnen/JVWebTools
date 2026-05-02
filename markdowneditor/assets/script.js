@@ -1,5 +1,5 @@
-const STORAGE_KEY = "markdown-editor-project-v12";
-const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
+const STORAGE_KEY = "markdown-editor-project-v13";
+const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v12", "markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
 
 const LANGUAGES = [
   ["powershell", "PowerShell"], ["cmd", "cmd"], ["bash", "Bash"], ["json", "JSON"], ["csv", "CSV"],
@@ -33,12 +33,11 @@ const els = {
   closePostInfoBtn: document.getElementById("closePostInfoBtn"),
   savePostInfoBtn: document.getElementById("savePostInfoBtn"),
   fmTitle: document.getElementById("fmTitle"),
+  fmSlug: document.getElementById("fmSlug"),
   fmDate: document.getElementById("fmDate"),
   fmDescription: document.getElementById("fmDescription"),
   fmTags: document.getElementById("fmTags"),
   fmCategories: document.getElementById("fmCategories"),
-  fmWeight: document.getElementById("fmWeight"),
-  fmType: document.getElementById("fmType"),
   fmHidden: document.getElementById("fmHidden"),
   imagePanel: document.getElementById("imagePanel"),
   imageUrl: document.getElementById("imageUrl"),
@@ -70,12 +69,11 @@ const state = {
   rawFrontMatter: "",
   metadata: {
     title: "New Markdown page",
+    slug: "new-markdown-page",
     date: new Date().toISOString().slice(0, 10),
+    tags: "",
+    categories: "",
     description: "",
-    tags: [],
-    categories: [],
-    weight: "",
-    type: "docs",
     hidden: "false"
   }
 };
@@ -134,6 +132,15 @@ function unescapeHtml(value) {
 function iconClass(block) { return block.icon.includes("fa-brands") ? block.icon : "fa-solid " + block.icon; }
 function splitList(value) { return String(value || "").split(",").map(item => item.trim()).filter(Boolean); }
 function yamlEscape(value) { return String(value || "").replace(/\\/g, "\\\\").replace(/"/g, "\\\""); }
+function yamlScalar(value) { return Array.isArray(value) ? value.join(", ") : String(value || "").trim(); }
+function slugify(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "markdown-page";
+}
 function listToYaml(items) {
   const clean = (Array.isArray(items) ? items : splitList(items)).filter(Boolean);
   return clean.length ? "[" + clean.map(item => `\"${yamlEscape(item)}\"`).join(", ") + "]" : "[]";
@@ -255,18 +262,16 @@ const blocks = [
 const sidebarCategoryOrder = ["Text", "Lists", "Media", "Content", "Code", "Alerts", "Docsy"];
 
 function buildFrontMatter() {
-  if (typeof state.rawFrontMatter === "string" && state.rawFrontMatter.trim()) {
-    return `---\n${state.rawFrontMatter.replace(/^\s*---\s*\r?\n?|\r?\n?---\s*$/g, "").trim()}\n---`;
-  }
-  const m = state.metadata;
+  const m = state.metadata || {};
+  const title = m.title || state.projectName || "New Markdown page";
+  const slug = m.slug || slugify(title);
   const lines = ["---"];
-  lines.push(`title: "${yamlEscape(m.title || state.projectName)}"`);
+  lines.push(`title: "${yamlEscape(title)}"`);
+  lines.push(`slug: "${yamlEscape(slug)}"`);
   if (m.date) lines.push(`date: ${m.date}`);
-  if (m.description) lines.push(`description: "${yamlEscape(m.description)}"`);
-  lines.push(`tags: ${listToYaml(m.tags)}`);
-  lines.push(`categories: ${listToYaml(m.categories)}`);
-  if (m.weight !== "") lines.push(`weight: ${Number(m.weight) || 0}`);
-  if (m.type) lines.push(`type: "${yamlEscape(m.type)}"`);
+  lines.push(`tags: ${yamlScalar(m.tags)}`);
+  lines.push(`categories: ${yamlScalar(m.categories)}`);
+  lines.push(`description: "${yamlEscape(m.description || "")}"`);
   lines.push(`hidden: ${m.hidden === "true" ? "true" : "false"}`);
   lines.push("---");
   return lines.join("\n");
@@ -300,12 +305,11 @@ function applyParsedFrontMatter(frontMatter) {
     const [, key, rawValue] = match;
     const normalizedKey = key.toLowerCase();
     if (normalizedKey === "title") nextMetadata.title = parseYamlScalar(rawValue);
+    if (normalizedKey === "slug") nextMetadata.slug = parseYamlScalar(rawValue);
     if (normalizedKey === "date") nextMetadata.date = parseYamlScalar(rawValue);
+    if (normalizedKey === "tags") nextMetadata.tags = parseYamlScalar(rawValue);
+    if (normalizedKey === "categories") nextMetadata.categories = parseYamlScalar(rawValue);
     if (normalizedKey === "description") nextMetadata.description = parseYamlScalar(rawValue);
-    if (normalizedKey === "tags") nextMetadata.tags = parseYamlArray(rawValue);
-    if (normalizedKey === "categories") nextMetadata.categories = parseYamlArray(rawValue);
-    if (normalizedKey === "weight") nextMetadata.weight = parseYamlScalar(rawValue);
-    if (normalizedKey === "type") nextMetadata.type = parseYamlScalar(rawValue);
     if (normalizedKey === "hidden") nextMetadata.hidden = parseYamlScalar(rawValue) === "true" ? "true" : "false";
   });
   state.metadata = nextMetadata;
@@ -996,6 +1000,7 @@ function setView(view) {
     if (markdownValue && els.markdownEditor.style.display === "block") {
       const { frontMatter, body } = splitMarkdownFrontMatter(markdownValue);
       rememberRawFrontMatter(frontMatter);
+      applyParsedFrontMatter(frontMatter);
       els.visualEditor.innerHTML = markdownToHtml(body);
     }
     els.visualEditor.style.display = "block";
@@ -1389,24 +1394,22 @@ function insertTableFromPanel() {
 function fillPostInfoForm() {
   const m = state.metadata;
   els.fmTitle.value = m.title || "";
+  els.fmSlug.value = m.slug || slugify(m.title || state.projectName || "");
   els.fmDate.value = m.date || "";
+  els.fmTags.value = yamlScalar(m.tags);
+  els.fmCategories.value = yamlScalar(m.categories);
   els.fmDescription.value = m.description || "";
-  els.fmTags.value = Array.isArray(m.tags) ? m.tags.join(", ") : m.tags || "";
-  els.fmCategories.value = Array.isArray(m.categories) ? m.categories.join(", ") : m.categories || "";
-  els.fmWeight.value = m.weight || "";
-  els.fmType.value = m.type || "";
   els.fmHidden.value = m.hidden === "true" ? "true" : "false";
 }
 function savePostInfoForm() {
   state.rawFrontMatter = "";
   state.metadata = {
     title: els.fmTitle.value.trim(),
+    slug: els.fmSlug.value.trim() || slugify(els.fmTitle.value || state.projectName),
     date: els.fmDate.value,
+    tags: els.fmTags.value.trim(),
+    categories: els.fmCategories.value.trim(),
     description: els.fmDescription.value.trim(),
-    tags: splitList(els.fmTags.value),
-    categories: splitList(els.fmCategories.value),
-    weight: els.fmWeight.value,
-    type: els.fmType.value.trim(),
     hidden: els.fmHidden.value
   };
   els.metadataDrawer.classList.remove("open");
@@ -1434,7 +1437,7 @@ function resetProject() {
   state.html = "";
   state.markdownCache = "";
   state.rawFrontMatter = "";
-  state.metadata = { title: "New Markdown page", date: new Date().toISOString().slice(0, 10), description: "", tags: [], categories: [], weight: "", type: "docs", hidden: "false" };
+  state.metadata = { title: "New Markdown page", slug: "new-markdown-page", date: new Date().toISOString().slice(0, 10), tags: "", categories: "", description: "", hidden: "false" };
   render();
   showToast("Project reset");
 }
@@ -1986,6 +1989,13 @@ els.codeBtn.addEventListener("click", () => setView("markdown"));
 els.postInfoBtn.addEventListener("click", () => { fillPostInfoForm(); els.metadataDrawer.classList.add("open"); });
 els.closePostInfoBtn.addEventListener("click", () => els.metadataDrawer.classList.remove("open"));
 els.savePostInfoBtn.addEventListener("click", savePostInfoForm);
+els.fmTitle.addEventListener("input", () => {
+  if (!els.fmSlug.value.trim() || els.fmSlug.dataset.autogenerated === "true") {
+    els.fmSlug.value = slugify(els.fmTitle.value);
+    els.fmSlug.dataset.autogenerated = "true";
+  }
+});
+els.fmSlug.addEventListener("input", () => { els.fmSlug.dataset.autogenerated = "false"; });
 els.importBtn?.addEventListener("click", () => els.importFile?.click());
 els.importFile?.addEventListener("change", event => {
   importMarkdownFile(event.target.files?.[0]);
@@ -2075,6 +2085,7 @@ els.markdownEditor.addEventListener("input", () => {
   state.markdownCache = els.markdownEditor.value;
   const { frontMatter } = splitMarkdownFrontMatter(els.markdownEditor.value);
   rememberRawFrontMatter(frontMatter);
+  applyParsedFrontMatter(frontMatter);
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
