@@ -1,13 +1,13 @@
 # MarkdownEditor
 
-Markdown Editor is a simple and web-based tool to create Markdown content created by Justin Verstijnen. This tool has the focus on creating articles for GitHub Pages with the Docsy Shortcodes into it.
+Markdown Editor is a simple and web-based tool to create Markdown content created by Justin Verstijnen. This tool has the focus on creating articles for GitHub Pages with the Docsy Shortcodes built into it.
 
 ## Main features
 
 The main features of this tool are:
 
 - Creating Markdown Files
-- Using the official Markdown-based content blocks
+- Using the official Markdown-based content blocks with drag-and-drop
 - Fast insertion of blocks with using "/" commands
 - Fast application of blocks using "Enter" button
 - Importing/Exporting Markdown files
