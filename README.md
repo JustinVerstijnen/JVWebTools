@@ -4,7 +4,7 @@ JVWebTools contains my [tools.justinverstijnen.nl](https://tools.justinverstijne
 
 ## Main features
 
-The main features of this tool are:
+The main features of this repository are:
 
 - Hosting all my tools
 - Iframes for API-driven tools for uniform URLs
