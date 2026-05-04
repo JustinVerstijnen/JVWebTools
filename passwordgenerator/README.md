@@ -1,20 +1,50 @@
 # PasswordGenerator
 
-Generate secure, random passwords with full customization.
+PasswordGenerator is a lightweight and web-based tool to generate different passwords and secrets created by Justin Verstijnen. This tool has some templates which you can use or you can define your own IP ranges.
 
-## Overview
+## Main features
 
-**PasswordGenerator** is an open-source tool that lets you create strong passwords tailored to your needs. Choose length, character types, and more — whether you're using the CLI or a lightweight web interface. Perfect for developers, sysadmins, or anyone needing reliable, customizable password generation.
+The main features of this tool are:
 
-## Features
+- Calculate network information:
+  - Network address
+  - Broadcast address
+  - First and last usable IP
+  - Total hosts
+  - Usable hosts
+- Supports both subnet mask and CIDR notation input
+- Clear, formatted output
+- Export results to different formats (e.g. JSON, CSV)
 
-- **Custom length**: specify any length within allowed bounds
-- **Character type options**:
-  - lowercase letters
-  - uppercase letters
-  - digits
-  - special characters (configurable set)
-- **Easy to use**:
-  - Lightweight web interface with copy-to-clipboard
-- **Open-source**: free to use, inspect, and extend
+### What the tool doesn't do
 
+- Cache or save your passwords, generation is done client-side using Javascript
+
+## Hosting
+
+This tool is currently hosted on GitHub Pages. Configuration changes are pushed and built using the default deployment method.
+
+## Technical Architecture
+
+- **Languages** : HTML, CSS, Javascript
+- **Platform** : GitHub Pages
+- **Runtime model** : Serverless
+- **Dependencies** : None
+
+## Changelog/new features
+
+New features to this tool are added when needed or if the tool is broken.
+
+Feature request can be done by submitting issues into GitHub.
+
+## Issues
+
+Its possible to submit any issues using the GitHub issues system.
+
+At this moment, this tool has no known issues.
+
+## License
+
+This project is licensed under the **MIT license**. This means that the software is open source and can be used to run the tool yourself.
+
+Use at your own risk. No guarantees or official support are provided.
