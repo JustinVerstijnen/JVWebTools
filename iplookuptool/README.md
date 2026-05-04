@@ -1,32 +1,48 @@
-# IP Lookup Tool
+# IPLookupTool
 
-A simple IP lookup tool that queries the public API at **ipwho.is** and shows the results in a clean table.
+IPLookupTool is a lightweight and web-based IP address Lookup tool created by Justin Verstijnen. This tool can be used to lookup different IPv4 and IPv6 addresses and get their details. It discovers the IP addresses using a 3rd party API.
 
-This repo is ready to deploy to **Azure Static Web Apps**:
+## Main features
 
-- `/` contains the static site (HTML/CSS/JS)
-- `/api` contains an Azure Function (`/api/iplookup`) that proxies requests to ipwho.is to avoid browser CORS blocks
+The main features of this tool are:
 
-## What does this tool do?
+- Lookup IPv4 and IPv6 addresses
+- Lookup your current IP addresss
+- Displays information like:
+   - IP version
+   - Country
+   - Region
+   - City
+   - GPS coordinates of location
+   - ISP
+   - Timezone
+- Export the lookup information
 
-- Accepts any valid IPv4 or IPv6 address
-- Displays geolocation/network metadata returned by ipwho.is (e.g., continent, country, city, latitude/longitude, ASN/ISP, timezone).
-- No personal or private information is retrieved — only publicly available IP metadata.
+## Hosting
 
-## How to use
+This tool is currently hosted on GitHub Pages. Configuration changes are pushed and built using the default deployment method.
 
-1. Enter any valid IP address (IPv4 or IPv6) in the search field.
-2. Click the **Lookup** button.
-3. The public WHOIS information will be displayed in a structured table format.
+## Technical Architecture
 
-## Azure Static Web Apps deployment notes
+- **Languages** : HTML, CSS, Javascript
+- **Platform** : GitHub Pages
+- **Runtime model** : Serverless
+- **Dependencies** : None
 
-In the Azure Static Web Apps resource configuration, set:
+## Changelog/new features
 
-- **App location:** `/`
-- **Api location:** `api`
-- **Output location:** *(leave empty)*
+New features to this tool are added when needed or if the tool is broken.
+
+Feature request can be done by submitting issues into GitHub.
+
+## Issues
+
+Its possible to submit any issues using the GitHub issues system.
+
+At this moment, this tool has no known issues.
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the **MIT license**. This means that the software is open source and can be used to run the tool yourself.
+
+Use at your own risk. No guarantees or official support are provided.
