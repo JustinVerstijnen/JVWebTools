@@ -6,15 +6,16 @@ PasswordGenerator is a lightweight and web-based tool to generate different pass
 
 The main features of this tool are:
 
-- Calculate network information:
-  - Network address
-  - Broadcast address
-  - First and last usable IP
-  - Total hosts
-  - Usable hosts
-- Supports both subnet mask and CIDR notation input
-- Clear, formatted output
-- Export results to different formats (e.g. JSON, CSV)
+- Generating passwords easy and fast
+- Generating PSKs with the PSK preset (60 characters to support some vendors' 64 character limit)
+- Complex passwords by default
+- Able to change the password parameters
+- Generation options:
+   - Include Uppercase characters
+   - Include Lowercase characters
+   - Include Numbers (0-9)
+   - Include Special characters
+   - Exclude Similar Characters (Upper and lowercase i's, l's O and 0' for example are being excluded)
 
 ### What the tool doesn't do
 
