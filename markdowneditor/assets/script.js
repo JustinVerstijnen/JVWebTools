@@ -188,6 +188,10 @@ function alertOptions(selected = "info") {
 function optionLabel(options, selected) {
   return (options.find(([value]) => value === selected) || options[0] || [selected, selected])[1];
 }
+function languageTitle(language) {
+  const normalized = String(language || "").trim();
+  return LANGUAGES.find(([value]) => value === normalized)?.[1] || normalized || "Plain text";
+}
 function blockDropdownHtml(type, options, selected) {
   const label = optionLabel(options, selected);
   const items = options.map(([value, text]) => `<button type="button" role="option" data-value="${escapeHtml(value)}" aria-selected="${value === selected ? "true" : "false"}">${escapeHtml(text)}</button>`).join("");
@@ -503,8 +507,9 @@ function nodeToMarkdown(node) {
   }
   if (node.matches(".docsy-code-block")) {
     const lang = node.dataset.language || "bash";
+    const title = languageTitle(lang);
     const code = node.querySelector("pre")?.textContent || "";
-    return `\n\n{{< card code=true header="**${lang.toUpperCase()}**" lang="${lang}" >}}\n${code.replace(/\n$/, "")}\n{{< /card >}}\n\n`;
+    return `\n\n{{< card code=true header="**${title}**" lang="${lang}" >}}\n${code.replace(/\n$/, "")}\n{{< /card >}}\n\n`;
   }
   if (node.matches(".code-block")) {
     const lang = node.dataset.language || "text";
