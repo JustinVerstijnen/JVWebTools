@@ -1,5 +1,5 @@
-const STORAGE_KEY = "markdown-editor-project-v14";
-const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v13", "markdown-editor-project-v12", "markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
+const STORAGE_KEY = "markdown-editor-project-v15";
+const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v14", "markdown-editor-project-v13", "markdown-editor-project-v12", "markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
 
 const LANGUAGES = [
   ["powershell", "PowerShell"], ["cmd", "cmd"], ["bash", "Bash"], ["json", "JSON"], ["csv", "CSV"],
@@ -141,9 +141,34 @@ function slugify(value) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "") || "markdown-page";
 }
-function listToYaml(items) {
-  const clean = (Array.isArray(items) ? items : splitList(items)).filter(Boolean);
-  return clean.length ? "[" + clean.map(item => `\"${yamlEscape(item)}\"`).join(", ") + "]" : "[]";
+function coerceYamlList(value) {
+  if (Array.isArray(value)) return value.map(item => String(item || "").trim()).filter(Boolean);
+  const raw = String(value || "").trim();
+  if (!raw) return [];
+  if (raw.startsWith("[") && raw.endsWith("]")) return parseYamlArray(raw);
+  return raw
+    .split(/\r?\n|,/)
+    .map(item => item.replace(/^\s*-\s*/, "").trim())
+    .filter(Boolean);
+}
+function yamlListItem(value) {
+  const item = String(value || "").trim();
+  if (!item) return '""';
+  const needsQuotes = /^[-?:,\[\]{}#&*!|>'"%@`]/.test(item)
+    || /:\s/.test(item)
+    || /\s#/.test(item)
+    || /[\r\n]/.test(item)
+    || /^(true|false|null|yes|no|on|off)$/i.test(item);
+  return needsQuotes ? `"${yamlEscape(item)}"` : item;
+}
+function appendYamlList(lines, key, value) {
+  const items = coerceYamlList(value);
+  if (!items.length) {
+    lines.push(`${key}: []`);
+    return;
+  }
+  lines.push(`${key}:`);
+  items.forEach(item => lines.push(`- ${yamlListItem(item)}`));
 }
 function showToast(message) {
   els.toast.textContent = message;
@@ -186,12 +211,18 @@ function rawHtmlDocsyBlockHtml(html = `<section class="custom-block">
 </section>`) {
   return rawHtmlCard("Raw HTML", html);
 }
+function markdownFragmentToHtml(markdown) {
+  const value = String(markdown || "").trim();
+  if (!value) return "";
+  return markdownToHtml(value).replace(/(?:<p><br><\/p>\s*)+$/i, "").trim();
+}
 function alertBlockHtml(kind = "markdown", color = "info", text = "") {
   const label = ALERTS.find(([value]) => value === color)?.[1] || "Info";
   const cls = kind === "docsy" ? "docsy-alert-block" : "markdown-alert-block";
   const title = kind === "docsy" ? `Docsy ${label}` : `Markdown ${label}`;
   const icon = kind === "docsy" ? "fa-triangle-exclamation" : "fa-bell";
-  return `<div class="${cls} editable-card alert-${escapeHtml(color)}" contenteditable="false" data-color="${escapeHtml(color)}"><div class="block-settings" contenteditable="false"><span><i class="fa-solid ${icon}"></i> ${escapeHtml(title)}</span><label>Type ${alertDropdownHtml(color)}</label></div><div class="alert-content" contenteditable="true">${escapeHtml(text)}</div></div><p><br></p>`;
+  const contentHtml = markdownFragmentToHtml(text);
+  return `<div class="${cls} editable-card alert-${escapeHtml(color)}" contenteditable="false" data-color="${escapeHtml(color)}"><div class="block-settings" contenteditable="false"><span><i class="fa-solid ${icon}"></i> ${escapeHtml(title)}</span><label>Type ${alertDropdownHtml(color)}</label></div><div class="alert-content" contenteditable="true">${contentHtml}</div></div><p><br></p>`;
 }
 function shortcodeCard(title, shortcode) {
   return `<div class="shortcode-card editable-card" data-shortcode="true" contenteditable="false"><div class="block-settings"><span><i class="fa-solid fa-cube"></i> ${escapeHtml(title)}</span></div><textarea>${escapeHtml(shortcode)}</textarea></div><p><br></p>`;
@@ -269,8 +300,8 @@ function buildFrontMatter() {
   lines.push(`title: "${yamlEscape(title)}"`);
   lines.push(`slug: "${yamlEscape(slug)}"`);
   if (m.date) lines.push(`date: ${m.date}`);
-  lines.push(`tags: ${yamlScalar(m.tags)}`);
-  lines.push(`categories: ${yamlScalar(m.categories)}`);
+  appendYamlList(lines, "tags", m.tags);
+  appendYamlList(lines, "categories", m.categories);
   lines.push(`description: "${yamlEscape(m.description || "")}"`);
   lines.push(`hidden: ${m.hidden === "true" ? "true" : "false"}`);
   lines.push("---");
@@ -329,22 +360,41 @@ function parseYamlArray(raw) {
   if (!value.startsWith("[") || !value.endsWith("]")) return splitList(value);
   return value.slice(1, -1).split(",").map(item => parseYamlScalar(item)).map(item => item.trim()).filter(Boolean);
 }
+function parseYamlListBlock(lines, startIndex, rawValue) {
+  const raw = String(rawValue || "").trim();
+  if (raw) return { value: coerceYamlList(raw).join(", "), nextIndex: startIndex };
+
+  const items = [];
+  let index = startIndex + 1;
+  while (index < lines.length) {
+    const itemMatch = lines[index].match(/^\s*-\s*(.*)$/);
+    if (!itemMatch) break;
+    items.push(parseYamlScalar(itemMatch[1]).trim());
+    index += 1;
+  }
+  return { value: items.filter(Boolean).join(", "), nextIndex: Math.max(startIndex, index - 1) };
+}
 function applyParsedFrontMatter(frontMatter) {
   if (!frontMatter) return;
   const nextMetadata = { ...state.metadata };
-  frontMatter.split(/\r?\n/).forEach(line => {
+  const lines = String(frontMatter || "").split(/\r?\n/);
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
     const match = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
-    if (!match) return;
+    if (!match) continue;
     const [, key, rawValue] = match;
     const normalizedKey = key.toLowerCase();
     if (normalizedKey === "title") nextMetadata.title = parseYamlScalar(rawValue);
     if (normalizedKey === "slug") nextMetadata.slug = parseYamlScalar(rawValue);
     if (normalizedKey === "date") nextMetadata.date = parseYamlScalar(rawValue);
-    if (normalizedKey === "tags") nextMetadata.tags = parseYamlScalar(rawValue);
-    if (normalizedKey === "categories") nextMetadata.categories = parseYamlScalar(rawValue);
+    if (normalizedKey === "tags" || normalizedKey === "categories") {
+      const parsed = parseYamlListBlock(lines, index, rawValue);
+      nextMetadata[normalizedKey] = parsed.value;
+      index = parsed.nextIndex;
+    }
     if (normalizedKey === "description") nextMetadata.description = parseYamlScalar(rawValue);
     if (normalizedKey === "hidden") nextMetadata.hidden = parseYamlScalar(rawValue) === "true" ? "true" : "false";
-  });
+  }
   state.metadata = nextMetadata;
   if (nextMetadata.title) {
     state.projectName = nextMetadata.title;
@@ -428,6 +478,11 @@ function htmlToMarkdown(html) {
   return nodesToMarkdown(root.childNodes).replace(/\n{3,}/g, "\n\n");
 }
 function nodesToMarkdown(nodes) { return Array.from(nodes).map(nodeToMarkdown).join("").replace(/\n{3,}/g, "\n\n"); }
+function alertContentToMarkdown(alertBlock) {
+  const content = alertBlock.querySelector(".alert-content");
+  if (!content) return "";
+  return nodesToMarkdown(content.childNodes).replace(/\n{3,}/g, "\n\n").trim();
+}
 function nodeToMarkdown(node) {
   if (node.nodeType === Node.TEXT_NODE) return node.textContent.replace(/\u00a0/g, " ");
   if (node.nodeType !== Node.ELEMENT_NODE) return "";
@@ -436,13 +491,14 @@ function nodeToMarkdown(node) {
   if (node.matches(".markdown-alert-block")) {
     const color = node.dataset.color || "info";
     const alert = ALERTS.find(([v]) => v === color) || ALERTS[0];
-    const txt = node.querySelector(".alert-content")?.textContent.trim() || "";
-    return `\n\n> [!${alert[2]}]\n${txt.split("\n").map(line => `> ${line}`).join("\n")}\n\n`;
+    const txt = alertContentToMarkdown(node);
+    const quoted = txt ? txt.split(/\r?\n/).map(line => line ? `> ${line}` : ">").join("\n") : ">";
+    return `\n\n> [!${alert[2]}]\n${quoted}\n\n`;
   }
   if (node.matches(".docsy-alert-block")) {
     const color = node.dataset.color || "info";
     const title = DOCSY_ALERT_TITLE[color] || "Info";
-    const txt = node.querySelector(".alert-content")?.textContent.trim() || "";
+    const txt = alertContentToMarkdown(node);
     return `\n\n{{% alert title="${title}" color="${color}" %}}\n${txt}\n{{% /alert %}}\n\n`;
   }
   if (node.matches(".docsy-code-block")) {
