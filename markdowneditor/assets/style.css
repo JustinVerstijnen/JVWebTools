@@ -1,3 +1,45 @@
+
+/* Local lightweight icon fallback. This removes the external Font Awesome dependency. */
+.fa-solid,
+.fa-brands {
+  display: inline-block;
+  width: 1.15em;
+  min-width: 1.15em;
+  text-align: center;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1;
+}
+.fa-pen-to-square::before, .fa-pen::before { content: "✎"; }
+.fa-code::before { content: "<>"; font-size: .82em; }
+.fa-circle-info::before { content: "i"; }
+.fa-file-import::before { content: "⇣"; }
+.fa-file-export::before { content: "⇡"; }
+.fa-trash::before, .fa-trash-can::before { content: "🗑"; font-size: .9em; }
+.fa-bold::before { content: "B"; }
+.fa-italic::before { content: "I"; font-style: italic; }
+.fa-link::before { content: "🔗"; font-size: .9em; }
+.fa-image::before { content: "▧"; }
+.fa-table::before, .fa-table-rows::before, .fa-table-columns::before { content: "▦"; }
+.fa-align-left::before { content: "☰"; }
+.fa-align-center::before { content: "≡"; }
+.fa-square-up-right::before { content: "↗"; }
+.fa-file-code::before { content: "▣"; }
+.fa-minus::before { content: "−"; }
+.fa-heading::before { content: "H"; }
+.fa-quote-left::before { content: "❝"; }
+.fa-list-ul::before { content: "•"; }
+.fa-list-ol::before { content: "1."; font-size: .82em; }
+.fa-bell::before { content: "!"; }
+.fa-triangle-exclamation::before { content: "⚠"; font-size: .9em; }
+.fa-circle-check::before { content: "✓"; }
+.fa-circle-xmark::before, .fa-xmark::before { content: "×"; }
+.fa-cube::before { content: "◇"; }
+.fa-html5::before { content: "H"; }
+.fa-folder-tree::before { content: "▤"; }
+.fa-layer-group::before { content: "▥"; }
+.fa-window-maximize::before { content: "□"; }
+
 :root {
   --accent: #77B0DE;
   --accent-strong: #4f94c7;

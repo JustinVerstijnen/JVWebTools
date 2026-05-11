@@ -1995,14 +1995,47 @@ function isPlainAutoListKey(event, key) {
   return event.key === key && !event.ctrlKey && !event.metaKey && !event.altKey;
 }
 
+function isAutoListIgnoredTarget(target) {
+  return !!target?.closest?.("input, textarea, select, pre, code, .block-settings, .block-dropdown");
+}
+
+function normalizedAutoListText(value) {
+  return String(value || "")
+    .replace(/ /g, " ")
+    .replace(/​/g, "")
+    .trim();
+}
+
+function maybeConvertAutoListMarkerInCurrentBlock() {
+  const block = getCurrentParagraphBlock();
+  if (block && selectionIsCollapsedInside(block)) {
+    const text = normalizedAutoListText(block.textContent);
+    if (/^[-*+]$/.test(text)) return replaceParagraphWithList(block, false, "");
+    if (/^\d+\.$/.test(text)) return replaceParagraphWithList(block, true, "");
+  }
+
+  const rootTextNode = getCurrentRootTextNode();
+  if (rootTextNode) {
+    const text = normalizedAutoListText(rootTextNode.textContent);
+    if (/^[-*+]$/.test(text)) return replaceRootTextNodeWithList(rootTextNode, false, "");
+    if (/^\d+\.$/.test(text)) return replaceRootTextNodeWithList(rootTextNode, true, "");
+  }
+
+  return false;
+}
+
 function maybeAutoCreateList(event) {
-  if (event.target?.closest?.("input, textarea, select, pre, code, .block-settings, .block-dropdown")) return false;
+  if (isAutoListIgnoredTarget(event.target)) return false;
 
   let block = getCurrentParagraphBlock();
   const rootTextNode = getCurrentRootTextNode();
 
   if (isPlainAutoListKey(event, "-")) {
-    if (!block && selectionInsideEditor() && (isEditorEffectivelyEmpty() || !rootTextNode)) {
+    if (block && isEmptyParagraphForAutoList(block)) {
+      event.preventDefault();
+      return replaceParagraphWithList(block, false, "");
+    }
+    if (!block && selectionInsideEditor() && (!rootTextNode || !normalizedAutoListText(rootTextNode.textContent))) {
       event.preventDefault();
       if (isEditorEffectivelyEmpty()) {
         block = document.createElement("p");
@@ -2012,10 +2045,6 @@ function maybeAutoCreateList(event) {
         return replaceParagraphWithList(block, false, "");
       }
       return insertEmptyListAtCurrentSelection(false);
-    }
-    if (block && isEmptyParagraphForAutoList(block)) {
-      event.preventDefault();
-      return replaceParagraphWithList(block, false, "");
     }
   }
 
@@ -2041,17 +2070,18 @@ function maybeAutoCreateList(event) {
   }
 
   if (event.key !== " ") return false;
-  if (!block) return false;
-  const text = (block.textContent || "").replace(/ /g, " ");
-  if (/^\s*[-*+]$/.test(text)) {
+  if (maybeConvertAutoListMarkerInCurrentBlock()) {
     event.preventDefault();
-    return convertParagraphToList(block, false);
-  }
-  if (/^\s*\d+\.$/.test(text)) {
-    event.preventDefault();
-    return convertParagraphToList(block, true);
+    return true;
   }
   return false;
+}
+
+function maybeAutoCreateListAfterInput(event) {
+  if (!event || event.isComposing || isAutoListIgnoredTarget(event.target)) return false;
+  if (event.inputType !== "insertText") return false;
+  if (!["-", ".", " "].includes(event.data)) return false;
+  return maybeConvertAutoListMarkerInCurrentBlock();
 }
 function getCurrentListItem() {
   const selection = window.getSelection();
@@ -2395,7 +2425,20 @@ els.projectName.addEventListener("input", () => {
 els.editorToolbar.addEventListener("pointerdown", () => saveSelection());
 els.headingSelect.addEventListener("change", event => setHeading(event.target.value));
 els.visualEditor.addEventListener("beforeinput", clearEditorPlaceholderBeforeInput);
-els.visualEditor.addEventListener("input", event => { autoLinkCurrentText(event); updateSlashMenu(); scheduleNormalizeEditorContent(event.target); updateEditorPlaceholder(); updateTableToolbarVisibility(); saveProject(); });
+els.visualEditor.addEventListener("input", event => {
+  if (maybeAutoCreateListAfterInput(event)) {
+    updateSlashMenu();
+    updateEditorPlaceholder();
+    updateTableToolbarVisibility();
+    return;
+  }
+  autoLinkCurrentText(event);
+  updateSlashMenu();
+  scheduleNormalizeEditorContent(event.target);
+  updateEditorPlaceholder();
+  updateTableToolbarVisibility();
+  saveProject();
+});
 els.visualEditor.addEventListener("keydown", handleEditorKeydown);
 els.visualEditor.addEventListener("keyup", event => {
   saveSelection();
