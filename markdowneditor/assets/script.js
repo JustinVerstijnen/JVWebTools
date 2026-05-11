@@ -1839,21 +1839,95 @@ function normalizeMarkdownListSpacing(markdown) {
   }
   return output.join("\n");
 }
+const AUTO_LIST_TEXT_BLOCK_SELECTOR = "p, h1, h2, h3, h4, h5, h6, blockquote";
+
+function isEditableLineDiv(element) {
+  if (!element || element === els.visualEditor || !els.visualEditor.contains(element)) return false;
+  if (element.matches(".editable-card, .block-settings, .docsy-alert-block, .markdown-alert-block, .code-block, .docsy-code-block, .raw-html-docsy-block, .alert-content")) return false;
+  if (element.closest(".block-settings, pre, table")) return false;
+  const parent = element.parentElement;
+  return parent === els.visualEditor || parent?.matches?.(".alert-content");
+}
+
+function findEditableLineBlockFromNode(node) {
+  let element = node?.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+  while (element && element !== els.visualEditor) {
+    if (element.matches?.(AUTO_LIST_TEXT_BLOCK_SELECTOR)) return element;
+    if (element.matches?.("div") && isEditableLineDiv(element)) return element;
+    element = element.parentElement;
+  }
+  return null;
+}
+
 function getCurrentParagraphBlock() {
   const selection = window.getSelection();
   if (!selection.rangeCount) return null;
-  let node = selection.getRangeAt(0).commonAncestorContainer;
-  if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
-  return node?.closest?.("p") || null;
+  const range = selection.getRangeAt(0);
+  const directBlock = findEditableLineBlockFromNode(range.commonAncestorContainer);
+  if (directBlock) return directBlock;
+
+  if (range.startContainer.nodeType === Node.ELEMENT_NODE) {
+    const container = range.startContainer;
+    const candidates = [container.childNodes[range.startOffset], container.childNodes[range.startOffset - 1]].filter(Boolean);
+    for (const candidate of candidates) {
+      const block = findEditableLineBlockFromNode(candidate);
+      if (block) return block;
+    }
+  }
+  return null;
 }
+
+function getCurrentRootTextNode() {
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return null;
+  const range = selection.getRangeAt(0);
+  return range.startContainer.nodeType === Node.TEXT_NODE && range.startContainer.parentNode === els.visualEditor ? range.startContainer : null;
+}
+
+function selectionIsCollapsedInside(block) {
+  const selection = window.getSelection();
+  return !!(selection.rangeCount && selection.getRangeAt(0).collapsed && block?.contains?.(selection.getRangeAt(0).commonAncestorContainer));
+}
+
+function getTextBeforeCaretInBlock(block) {
+  const selection = window.getSelection();
+  if (!selection.rangeCount || !block) return "";
+  const activeRange = selection.getRangeAt(0);
+  const range = activeRange.cloneRange();
+  range.selectNodeContents(block);
+  range.setEnd(activeRange.startContainer, activeRange.startOffset);
+  return range.toString().replace(/ /g, " ");
+}
+
+function getTextAfterCaretInBlock(block) {
+  const selection = window.getSelection();
+  if (!selection.rangeCount || !block) return "";
+  const activeRange = selection.getRangeAt(0);
+  const range = activeRange.cloneRange();
+  range.selectNodeContents(block);
+  range.setStart(activeRange.endContainer, activeRange.endOffset);
+  return range.toString().replace(/ /g, " ");
+}
+
 function convertParagraphToList(block, ordered = false) {
   if (!block || !els.visualEditor.contains(block)) return false;
   const rawText = (block.textContent || "").replace(/ /g, " ");
-  const match = rawText.match(ordered ? /^\s*(\d+)\.\s+(.*)$/ : /^\s*[-*+]\s+(.*)$/);
+  const match = rawText.match(ordered ? /^\s*(\d+)\.\s*(.*)$/ : /^\s*[-*+]\s*(.*)$/);
   if (!match) return false;
   const content = ordered ? match[2] : match[1];
   return replaceParagraphWithList(block, ordered, content);
 }
+
+function focusListItem(li) {
+  const range = document.createRange();
+  range.selectNodeContents(li);
+  range.collapse(false);
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+  saveSelection();
+}
+
 function replaceParagraphWithList(block, ordered = false, content = "") {
   if (!block || !els.visualEditor.contains(block)) return false;
   const list = document.createElement(ordered ? "ol" : "ul");
@@ -1864,39 +1938,110 @@ function replaceParagraphWithList(block, ordered = false, content = "") {
   trailingParagraph.innerHTML = "<br>";
   block.replaceWith(list, trailingParagraph);
   normalizeEditorContent(list);
-  const range = document.createRange();
-  range.selectNodeContents(li);
-  range.collapse(false);
-  const selection = window.getSelection();
-  selection.removeAllRanges();
-  selection.addRange(range);
-  saveSelection();
+  focusListItem(li);
   saveProject();
   return true;
 }
-function isEmptyParagraphForAutoList(block) {
-  if (!block || !els.visualEditor.contains(block)) return false;
-  const text = (block.textContent || "").replace(/ /g, " ").trim();
-  if (text) return false;
+
+function insertEmptyListAtCurrentSelection(ordered = false) {
   const selection = window.getSelection();
-  return !!(selection.rangeCount && selection.getRangeAt(0).collapsed && block.contains(selection.getRangeAt(0).commonAncestorContainer));
+  if (!selection.rangeCount || !selectionInsideEditor()) return false;
+  const range = selection.getRangeAt(0);
+  const list = document.createElement(ordered ? "ol" : "ul");
+  const li = document.createElement("li");
+  li.innerHTML = "<br>";
+  list.appendChild(li);
+  const trailingParagraph = document.createElement("p");
+  trailingParagraph.innerHTML = "<br>";
+
+  if (range.startContainer === els.visualEditor) {
+    const nextNode = els.visualEditor.childNodes[range.startOffset];
+    const previousNode = els.visualEditor.childNodes[range.startOffset - 1];
+    if (nextNode?.nodeName === "BR") nextNode.remove();
+    if (previousNode?.nodeName === "BR") previousNode.remove();
+  }
+
+  range.deleteContents();
+  range.insertNode(list);
+  list.after(trailingParagraph);
+  normalizeEditorContent(list);
+  focusListItem(li);
+  saveProject();
+  return true;
 }
+
+function replaceRootTextNodeWithList(textNode, ordered = false, content = "") {
+  if (!textNode || textNode.parentNode !== els.visualEditor) return false;
+  const list = document.createElement(ordered ? "ol" : "ul");
+  const li = document.createElement("li");
+  li.innerHTML = content && String(content).trim() ? inlineMarkdown(String(content).trim()) : "<br>";
+  list.appendChild(li);
+  const trailingParagraph = document.createElement("p");
+  trailingParagraph.innerHTML = "<br>";
+  textNode.replaceWith(list, trailingParagraph);
+  normalizeEditorContent(list);
+  focusListItem(li);
+  saveProject();
+  return true;
+}
+
+function isEmptyParagraphForAutoList(block) {
+  if (!block || !els.visualEditor.contains(block) || !selectionIsCollapsedInside(block)) return false;
+  const text = (block.textContent || "").replace(/ /g, " ").trim();
+  return !text;
+}
+
+function isPlainAutoListKey(event, key) {
+  return event.key === key && !event.ctrlKey && !event.metaKey && !event.altKey;
+}
+
 function maybeAutoCreateList(event) {
+  if (event.target?.closest?.("input, textarea, select, pre, code, .block-settings, .block-dropdown")) return false;
+
   let block = getCurrentParagraphBlock();
-  if (!block && event.key === "-" && !event.ctrlKey && !event.metaKey && !event.altKey && selectionInsideEditor() && isEditorEffectivelyEmpty()) {
-    event.preventDefault();
-    block = document.createElement("p");
-    block.innerHTML = "<br>";
-    els.visualEditor.innerHTML = "";
-    els.visualEditor.appendChild(block);
-    return replaceParagraphWithList(block, false, "");
+  const rootTextNode = getCurrentRootTextNode();
+
+  if (isPlainAutoListKey(event, "-")) {
+    if (!block && selectionInsideEditor() && (isEditorEffectivelyEmpty() || !rootTextNode)) {
+      event.preventDefault();
+      if (isEditorEffectivelyEmpty()) {
+        block = document.createElement("p");
+        block.innerHTML = "<br>";
+        els.visualEditor.innerHTML = "";
+        els.visualEditor.appendChild(block);
+        return replaceParagraphWithList(block, false, "");
+      }
+      return insertEmptyListAtCurrentSelection(false);
+    }
+    if (block && isEmptyParagraphForAutoList(block)) {
+      event.preventDefault();
+      return replaceParagraphWithList(block, false, "");
+    }
   }
-  if (!block) return false;
-  if (event.key === "-" && !event.ctrlKey && !event.metaKey && !event.altKey && isEmptyParagraphForAutoList(block)) {
-    event.preventDefault();
-    return replaceParagraphWithList(block, false, "");
+
+  if (isPlainAutoListKey(event, ".")) {
+    if (block && selectionIsCollapsedInside(block)) {
+      const before = getTextBeforeCaretInBlock(block);
+      const after = getTextAfterCaretInBlock(block);
+      if (/^\s*\d+$/.test(before) && !after.trim()) {
+        event.preventDefault();
+        return replaceParagraphWithList(block, true, "");
+      }
+    }
+    if (rootTextNode) {
+      const selection = window.getSelection();
+      const range = selection.rangeCount ? selection.getRangeAt(0) : null;
+      const before = range ? rootTextNode.textContent.slice(0, range.startOffset).replace(/ /g, " ") : "";
+      const after = range ? rootTextNode.textContent.slice(range.endOffset).replace(/ /g, " ") : "";
+      if (/^\s*\d+$/.test(before) && !after.trim()) {
+        event.preventDefault();
+        return replaceRootTextNodeWithList(rootTextNode, true, "");
+      }
+    }
   }
+
   if (event.key !== " ") return false;
+  if (!block) return false;
   const text = (block.textContent || "").replace(/ /g, " ");
   if (/^\s*[-*+]$/.test(text)) {
     event.preventDefault();
