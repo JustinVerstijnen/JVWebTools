@@ -1,5 +1,5 @@
-const STORAGE_KEY = "markdown-editor-project-v15";
-const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v14", "markdown-editor-project-v13", "markdown-editor-project-v12", "markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
+const STORAGE_KEY = "markdown-editor-project-v16";
+const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v15", "markdown-editor-project-v14", "markdown-editor-project-v13", "markdown-editor-project-v12", "markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
 
 const LANGUAGES = [
   ["powershell", "PowerShell"], ["cmd", "cmd"], ["bash", "Bash"], ["json", "JSON"], ["csv", "CSV"],
@@ -129,6 +129,25 @@ function unescapeHtml(value) {
   node.innerHTML = value;
   return node.value;
 }
+function escapeShortcodeAttribute(value) {
+  return String(value || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"');
+}
+function getShortcodeAttribute(attrs, name) {
+  const pattern = new RegExp(`${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "i");
+  const match = String(attrs || "").match(pattern);
+  if (!match) return "";
+  return String(match[1] ?? match[2] ?? "")
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, "\\");
+}
+function getDefaultDocsyAlertTitle(color = "info") {
+  return DOCSY_ALERT_TITLE[color] || "Info";
+}
+function isDefaultDocsyAlertTitle(title = "") {
+  return Object.values(DOCSY_ALERT_TITLE).includes(String(title || "").trim());
+}
 function iconClass(block) { return block.icon.includes("fa-brands") ? block.icon : "fa-solid " + block.icon; }
 function splitList(value) { return String(value || "").split(",").map(item => item.trim()).filter(Boolean); }
 function yamlEscape(value) { return String(value || "").replace(/\\/g, "\\\\").replace(/"/g, "\\\""); }
@@ -199,6 +218,16 @@ function blockDropdownHtml(type, options, selected) {
 }
 function languageDropdownHtml(selected = "powershell") { return blockDropdownHtml("language", LANGUAGES, selected); }
 function alertDropdownHtml(selected = "info") { return blockDropdownHtml("alert", ALERTS.map(([value, label]) => [value, label]), selected); }
+function alertTitleInputHtml(color = "info", title = "") {
+  const value = String(title || "").trim() || getDefaultDocsyAlertTitle(color);
+  return `<label class="alert-title-field">Title <input class="alert-title" type="text" value="${escapeHtml(value)}" placeholder="${escapeHtml(getDefaultDocsyAlertTitle(color))}" contenteditable="false" /></label>`;
+}
+function getAlertBlockTitle(block) {
+  const color = block?.dataset?.color || "info";
+  const input = block?.querySelector?.(".alert-title");
+  const title = String(input?.value || input?.getAttribute("value") || block?.dataset?.title || "").trim();
+  return title || getDefaultDocsyAlertTitle(color);
+}
 
 function codeBlockHtml(language = "powershell", code = "") {
   return `<div class="code-block editable-card" contenteditable="false" data-language="${escapeHtml(language)}"><div class="block-settings" contenteditable="false"><span><i class="fa-solid fa-code"></i> Code block</span><label>Language ${languageDropdownHtml(language)}</label></div><pre contenteditable="true" spellcheck="false"><code>${escapeHtml(code)}</code></pre></div><p><br></p>`;
@@ -220,13 +249,17 @@ function markdownFragmentToHtml(markdown) {
   if (!value) return "";
   return markdownToHtml(value).replace(/(?:<p><br><\/p>\s*)+$/i, "").trim();
 }
-function alertBlockHtml(kind = "markdown", color = "info", text = "") {
-  const label = ALERTS.find(([value]) => value === color)?.[1] || "Info";
+function alertBlockHtml(kind = "markdown", color = "info", text = "", customTitle = "") {
+  const normalizedColor = ALERTS.find(([value]) => value === color)?.[0] || "info";
+  const label = ALERTS.find(([value]) => value === normalizedColor)?.[1] || "Info";
   const cls = kind === "docsy" ? "docsy-alert-block" : "markdown-alert-block";
   const title = kind === "docsy" ? `Docsy ${label}` : `Markdown ${label}`;
   const icon = kind === "docsy" ? "fa-triangle-exclamation" : "fa-bell";
   const contentHtml = markdownFragmentToHtml(text);
-  return `<div class="${cls} editable-card alert-${escapeHtml(color)}" contenteditable="false" data-color="${escapeHtml(color)}"><div class="block-settings" contenteditable="false"><span><i class="fa-solid ${icon}"></i> ${escapeHtml(title)}</span><label>Type ${alertDropdownHtml(color)}</label></div><div class="alert-content" contenteditable="true">${contentHtml}</div></div><p><br></p>`;
+  const docsyTitle = String(customTitle || "").trim() || getDefaultDocsyAlertTitle(normalizedColor);
+  const titleControl = kind === "docsy" ? alertTitleInputHtml(normalizedColor, docsyTitle) : "";
+  const titleData = kind === "docsy" ? ` data-title="${escapeHtml(docsyTitle)}"` : "";
+  return `<div class="${cls} editable-card alert-${escapeHtml(normalizedColor)}" contenteditable="false" data-color="${escapeHtml(normalizedColor)}"${titleData}><div class="block-settings" contenteditable="false"><span><i class="fa-solid ${icon}"></i> ${escapeHtml(title)}</span><label>Type ${alertDropdownHtml(normalizedColor)}</label>${titleControl}</div><div class="alert-content" contenteditable="true">${contentHtml}</div></div><p><br></p>`;
 }
 function shortcodeCard(title, shortcode) {
   return `<div class="shortcode-card editable-card" data-shortcode="true" contenteditable="false"><div class="block-settings"><span><i class="fa-solid fa-cube"></i> ${escapeHtml(title)}</span></div><textarea>${escapeHtml(shortcode)}</textarea></div><p><br></p>`;
@@ -501,9 +534,15 @@ function nodeToMarkdown(node) {
   }
   if (node.matches(".docsy-alert-block")) {
     const color = node.dataset.color || "info";
-    const title = DOCSY_ALERT_TITLE[color] || "Info";
+    const title = getAlertBlockTitle(node);
     const txt = alertContentToMarkdown(node);
-    return `\n\n{{% alert title="${title}" color="${color}" %}}\n${txt}\n{{% /alert %}}\n\n`;
+    return `
+
+{{% alert title="${escapeShortcodeAttribute(title)}" color="${escapeShortcodeAttribute(color)}" %}}
+${txt}
+{{% /alert %}}
+
+`;
   }
   if (node.matches(".docsy-code-block")) {
     const lang = node.dataset.language || "bash";
@@ -730,9 +769,11 @@ function markdownToHtml(markdown) {
     tokens.push(docsyCodeBlockHtml((lang || "bash").trim(), code.trim()));
     return token;
   });
-  text = text.replace(/{{%\s*alert[^%]*color="([^"]+)"[^%]*%}}([\s\S]*?){{%\s*\/alert\s*%}}/g, (_, color, body) => {
+  text = text.replace(/{{%\s*alert([^%]*)%}}([\s\S]*?){{%\s*\/alert\s*%}}/g, (_, attrs, body) => {
+    const color = getShortcodeAttribute(attrs, "color") || "info";
+    const title = getShortcodeAttribute(attrs, "title") || getDefaultDocsyAlertTitle(color);
     const token = `__TOKEN_${tokens.length}__`;
-    tokens.push(alertBlockHtml("docsy", color, body.trim()));
+    tokens.push(alertBlockHtml("docsy", color, body.trim(), title));
     return token;
   });
   text = text.replace(/{{[%<][\s\S]*?[%>]}}(?:[\s\S]*?{{[%<]\s*\/[\s\S]*?[%>]}})?/g, match => {
@@ -1538,13 +1579,38 @@ function exportMarkdown() {
 }
 function resetProject() {
   if (!window.confirm("Delete the locally saved project and start over?")) return;
-  localStorage.removeItem(STORAGE_KEY);
+  const preferredView = state.view === "markdown" ? "markdown" : "editor";
+  clearTimeout(saveTimer);
+  [STORAGE_KEY, ...PREVIOUS_STORAGE_KEYS].forEach(key => localStorage.removeItem(key));
   state.projectName = "markdown-page";
   state.html = "";
   state.markdownCache = "";
   state.rawFrontMatter = "";
   state.metadata = { title: "New Markdown page", slug: "new-markdown-page", date: new Date().toISOString().slice(0, 10), tags: "", categories: "", description: "", hidden: "false" };
-  render();
+
+  els.projectName.value = state.projectName;
+  els.visualEditor.innerHTML = "";
+  els.markdownEditor.value = "";
+  normalizeEditorContent();
+  updateEditorPlaceholder();
+  fillPostInfoForm();
+  updateTableToolbarVisibility();
+
+  state.view = preferredView;
+  els.editorBtn.classList.toggle("active", preferredView === "editor");
+  els.codeBtn.classList.toggle("active", preferredView === "markdown");
+  els.visualEditor.style.display = preferredView === "editor" ? "block" : "none";
+  els.editorToolbar.style.display = preferredView === "editor" ? "flex" : "none";
+  els.markdownEditor.style.display = preferredView === "markdown" ? "block" : "none";
+  if (preferredView === "markdown") {
+    state.markdownCache = `${buildFrontMatter()}
+
+`;
+    els.markdownEditor.value = state.markdownCache;
+  }
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  els.saveStatus.textContent = "Saved at " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   showToast("Project reset");
 }
 
@@ -1786,9 +1852,13 @@ function convertParagraphToList(block, ordered = false) {
   const match = rawText.match(ordered ? /^\s*(\d+)\.\s+(.*)$/ : /^\s*[-*+]\s+(.*)$/);
   if (!match) return false;
   const content = ordered ? match[2] : match[1];
+  return replaceParagraphWithList(block, ordered, content);
+}
+function replaceParagraphWithList(block, ordered = false, content = "") {
+  if (!block || !els.visualEditor.contains(block)) return false;
   const list = document.createElement(ordered ? "ol" : "ul");
   const li = document.createElement("li");
-  li.innerHTML = content && content.trim() ? inlineMarkdown(content.trim()) : "<br>";
+  li.innerHTML = content && String(content).trim() ? inlineMarkdown(String(content).trim()) : "<br>";
   list.appendChild(li);
   const trailingParagraph = document.createElement("p");
   trailingParagraph.innerHTML = "<br>";
@@ -1804,10 +1874,29 @@ function convertParagraphToList(block, ordered = false) {
   saveProject();
   return true;
 }
+function isEmptyParagraphForAutoList(block) {
+  if (!block || !els.visualEditor.contains(block)) return false;
+  const text = (block.textContent || "").replace(/ /g, " ").trim();
+  if (text) return false;
+  const selection = window.getSelection();
+  return !!(selection.rangeCount && selection.getRangeAt(0).collapsed && block.contains(selection.getRangeAt(0).commonAncestorContainer));
+}
 function maybeAutoCreateList(event) {
-  if (event.key !== " ") return false;
-  const block = getCurrentParagraphBlock();
+  let block = getCurrentParagraphBlock();
+  if (!block && event.key === "-" && !event.ctrlKey && !event.metaKey && !event.altKey && selectionInsideEditor() && isEditorEffectivelyEmpty()) {
+    event.preventDefault();
+    block = document.createElement("p");
+    block.innerHTML = "<br>";
+    els.visualEditor.innerHTML = "";
+    els.visualEditor.appendChild(block);
+    return replaceParagraphWithList(block, false, "");
+  }
   if (!block) return false;
+  if (event.key === "-" && !event.ctrlKey && !event.metaKey && !event.altKey && isEmptyParagraphForAutoList(block)) {
+    event.preventDefault();
+    return replaceParagraphWithList(block, false, "");
+  }
+  if (event.key !== " ") return false;
   const text = (block.textContent || "").replace(/ /g, " ");
   if (/^\s*[-*+]$/.test(text)) {
     event.preventDefault();
@@ -1989,9 +2078,10 @@ function applyBlockDropdownValue(dropdown, value) {
     block.dataset.language = value;
     refreshBlockDropdown(dropdown, value);
   } else {
+    const previousColor = block.dataset.color || "info";
     block.dataset.color = value;
     refreshBlockDropdown(dropdown, value);
-    refreshAlertBlockAppearance(block);
+    refreshAlertBlockAppearance(block, previousColor);
   }
   closeAllBlockDropdowns();
   saveProject();
@@ -2047,7 +2137,26 @@ function syncSelectSelectedAttributes(select) {
     else option.removeAttribute("selected");
   });
 }
-function refreshAlertBlockAppearance(block) {
+function ensureAlertTitleInput(block) {
+  if (!block?.classList?.contains("docsy-alert-block")) return;
+  const settings = block.querySelector(".block-settings");
+  if (!settings) return;
+  const color = block.dataset.color || "info";
+  let input = settings.querySelector("input.alert-title");
+  const title = String(input?.value || input?.getAttribute("value") || block.dataset.title || getDefaultDocsyAlertTitle(color)).trim() || getDefaultDocsyAlertTitle(color);
+  block.dataset.title = title;
+  if (!input) {
+    settings.insertAdjacentHTML("beforeend", alertTitleInputHtml(color, title));
+    input = settings.querySelector("input.alert-title");
+  }
+  if (input) {
+    input.value = title;
+    input.setAttribute("value", title);
+    input.placeholder = getDefaultDocsyAlertTitle(color);
+    input.contentEditable = "false";
+  }
+}
+function refreshAlertBlockAppearance(block, previousColor = null) {
   const color = block.dataset.color || "info";
   const label = ALERTS.find(([value]) => value === color)?.[1] || "Info";
   const title = block.classList.contains("docsy-alert-block") ? `Docsy ${label}` : `Markdown ${label}`;
@@ -2056,6 +2165,23 @@ function refreshAlertBlockAppearance(block) {
   if (titleNode) titleNode.innerHTML = `${icon} ${escapeHtml(title)}`;
   const base = block.classList.contains("docsy-alert-block") ? "docsy-alert-block" : "markdown-alert-block";
   block.className = `${base} editable-card alert-${color}`;
+
+  if (base === "docsy-alert-block") {
+    ensureAlertTitleInput(block);
+    const input = block.querySelector(".alert-title");
+    const currentTitle = String(input?.value || block.dataset.title || "").trim();
+    const previousDefault = getDefaultDocsyAlertTitle(previousColor || color);
+    const shouldUseNewDefault = previousColor ? (!currentTitle || currentTitle === previousDefault) : !currentTitle;
+    if (shouldUseNewDefault) {
+      const nextTitle = getDefaultDocsyAlertTitle(color);
+      block.dataset.title = nextTitle;
+      if (input) {
+        input.value = nextTitle;
+        input.setAttribute("value", nextTitle);
+      }
+    }
+    if (input) input.placeholder = getDefaultDocsyAlertTitle(color);
+  }
 }
 
 function bindEmbeddedSelect(select) {
@@ -2136,13 +2262,23 @@ els.visualEditor.addEventListener("mouseup", () => { saveSelection(); updateTabl
 els.visualEditor.addEventListener("focus", () => { saveSelection(); updateTableToolbarVisibility(); });
 els.visualEditor.addEventListener("paste", handlePaste);
 els.imagePanel.addEventListener("paste", handleImagePanelPaste);
+function updateAlertTitleInput(input) {
+  const block = input?.closest?.(".docsy-alert-block");
+  if (!block) return;
+  const title = String(input.value || "").trim();
+  block.dataset.title = title || getDefaultDocsyAlertTitle(block.dataset.color || "info");
+  input.setAttribute("value", input.value);
+  saveProject();
+}
 els.visualEditor.addEventListener("input", event => {
   if (event.target.matches(".code-language")) updateCodeLanguageSelect(event.target);
   if (event.target.matches(".alert-color")) updateAlertColorSelect(event.target);
+  if (event.target.matches(".alert-title")) updateAlertTitleInput(event.target);
 });
 els.visualEditor.addEventListener("change", event => {
   if (event.target.matches(".code-language")) updateCodeLanguageSelect(event.target);
   if (event.target.matches(".alert-color")) updateAlertColorSelect(event.target);
+  if (event.target.matches(".alert-title")) updateAlertTitleInput(event.target);
 });
 els.visualEditor.addEventListener("click", event => {
   if (handleBlockDropdownClick(event)) return;

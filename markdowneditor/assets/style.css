@@ -749,3 +749,28 @@ select:hover,
   transform: translateY(-1px);
   box-shadow: 0 12px 24px rgba(15, 30, 50, 0.22);
 }
+
+/* v16: Docsy alert title field in visual editor */
+.alert-title-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.block-settings .alert-title {
+  min-width: 180px;
+  border: 1px solid rgba(18, 32, 51, 0.10);
+  background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(241,247,252,.94));
+  color: #173247;
+  border-radius: 12px;
+  padding: 8px 10px;
+  outline: none;
+  box-shadow: 0 6px 18px rgba(15, 30, 50, 0.06);
+  font-weight: 750;
+  font-size: 12px;
+}
+.block-settings .alert-title:focus {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 4px rgba(119, 176, 222, 0.22), 0 6px 18px rgba(15, 30, 50, 0.06);
+}
