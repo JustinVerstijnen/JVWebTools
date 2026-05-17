@@ -978,6 +978,17 @@ function placeCursorAfter(node) {
   savedRange = range.cloneRange();
   lastSelectionSavedAt = Date.now();
 }
+function placeCursorAtStart(node) {
+  if (!node) return;
+  const range = document.createRange();
+  const selection = window.getSelection();
+  range.selectNodeContents(node);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  savedRange = range.cloneRange();
+  lastSelectionSavedAt = Date.now();
+}
 function focusFirstEditableIn(nodes) {
   const firstElement = nodes.find(node => node.nodeType === Node.ELEMENT_NODE);
   const target = firstElement?.matches?.('p, h1, h2, h3, h4, h5, h6, blockquote, li, figcaption, .alert-content, pre, td, th')
@@ -1985,10 +1996,24 @@ function replaceRootTextNodeWithList(textNode, ordered = false, content = "") {
   return true;
 }
 
+function isEmptyInlineNode(node) {
+  if (!node) return false;
+  if (node.nodeType === Node.TEXT_NODE) return !normalizedAutoListText(node.textContent);
+  if (node.nodeName === "BR") return true;
+  return false;
+}
+
+function isEmptyEditableLineElement(element) {
+  if (!element || element === els.visualEditor) return false;
+  if (!element.matches?.(AUTO_LIST_TEXT_BLOCK_SELECTOR) && !(element.matches?.("div") && isEditableLineDiv(element))) return false;
+  if (element.querySelector?.("img, table, figure, .editable-card, hr, ul, ol")) return false;
+  return !normalizedAutoListText(element.textContent);
+}
+
 function isEmptyParagraphForAutoList(block) {
   if (!block || !els.visualEditor.contains(block) || !selectionIsCollapsedInside(block)) return false;
-  const text = (block.textContent || "").replace(/ /g, " ").trim();
-  return !text;
+  if (!isEmptyEditableLineElement(block)) return false;
+  return !getTextBeforeCaretInBlock(block).trim() && !getTextAfterCaretInBlock(block).trim();
 }
 
 function isPlainAutoListKey(event, key) {
@@ -2006,18 +2031,81 @@ function normalizedAutoListText(value) {
     .trim();
 }
 
+function selectionIsOnEmptyRootTextLine(textNode) {
+  if (!textNode || textNode.parentNode !== els.visualEditor) return false;
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return false;
+  const range = selection.getRangeAt(0);
+  if (!range.collapsed || range.startContainer !== textNode) return false;
+  const before = textNode.textContent.slice(0, range.startOffset).replace(/ /g, " ");
+  const after = textNode.textContent.slice(range.endOffset).replace(/ /g, " ");
+  return !normalizedAutoListText(before) && !normalizedAutoListText(after);
+}
+
+function selectionIsOnEmptyEditorInsertionLine() {
+  const selection = window.getSelection();
+  if (!selection.rangeCount || !selectionInsideEditor()) return false;
+  const range = selection.getRangeAt(0);
+  if (!range.collapsed || range.startContainer !== els.visualEditor) return false;
+  if (isEditorEffectivelyEmpty()) return true;
+
+  const before = els.visualEditor.childNodes[range.startOffset - 1] || null;
+  const after = els.visualEditor.childNodes[range.startOffset] || null;
+  if (isEmptyInlineNode(before) || isEmptyInlineNode(after)) return true;
+
+  // Some browsers place the caret directly in the editor after a paragraph when the user is on a new empty line.
+  // Only allow this top-level position; selections inside text nodes are handled separately and will not match here.
+  return range.startOffset === els.visualEditor.childNodes.length || range.startOffset === 0;
+}
+
+function getEmptyAutoListTarget() {
+  const selection = window.getSelection();
+  if (!selection.rangeCount || !selectionInsideEditor()) return null;
+  const range = selection.getRangeAt(0);
+  if (!range.collapsed) return null;
+
+  const block = getCurrentParagraphBlock();
+  if (block && isEmptyParagraphForAutoList(block)) return { type: "block", block };
+
+  const rootTextNode = getCurrentRootTextNode();
+  if (rootTextNode && selectionIsOnEmptyRootTextLine(rootTextNode)) return { type: "root-text", rootTextNode };
+
+  if (selectionIsOnEmptyEditorInsertionLine()) return { type: "insertion" };
+
+  return null;
+}
+
+function replaceEmptyAutoListTarget(target, ordered = false) {
+  if (!target) return false;
+  if (target.type === "block") return replaceParagraphWithList(target.block, ordered, "");
+  if (target.type === "root-text") return replaceRootTextNodeWithList(target.rootTextNode, ordered, "");
+  if (target.type === "insertion") {
+    if (isEditorEffectivelyEmpty()) {
+      const block = document.createElement("p");
+      block.innerHTML = "<br>";
+      els.visualEditor.innerHTML = "";
+      els.visualEditor.appendChild(block);
+      return replaceParagraphWithList(block, ordered, "");
+    }
+    return insertEmptyListAtCurrentSelection(ordered);
+  }
+  return false;
+}
+
 function maybeConvertAutoListMarkerInCurrentBlock() {
   const block = getCurrentParagraphBlock();
   if (block && selectionIsCollapsedInside(block)) {
     const text = normalizedAutoListText(block.textContent);
-    if (/^[-*+]$/.test(text)) return replaceParagraphWithList(block, false, "");
-    if (/^\d+\.$/.test(text)) return replaceParagraphWithList(block, true, "");
+    const before = normalizedAutoListText(getTextBeforeCaretInBlock(block));
+    const after = normalizedAutoListText(getTextAfterCaretInBlock(block));
+    if (!after && text === "-" && before === "-") return replaceParagraphWithList(block, false, "");
+    if (!after && /^\d+\.$/.test(text) && before === text) return replaceParagraphWithList(block, true, "");
   }
 
   const rootTextNode = getCurrentRootTextNode();
-  if (rootTextNode) {
+  if (rootTextNode && selectionIsOnEmptyRootTextLine(rootTextNode)) {
     const text = normalizedAutoListText(rootTextNode.textContent);
-    if (/^[-*+]$/.test(text)) return replaceRootTextNodeWithList(rootTextNode, false, "");
+    if (text === "-") return replaceRootTextNodeWithList(rootTextNode, false, "");
     if (/^\d+\.$/.test(text)) return replaceRootTextNodeWithList(rootTextNode, true, "");
   }
 
@@ -2027,28 +2115,15 @@ function maybeConvertAutoListMarkerInCurrentBlock() {
 function maybeAutoCreateList(event) {
   if (isAutoListIgnoredTarget(event.target)) return false;
 
-  let block = getCurrentParagraphBlock();
-  const rootTextNode = getCurrentRootTextNode();
-
   if (isPlainAutoListKey(event, "-")) {
-    if (block && isEmptyParagraphForAutoList(block)) {
-      event.preventDefault();
-      return replaceParagraphWithList(block, false, "");
-    }
-    if (!block && selectionInsideEditor() && (!rootTextNode || !normalizedAutoListText(rootTextNode.textContent))) {
-      event.preventDefault();
-      if (isEditorEffectivelyEmpty()) {
-        block = document.createElement("p");
-        block.innerHTML = "<br>";
-        els.visualEditor.innerHTML = "";
-        els.visualEditor.appendChild(block);
-        return replaceParagraphWithList(block, false, "");
-      }
-      return insertEmptyListAtCurrentSelection(false);
-    }
+    const target = getEmptyAutoListTarget();
+    if (!target) return false;
+    event.preventDefault();
+    return replaceEmptyAutoListTarget(target, false);
   }
 
   if (isPlainAutoListKey(event, ".")) {
+    const block = getCurrentParagraphBlock();
     if (block && selectionIsCollapsedInside(block)) {
       const before = getTextBeforeCaretInBlock(block);
       const after = getTextAfterCaretInBlock(block);
@@ -2057,6 +2132,7 @@ function maybeAutoCreateList(event) {
         return replaceParagraphWithList(block, true, "");
       }
     }
+    const rootTextNode = getCurrentRootTextNode();
     if (rootTextNode) {
       const selection = window.getSelection();
       const range = selection.rangeCount ? selection.getRangeAt(0) : null;
