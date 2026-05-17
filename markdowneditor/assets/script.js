@@ -694,14 +694,25 @@ function markdownQuoteToHtml(lines, startIndex) {
 }
 function getListLineInfo(rawLine = "") {
   const raw = String(rawLine || "");
-  const indentMatch = raw.match(/^(	+| +)/);
-  const indentToken = indentMatch ? indentMatch[0] : "";
-  const indentSpaces = indentToken.includes("	") ? indentToken.length * 2 : indentToken.length;
-  const level = Math.min(2, Math.floor(indentSpaces / 2));
-  const trimmed = raw.trim();
-  const match = trimmed.match(/^(?:([-*+])|(\d+)\.)\s+(.*)$/);
+  if (!raw.trim()) return null;
+
+  // Accept normal items like "- text" / "1. text", but also empty items like "-" or "1.".
+  // This is needed because htmlToMarkdown() exports an empty <li> as "-", and line.trim()
+  // removes the trailing space from "- ".
+  const match = raw.match(/^(\s*)(?:([-*+])(?:\s+(.*))?|(\d+)\.(?:\s+(.*))?)$/);
   if (!match) return null;
-  return { level, ordered: Boolean(match[2]), body: match[3] || "" };
+
+  const indentToken = match[1] || "";
+  const indentSpaces = Array.from(indentToken).reduce((total, char) => total + (char === "	" ? 2 : 1), 0);
+  const level = Math.min(2, Math.floor(indentSpaces / 2));
+  const ordered = Boolean(match[4]);
+  const body = ordered ? (match[5] || "") : (match[3] || "");
+
+  return { level, ordered, body };
+}
+
+function isMarkdownListLine(rawLine = "") {
+  return getListLineInfo(rawLine) !== null;
 }
 
 function buildListHtml(lines, startIndex) {
@@ -746,7 +757,7 @@ function buildListHtml(lines, startIndex) {
       stack[stack.length - 1].list.dataset.checklist = "true";
       li.innerHTML = `<input type="checkbox" ${/[xX]/.test(taskMatch[1]) ? "checked" : ""}> ${inlineMarkdown(taskMatch[2])}`;
     } else {
-      li.innerHTML = inlineMarkdown(info.body);
+      li.innerHTML = info.body ? inlineMarkdown(info.body) : "<br>";
     }
     stack[stack.length - 1].list.appendChild(li);
     currentLi = li;
@@ -808,7 +819,7 @@ function markdownToHtml(markdown) {
       index = quoteResult.nextIndex;
       continue;
     }
-    if (/^(?:[-*+]\s+|\d+\.\s+)/.test(line.trim())) {
+    if (isMarkdownListLine(line)) {
       const listResult = buildListHtml(lines, index);
       html.push(listResult.html);
       index = listResult.nextIndex;
@@ -1842,9 +1853,9 @@ function normalizeMarkdownListSpacing(markdown) {
     const trimmed = current.trim();
     const next = i + 1 < lines.length ? lines[i + 1].trim() : "";
     const prev = output.length ? output[output.length - 1].trim() : "";
-    const currentIsList = /^(?:[-*+]\s+|\d+\.\s+|\[(?: |x|X)\]\s+)/.test(trimmed);
-    const nextIsList = /^(?:[-*+]\s+|\d+\.\s+|\[(?: |x|X)\]\s+)/.test(next);
-    const prevIsList = /^(?:[-*+]\s+|\d+\.\s+|\[(?: |x|X)\]\s+)/.test(prev);
+    const currentIsList = isMarkdownListLine(current) || /^\[(?: |x|X)\]\s+/.test(trimmed);
+    const nextIsList = isMarkdownListLine(lines[i + 1] || "") || /^\[(?: |x|X)\]\s+/.test(next);
+    const prevIsList = isMarkdownListLine(output.length ? output[output.length - 1] : "") || /^\[(?: |x|X)\]\s+/.test(prev);
     if (!trimmed && prevIsList && nextIsList) continue;
     output.push(current);
   }
