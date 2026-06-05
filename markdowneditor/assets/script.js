@@ -257,12 +257,23 @@ function getDefaultDrawioEmbed() {
 }
 function cleanDrawioEmbed(html = "") {
   const value = String(html || "").trim() || getDefaultDrawioEmbed();
-  const wrapper = document.createElement("div");
-  wrapper.innerHTML = value;
-  const existingWrapper = wrapper.querySelector(".drawio-white-background");
-  const iframe = wrapper.querySelector("iframe");
-  if (existingWrapper && iframe) return existingWrapper.outerHTML.trim();
-  const inner = iframe ? iframe.outerHTML : value;
+  const sandbox = document.createElement("div");
+  sandbox.innerHTML = value;
+
+  // Keep the draw.io block idempotent when switching between editor/code.
+  // Older versions could wrap an already wrapped iframe again, which caused repeated
+  // <!-- draw.io diagram --> + .drawio-white-background blocks in Markdown view.
+  const drawioIframe = Array.from(sandbox.querySelectorAll("iframe"))
+    .find(iframe => /(?:viewer|app)\.diagrams\.net/i.test(iframe.getAttribute("src") || ""));
+  const iframe = drawioIframe || sandbox.querySelector("iframe");
+  const inner = iframe
+    ? iframe.outerHTML.trim()
+    : value
+        .replace(/<!--\s*draw\.io diagram\s*-->/gi, "")
+        .replace(/<div\b([^>]*\sclass=["'][^"']*drawio-white-background[^"']*["'][^>]*)>/gi, "")
+        .replace(/<\/div>\s*$/i, "")
+        .trim();
+
   return `<!-- draw.io diagram -->
 <div class="drawio-white-background" style="background:#ffffff; padding:24px; border-radius:12px; overflow-x:auto;">
 ${inner}
@@ -364,6 +375,8 @@ const blocks = [
   { id: "failuredocsy", command: "/failuredocsy", icon: "fa-circle-xmark", category: "Docsy", sidebar: false, name: "Docsy Failure", description: "Docsy failure alert shortcode", html: alertBlockHtml("docsy", "danger") },
   { id: "errordocsy", command: "/errordocsy", icon: "fa-circle-xmark", category: "Docsy", sidebar: false, name: "Docsy Error", description: "Docsy error alert shortcode", html: alertBlockHtml("docsy", "danger") },
   { id: "successdocsy", command: "/successdocsy", icon: "fa-circle-check", category: "Docsy", sidebar: false, name: "Docsy Success", description: "Docsy success alert shortcode", html: alertBlockHtml("docsy", "success") },
+  { id: "adsdocsy", command: "/ads", icon: "fa-rectangle-ad", category: "Docsy", sidebar: true, name: "Docsy Ads", description: "Insert ads shortcode", html: shortcodeCard("Docsy Ads", "{{< ads >}}") },
+  { id: "articledocsy", command: "/article-footer", icon: "fa-shoe-prints", category: "Docsy", sidebar: true, name: "Docsy Article Footer", description: "Insert article footer shortcode", html: shortcodeCard("Docsy Article Footer", "{{< article-footer >}}") },
   { id: "pageinfo", command: "/pageinfo", icon: "fa-circle-info", category: "Docsy", sidebar: true, name: "Docsy Pageinfo", description: "Docsy page info block", html: shortcodeCard("Docsy Pageinfo", "{{% pageinfo color=\"primary\" %}}\nThis page contains extra context.\n{{% /pageinfo %}}") },
   { id: "tabpane", command: "/tabpane", icon: "fa-folder-tree", category: "Docsy", sidebar: true, name: "Docsy Tabpane", description: "Docsy tabs shortcode", html: shortcodeCard("Docsy Tabpane", "{{< tabpane text=true >}}\n  {{% tab header=\"Step 1\" %}}\n  Content for step 1.\n  {{% /tab %}}\n  {{% tab header=\"Step 2\" %}}\n  Content for step 2.\n  {{% /tab %}}\n{{< /tabpane >}}") },
   { id: "cover", command: "/cover", icon: "fa-window-maximize", category: "Docsy", sidebar: true, name: "Docsy Cover", description: "Landing page hero block", html: shortcodeCard("Docsy Cover", "{{< blocks/cover title=\"Welcome\" height=\"auto td-below-navbar\" color=\"primary\" >}}\nWrite your hero text here.\n{{< /blocks/cover >}}") },
@@ -566,8 +579,20 @@ function alertContentToMarkdown(alertBlock) {
 function nodeToMarkdown(node) {
   if (node.nodeType === Node.TEXT_NODE) return node.textContent.replace(/\u00a0/g, " ");
   if (node.nodeType !== Node.ELEMENT_NODE) return "";
-  if (node.matches(".shortcode-card")) return `\n\n${node.querySelector("textarea")?.value.trim() || ""}\n\n`;
-  if (node.matches(".raw-html-card")) return `\n\n${node.querySelector("textarea")?.value.trim() || ""}\n\n`;
+  if (node.matches(".shortcode-card")) return `
+
+${node.querySelector("textarea")?.value.trim() || ""}
+
+`;
+  if (node.matches(".raw-html-card")) {
+    const rawValue = node.querySelector("textarea")?.value.trim() || "";
+    const value = node.dataset.drawio === "true" || isDrawioHtml(rawValue) ? cleanDrawioEmbed(rawValue) : rawValue;
+    return `
+
+${value}
+
+`;
+  }
   if (node.matches(".markdown-alert-block")) {
     const color = node.dataset.color || "info";
     const alert = ALERTS.find(([v]) => v === color) || ALERTS[0];
@@ -832,6 +857,16 @@ function markdownToHtml(markdown) {
     const title = getShortcodeAttribute(attrs, "title") || getDefaultDocsyAlertTitle(color);
     const token = `__TOKEN_${tokens.length}__`;
     tokens.push(alertBlockHtml("docsy", color, body.trim(), title));
+    return token;
+  });
+  text = text.replace(/{{<\s*ads\s*>}}/g, match => {
+    const token = `__TOKEN_${tokens.length}__`;
+    tokens.push(shortcodeCard("Docsy Ads", match.trim()));
+    return token;
+  });
+  text = text.replace(/{{<\s*article-footer\s*>}}/g, match => {
+    const token = `__TOKEN_${tokens.length}__`;
+    tokens.push(shortcodeCard("Docsy Article Footer", match.trim()));
     return token;
   });
   text = text.replace(/{{[%<][\s\S]*?[%>]}}(?:[\s\S]*?{{[%<]\s*\/[\s\S]*?[%>]}})?/g, match => {
