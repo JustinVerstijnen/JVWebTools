@@ -1,5 +1,5 @@
-const STORAGE_KEY = "markdown-editor-project-v16";
-const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v15", "markdown-editor-project-v14", "markdown-editor-project-v13", "markdown-editor-project-v12", "markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
+const STORAGE_KEY = "markdown-editor-project-v17";
+const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v16", "markdown-editor-project-v15", "markdown-editor-project-v14", "markdown-editor-project-v13", "markdown-editor-project-v12", "markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
 
 const LANGUAGES = [
   ["powershell", "PowerShell"], ["cmd", "cmd"], ["bash", "Bash"], ["json", "JSON"], ["csv", "CSV"],
@@ -49,6 +49,10 @@ const els = {
   tableColumns: document.getElementById("tableColumns"),
   tableRows: document.getElementById("tableRows"),
   tableAlign: document.getElementById("tableAlign"),
+  drawioPanel: document.getElementById("drawioPanel"),
+  drawioEmbed: document.getElementById("drawioEmbed"),
+  cancelDrawioBtn: document.getElementById("cancelDrawioBtn"),
+  insertDrawioBtn: document.getElementById("insertDrawioBtn"),
   cancelTableBtn: document.getElementById("cancelTableBtn"),
   insertTableBtn: document.getElementById("insertTableBtn"),
   buttonPanel: document.getElementById("buttonPanel"),
@@ -90,6 +94,9 @@ let pendingInsertMarker = null;
 let pendingButtonEditAnchor = null;
 let pendingImageEditFigure = null;
 let pendingTableEditTarget = null;
+let pendingDrawioEditCard = null;
+let draggedTableRow = null;
+let draggedTableColumnIndex = -1;
 let normalizeFrame = 0;
 let normalizeTimer = 0;
 let lastSlashQuery = null;
@@ -244,6 +251,41 @@ function rawHtmlDocsyBlockHtml(html = `<section class="custom-block">
 </section>`) {
   return rawHtmlCard("Raw HTML", html);
 }
+function getDefaultDrawioEmbed() {
+  return `<!-- draw.io diagram -->
+<iframe frameborder="0" style="width:100%;height:409px;background:#ffffff;display:block;border:0;" src="https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&layers=1&nav=1&dark=0"></iframe>`;
+}
+function cleanDrawioEmbed(html = "") {
+  const value = String(html || "").trim() || getDefaultDrawioEmbed();
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = value;
+  const existingWrapper = wrapper.querySelector(".drawio-white-background");
+  const iframe = wrapper.querySelector("iframe");
+  if (existingWrapper && iframe) return existingWrapper.outerHTML.trim();
+  const inner = iframe ? iframe.outerHTML : value;
+  return `<!-- draw.io diagram -->
+<div class="drawio-white-background" style="background:#ffffff; padding:24px; border-radius:12px; overflow-x:auto;">
+${inner}
+</div>`;
+}
+function drawioBlockHtml(html = getDefaultDrawioEmbed()) {
+  return rawHtmlCard("Draw.io diagram", cleanDrawioEmbed(html)).replace('data-raw-html="true"', 'data-raw-html="true" data-drawio="true"');
+}
+function isDrawioHtml(html = "") {
+  return /drawio-white-background|viewer\.diagrams\.net|app\.diagrams\.net/i.test(String(html || ""));
+}
+function htmlBlockToInteractiveBlock(html = "") {
+  const value = String(html || "").trim();
+  if (!value) return rawHtmlCard("Raw HTML", "");
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = value;
+  const anchor = wrapper.querySelector('a.btn[href]');
+  if (anchor && wrapper.textContent.trim() === anchor.textContent.trim()) {
+    return `<p>${anchor.outerHTML}</p>`;
+  }
+  if (isDrawioHtml(value)) return drawioBlockHtml(value);
+  return rawHtmlCard("Raw HTML", value);
+}
 function markdownFragmentToHtml(markdown) {
   const value = String(markdown || "").trim();
   if (!value) return "";
@@ -309,6 +351,7 @@ const blocks = [
   { id: "codedocsy", command: "/codedocsy", icon: "fa-file-code", category: "Docsy", sidebar: true, name: "Docsy Code", description: "Docsy card code shortcode", html: docsyCodeBlockHtml() },
   { id: "html", command: "/html", icon: "fa-brands fa-html5", category: "Code", sidebar: true, name: "HTML", description: "HTML code block", html: htmlBlockHtml() },
   { id: "htmldocsy", command: "/htmldocsy", icon: "fa-brands fa-html5", category: "Docsy", sidebar: true, name: "Docsy Raw HTML", description: "Insert raw HTML", html: rawHtmlDocsyBlockHtml() },
+  { id: "drawio", command: "/drawio", icon: "fa-diagram-project", category: "Docsy", sidebar: true, name: "Draw.io diagram", description: "Paste a diagrams.net HTML embed with light/dark wrapper", action: "drawio" },
   { id: "alert", command: "/alert", icon: "fa-bell", category: "Alerts", sidebar: true, name: "Alert", description: "Markdown alert", html: alertBlockHtml("markdown", "info") },
   { id: "info", command: "/info", icon: "fa-circle-info", category: "Alerts", sidebar: false, name: "Info", description: "Markdown info alert", html: alertBlockHtml("markdown", "info") },
   { id: "warning", command: "/warning", icon: "fa-triangle-exclamation", category: "Alerts", sidebar: true, name: "Warning", description: "Markdown warning alert", html: alertBlockHtml("markdown", "warning") },
@@ -647,7 +690,11 @@ function listToMarkdown(node, ordered, level = 0) {
 function tableToMarkdown(table) {
   const rows = Array.from(table.querySelectorAll("tr"));
   if (!rows.length) return "";
-  const data = rows.map(row => Array.from(row.children).map(cell => cell.textContent.trim().replace(/\|/g, "\\|")));
+  const data = rows.map(row => Array.from(row.children).map(cell => {
+    const clone = cell.cloneNode(true);
+    clone.querySelectorAll(".table-drag-handle").forEach(handle => handle.remove());
+    return clone.textContent.trim().replace(/\|/g, "\\|");
+  }));
   const maxCols = Math.max(...data.map(row => row.length));
   const normalized = data.map(row => [...row, ...Array(Math.max(0, maxCols - row.length)).fill("")]);
   const align = table.getAttribute("data-align") || "left";
@@ -658,10 +705,10 @@ function tableToMarkdown(table) {
 
 function isHtmlBlockLine(line) {
   const trimmed = line.trim();
-  return /^<([a-z][\w:-]*)(?:\s[^>]*)?>/i.test(trimmed) || /^<\/[a-z][\w:-]*>$/i.test(trimmed);
+  return /^<!--[\s\S]*-->$/.test(trimmed) || /^<([a-z][\w:-]*)(?:\s[^>]*)?>/i.test(trimmed) || /^<\/[a-z][\w:-]*>$/i.test(trimmed);
 }
 function htmlBlockToCard(lines) {
-  return rawHtmlCard("Raw HTML", lines.join("\n").trim());
+  return htmlBlockToInteractiveBlock(lines.join("\n").trim());
 }
 function markdownQuoteToHtml(lines, startIndex) {
   const quoteLines = [];
@@ -1071,6 +1118,7 @@ function insertBlock(blockId, options = {}) {
   if (block.action === "image") { openImagePanel(insertionOptions); return; }
   if (block.action === "table") { openTablePanel(insertionOptions); return; }
   if (block.action === "buttondocsy") { openButtonPanel(insertionOptions); return; }
+  if (block.action === "drawio") { openDrawioPanel(insertionOptions); return; }
   insertHtmlAtCursor(block.html, insertionOptions);
   showToast(`${block.name} inserted`);
 }
@@ -1195,6 +1243,7 @@ function execFormat(format) {
   if (format === "code") insertBlock("code");
   if (format === "codedocsy") insertBlock("codedocsy");
   if (format === "buttondocsy") insertBlock("buttondocsy");
+  if (format === "drawio") insertBlock("drawio");
   if (format === "html") insertBlock("html");
   if (format === "separator") insertBlock("separator");
   if (format === "delete-block") deleteCurrentBlock();
@@ -1358,6 +1407,7 @@ function handlePanelKeydown(event) {
   if (panel === els.imagePanel) insertImageFromPanel();
   if (panel === els.buttonPanel) saveButtonFromPanel();
   if (panel === els.tablePanel) insertTableFromPanel();
+  if (panel === els.drawioPanel) saveDrawioFromPanel();
 }
 function openImagePanel(options = {}) {
   pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false, marker: options.marker && options.marker.isConnected ? options.marker : null };
@@ -1529,7 +1579,7 @@ function copyTableContent(sourceTable, targetTable) {
     Array.from(targetRow.children).forEach((targetCell, cellIndex) => {
       const sourceCell = sourceRow.children[cellIndex];
       if (!sourceCell) return;
-      targetCell.innerHTML = sourceCell.innerHTML;
+      targetCell.innerHTML = stripTableDragHandlesFromCell(sourceCell);
     });
   });
 }
@@ -1555,6 +1605,48 @@ function insertTableFromPanel() {
   pendingInsertMarker = null;
   pendingTableEditTarget = null;
   els.insertTableBtn.textContent = "Insert table";
+}
+
+function openDrawioPanel(options = {}) {
+  pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false, marker: options.marker && options.marker.isConnected ? options.marker : null };
+  const insertionRange = getPanelInsertionRange(options);
+  pendingInsertMarker = options.marker && options.marker.isConnected ? options.marker : null;
+  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(insertionRange);
+  pendingDrawioEditCard = options.editCard || null;
+  if (insertionRange) {
+    savedRange = insertionRange.cloneRange();
+    lastSelectionSavedAt = Date.now();
+  } else {
+    savedRange = createEndRange();
+    lastSelectionSavedAt = Date.now();
+    pendingPanelInsertOptions.allowOldSelection = false;
+  }
+  els.drawioEmbed.value = options.editCard?.querySelector?.("textarea")?.value || getDefaultDrawioEmbed();
+  els.insertDrawioBtn.textContent = options.editCard ? "Update draw.io" : "Insert draw.io";
+  els.drawioPanel.classList.add("open");
+  setTimeout(() => els.drawioEmbed.focus(), 80);
+}
+function saveDrawioFromPanel() {
+  const html = drawioBlockHtml(els.drawioEmbed.value);
+  els.drawioPanel.classList.remove("open");
+  if (pendingDrawioEditCard && pendingDrawioEditCard.isConnected) {
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = html;
+    const newCard = wrapper.querySelector(".raw-html-card");
+    if (newCard) {
+      pendingDrawioEditCard.replaceWith(newCard);
+      normalizeEditorContent(newCard);
+      saveProject();
+      showToast("Draw.io diagram updated");
+    }
+  } else {
+    insertHtmlAtCursor(html, { ...pendingPanelInsertOptions, marker: pendingInsertMarker, anchorBlock: pendingInsertAnchorBlock });
+    showToast("Draw.io diagram inserted");
+  }
+  pendingInsertAnchorBlock = null;
+  pendingInsertMarker = null;
+  pendingDrawioEditCard = null;
+  els.insertDrawioBtn.textContent = "Insert draw.io";
 }
 
 function fillPostInfoForm() {
@@ -1719,6 +1811,21 @@ function normalizeEditorContent(scope = els.visualEditor) {
     ensureBlockDropdown(block, "language");
   });
 
+  const rawHtmlCards = [];
+  if (root.matches?.('.raw-html-card')) rawHtmlCards.push(root);
+  root.querySelectorAll?.('.raw-html-card').forEach(card => rawHtmlCards.push(card));
+  rawHtmlCards.forEach(card => {
+    card.contentEditable = "false";
+    card.querySelectorAll(".block-settings").forEach(settings => { settings.contentEditable = "false"; });
+    const textarea = card.querySelector("textarea");
+    if (textarea && isDrawioHtml(textarea.value)) card.dataset.drawio = "true";
+  });
+
+  const tables = [];
+  if (root.matches?.('table')) tables.push(root);
+  root.querySelectorAll?.('table').forEach(table => tables.push(table));
+  tables.forEach(ensureTableDragHandles);
+
   const alertBlocks = [];
   if (root.matches?.('.docsy-alert-block, .markdown-alert-block')) alertBlocks.push(root);
   root.querySelectorAll?.('.docsy-alert-block, .markdown-alert-block').forEach(block => alertBlocks.push(block));
@@ -1830,7 +1937,7 @@ function insertSlashSelection() {
   slashRange.deleteContents();
 
   let marker = null;
-  if (block.action === "image" || block.action === "table" || block.action === "buttondocsy") {
+  if (block.action === "image" || block.action === "table" || block.action === "buttondocsy" || block.action === "drawio") {
     marker = document.createElement("span");
     marker.className = "slash-insert-marker";
     marker.setAttribute("data-slash-insert-marker", "true");
@@ -2223,6 +2330,93 @@ function outdentCurrentListItem() {
   return true;
 }
 
+function stripTableDragHandlesFromCell(cell) {
+  const clone = cell.cloneNode(true);
+  clone.querySelectorAll(".table-drag-handle").forEach(handle => handle.remove());
+  return clone.innerHTML || "<br>";
+}
+function ensureTableDragHandles(table) {
+  if (!table || table.dataset.dragHandlesReady === "true" && table.querySelector(".table-row-drag-handle")) return;
+  table.dataset.dragHandlesReady = "true";
+  table.querySelectorAll(".table-drag-handle").forEach(handle => handle.remove());
+  table.querySelectorAll("tr").forEach(row => {
+    const firstCell = row.children[0];
+    if (!firstCell) return;
+    firstCell.insertAdjacentHTML("afterbegin", '<span class="table-drag-handle table-row-drag-handle" draggable="true" contenteditable="false" title="Drag row">↕</span>');
+  });
+  const headerRow = table.querySelector("thead tr") || table.querySelector("tr");
+  Array.from(headerRow?.children || []).forEach((cell, index) => {
+    cell.insertAdjacentHTML("afterbegin", `<span class="table-drag-handle table-column-drag-handle" draggable="true" contenteditable="false" data-column-index="${index}" title="Drag column">↔</span>`);
+  });
+}
+function moveTableColumn(table, fromIndex, toIndex) {
+  if (!table || fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return;
+  table.querySelectorAll("tr").forEach(row => {
+    const cells = Array.from(row.children);
+    const moving = cells[fromIndex];
+    const target = cells[toIndex];
+    if (!moving || !target) return;
+    if (fromIndex < toIndex) target.after(moving);
+    else target.before(moving);
+  });
+  table.dataset.dragHandlesReady = "false";
+  ensureTableDragHandles(table);
+  saveProject();
+  showToast("Column moved");
+}
+function handleTableDragStart(event) {
+  const rowHandle = event.target.closest?.(".table-row-drag-handle");
+  const columnHandle = event.target.closest?.(".table-column-drag-handle");
+  if (!rowHandle && !columnHandle) return;
+  event.stopPropagation();
+  const table = event.target.closest("table");
+  if (rowHandle) {
+    draggedTableRow = rowHandle.closest("tr");
+    draggedTableColumnIndex = -1;
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", "table-row");
+    draggedTableRow?.classList.add("table-dragging");
+  } else {
+    draggedTableRow = null;
+    draggedTableColumnIndex = Number(columnHandle.dataset.columnIndex || 0);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", "table-column");
+    table?.classList.add("table-dragging-column");
+  }
+}
+function handleTableDragOver(event) {
+  if (!draggedTableRow && draggedTableColumnIndex < 0) return;
+  const table = event.target.closest?.("table");
+  if (!table) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+}
+function handleTableDrop(event) {
+  const table = event.target.closest?.("table");
+  if (!table) return;
+  if (draggedTableRow) {
+    const targetRow = event.target.closest("tr");
+    if (targetRow && targetRow.parentElement === draggedTableRow.parentElement && targetRow !== draggedTableRow) {
+      const rows = Array.from(targetRow.parentElement.children);
+      if (rows.indexOf(draggedTableRow) < rows.indexOf(targetRow)) targetRow.after(draggedTableRow);
+      else targetRow.before(draggedTableRow);
+      saveProject();
+      showToast("Row moved");
+    }
+  } else if (draggedTableColumnIndex >= 0) {
+    const targetCell = event.target.closest("th,td");
+    const targetIndex = targetCell ? Array.from(targetCell.parentElement.children).indexOf(targetCell) : -1;
+    if (targetIndex >= 0) moveTableColumn(table, draggedTableColumnIndex, targetIndex);
+  }
+  handleTableDragEnd(event);
+}
+function handleTableDragEnd(event) {
+  document.querySelectorAll(".table-dragging").forEach(el => el.classList.remove("table-dragging"));
+  document.querySelectorAll(".table-dragging-column").forEach(el => el.classList.remove("table-dragging-column"));
+  draggedTableRow = null;
+  draggedTableColumnIndex = -1;
+}
+
 function handleEditorKeydown(event) {
   if (handleBlockDropdownKeydown(event)) return;
   if (handleSlashMenuKey(event)) return;
@@ -2587,6 +2781,10 @@ els.visualEditor.addEventListener("click", event => {
       openTablePanel({ editTable: block, anchorBlock: block, allowOldSelection: true });
       return;
     }
+    if (block?.matches?.('.raw-html-card[data-drawio="true"]')) {
+      openDrawioPanel({ editCard: block, anchorBlock: block, allowOldSelection: true });
+      return;
+    }
     const textarea = block?.querySelector?.('textarea');
     const editable = textarea || block?.querySelector?.('[contenteditable="true"]');
     editable?.focus?.();
@@ -2602,6 +2800,10 @@ els.visualEditor.addEventListener("click", event => {
   }
   if (anchor && (event.ctrlKey || event.metaKey || anchor.classList.contains("image-link"))) window.open(anchor.href, "_blank", "noopener");
 });
+els.visualEditor.addEventListener("dragstart", handleTableDragStart);
+els.visualEditor.addEventListener("dragover", handleTableDragOver);
+els.visualEditor.addEventListener("drop", handleTableDrop);
+els.visualEditor.addEventListener("dragend", handleTableDragEnd);
 els.markdownEditor.addEventListener("input", () => {
   const normalized = normalizeMarkdownListSpacing(els.markdownEditor.value);
   if (normalized !== els.markdownEditor.value) {
@@ -2640,6 +2842,10 @@ els.cancelTableBtn.addEventListener("click", () => { els.tablePanel.classList.re
 els.insertTableBtn.addEventListener("click", insertTableFromPanel);
 els.tablePanel.addEventListener("click", event => { if (event.target === els.tablePanel) { els.tablePanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingTableEditTarget = null; els.insertTableBtn.textContent = "Insert table"; } });
 els.tablePanel.addEventListener("keydown", handlePanelKeydown);
+els.cancelDrawioBtn.addEventListener("click", () => { els.drawioPanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingDrawioEditCard = null; els.insertDrawioBtn.textContent = "Insert draw.io"; });
+els.insertDrawioBtn.addEventListener("click", saveDrawioFromPanel);
+els.drawioPanel.addEventListener("click", event => { if (event.target === els.drawioPanel) { els.drawioPanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingDrawioEditCard = null; els.insertDrawioBtn.textContent = "Insert draw.io"; } });
+els.drawioPanel.addEventListener("keydown", handlePanelKeydown);
 document.addEventListener("keydown", event => {
   const active = document.activeElement;
   if (els.slashMenu.classList.contains("open") && (selectionInsideEditor() || els.visualEditor.contains(active) || els.slashMenu.contains(active) || active === document.body)) {

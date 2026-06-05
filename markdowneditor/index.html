@@ -77,6 +77,7 @@
           <button type="button" data-format="table-add-column"><i class="fa-solid fa-table-columns"></i> Add column</button>
           <button type="button" data-format="table-remove-column"><i class="fa-solid fa-trash-can"></i> Remove column</button>
           <button type="button" data-format="buttondocsy"><i class="fa-solid fa-square-up-right"></i> Docsy button</button>
+          <button type="button" data-format="drawio"><i class="fa-solid fa-diagram-project"></i> Draw.io</button>
           <button type="button" data-format="code"><i class="fa-solid fa-code"></i> Code</button>
           <button type="button" data-format="codedocsy"><i class="fa-solid fa-file-code"></i> Docsy code</button>
           <button type="button" data-format="separator"><i class="fa-solid fa-minus"></i> Separator</button>
@@ -126,6 +127,16 @@
       <div class="field"><label for="tableRows">Body rows</label><input id="tableRows" type="number" min="1" max="30" value="3" placeholder="Number of body rows" /><div class="field-help">Example: 3 body rows creates 1 header row + 3 editable rows.</div></div>
       <div class="field"><label for="tableAlign">Alignment</label><select id="tableAlign" aria-label="Table alignment"><option value="left">Left aligned</option><option value="center">Centered</option></select></div>
       <div class="panel-actions"><button class="pill" id="cancelTableBtn" type="button">Cancel</button><button class="pill primary" id="insertTableBtn" type="button">Insert table</button></div>
+    </div>
+  </div>
+
+  <div class="modal-panel" id="drawioPanel" role="dialog" aria-label="Insert draw.io diagram">
+    <div class="modal-card panel-animate modal-wide">
+      <h2>Draw.io diagram</h2>
+      <p>Paste the diagrams.net / draw.io iframe embed. The editor will automatically wrap it in a white background for light and dark mode.</p>
+      <div class="field"><label for="drawioEmbed">HTML embed</label><textarea id="drawioEmbed" spellcheck="false" placeholder="Paste the draw.io iframe or full embed HTML here"></textarea></div>
+      <div class="field-help">On export this is saved as raw HTML with a <code>drawio-white-background</code> wrapper.</div>
+      <div class="panel-actions"><button class="pill" id="cancelDrawioBtn" type="button">Cancel</button><button class="pill primary" id="insertDrawioBtn" type="button">Insert draw.io</button></div>
     </div>
   </div>
 

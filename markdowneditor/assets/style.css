@@ -816,3 +816,39 @@ select:hover,
   border-color: var(--accent-strong);
   box-shadow: 0 0 0 4px rgba(119, 176, 222, 0.22), 0 6px 18px rgba(15, 30, 50, 0.06);
 }
+
+/* v17: Draw.io block, stable Docsy button round-trip, and draggable table rows/columns */
+.fa-diagram-project::before { content: "◇"; }
+.modal-card.modal-wide { width: min(920px, calc(100vw - 36px)); }
+#drawioEmbed {
+  min-height: 260px;
+  font-family: var(--mono);
+  white-space: pre;
+  overflow: auto;
+}
+.raw-html-card[data-drawio="true"] .block-settings {
+  background: rgba(119, 176, 222, 0.18);
+}
+.raw-html-card[data-drawio="true"] textarea {
+  min-height: 220px;
+  font-family: var(--mono);
+}
+.table-drag-handle {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin: 0 6px 2px 0;
+  border-radius: 999px;
+  background: rgba(119, 176, 222, 0.22);
+  color: #1d4b6c;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: grab;
+  user-select: none;
+  vertical-align: middle;
+}
+.table-drag-handle:active { cursor: grabbing; }
+.visual-editor tr.table-dragging { opacity: .48; }
+.visual-editor table.table-dragging-column th,
+.visual-editor table.table-dragging-column td { outline: 1px dashed rgba(79, 148, 199, 0.58); outline-offset: -3px; }
