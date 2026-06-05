@@ -817,10 +817,17 @@ select:hover,
   box-shadow: 0 0 0 4px rgba(119, 176, 222, 0.22), 0 6px 18px rgba(15, 30, 50, 0.06);
 }
 
-/* v17: Draw.io block, stable Docsy button round-trip, and draggable table rows/columns */
+/* v18: Draw.io placement, wider embed input, stable alert link insertion, Docsy button round-trip, and draggable table rows/columns */
 .fa-diagram-project::before { content: "◇"; }
 .modal-card.modal-wide { width: min(920px, calc(100vw - 36px)); }
+#drawioPanel .field,
+#drawioPanel .field textarea,
 #drawioEmbed {
+  width: 100%;
+  box-sizing: border-box;
+}
+#drawioEmbed {
+  display: block;
   min-height: 260px;
   font-family: var(--mono);
   white-space: pre;

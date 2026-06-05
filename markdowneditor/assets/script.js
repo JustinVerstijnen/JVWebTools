@@ -351,7 +351,7 @@ const blocks = [
   { id: "codedocsy", command: "/codedocsy", icon: "fa-file-code", category: "Docsy", sidebar: true, name: "Docsy Code", description: "Docsy card code shortcode", html: docsyCodeBlockHtml() },
   { id: "html", command: "/html", icon: "fa-brands fa-html5", category: "Code", sidebar: true, name: "HTML", description: "HTML code block", html: htmlBlockHtml() },
   { id: "htmldocsy", command: "/htmldocsy", icon: "fa-brands fa-html5", category: "Docsy", sidebar: true, name: "Docsy Raw HTML", description: "Insert raw HTML", html: rawHtmlDocsyBlockHtml() },
-  { id: "drawio", command: "/drawio", icon: "fa-diagram-project", category: "Docsy", sidebar: true, name: "Draw.io diagram", description: "Paste a diagrams.net HTML embed with light/dark wrapper", action: "drawio" },
+  { id: "drawio", command: "/drawio", icon: "fa-diagram-project", category: "Content", sidebar: true, name: "Draw.io diagram", description: "Paste a diagrams.net HTML embed with light/dark wrapper", action: "drawio" },
   { id: "alert", command: "/alert", icon: "fa-bell", category: "Alerts", sidebar: true, name: "Alert", description: "Markdown alert", html: alertBlockHtml("markdown", "info") },
   { id: "info", command: "/info", icon: "fa-circle-info", category: "Alerts", sidebar: false, name: "Info", description: "Markdown info alert", html: alertBlockHtml("markdown", "info") },
   { id: "warning", command: "/warning", icon: "fa-triangle-exclamation", category: "Alerts", sidebar: true, name: "Warning", description: "Markdown warning alert", html: alertBlockHtml("markdown", "warning") },
@@ -1236,7 +1236,11 @@ function execFormat(format) {
   if (format === "italic") document.execCommand("italic");
   if (format === "link") {
     const url = window.prompt("Paste the link URL");
-    if (url) { document.execCommand("createLink", false, url); normalizeEditorContent(); }
+    if (url && !createLinkAtSelection(url)) {
+      document.execCommand("createLink", false, url);
+      normalizeEditorContent();
+      saveProject();
+    }
   }
   if (format === "image") openImagePanel();
   if (format === "table") openTablePanel();
@@ -2484,6 +2488,75 @@ function autoLinkCurrentText(event) {
   selection.addRange(newRange);
   saveSelection();
 }
+function insertInlineHtmlAtCursor(html, options = {}) {
+  const fragment = document.createRange().createContextualFragment(html);
+  const insertedNodes = Array.from(fragment.childNodes);
+  if (!insertedNodes.length) return false;
+
+  restoreSelection({ ...options, allowOldSelection: options.allowOldSelection ?? false });
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return false;
+  const range = selection.getRangeAt(0);
+  if (!els.visualEditor.contains(range.commonAncestorContainer)) return false;
+
+  const container = range.commonAncestorContainer.nodeType === Node.TEXT_NODE ? range.commonAncestorContainer.parentElement : range.commonAncestorContainer;
+  if (container?.closest?.("input, textarea, select, button, .block-settings, .block-dropdown")) return false;
+
+  range.deleteContents();
+  range.insertNode(fragment);
+
+  const lastNode = insertedNodes[insertedNodes.length - 1];
+  const newRange = document.createRange();
+  newRange.setStartAfter(lastNode);
+  newRange.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(newRange);
+  savedRange = newRange.cloneRange();
+  lastSelectionSavedAt = Date.now();
+
+  normalizeEditorContent(lastNode.parentElement || els.visualEditor);
+  updateEditorPlaceholder();
+  saveProject();
+  return true;
+}
+function createLinkAtSelection(url) {
+  const cleanUrl = String(url || "").trim();
+  if (!cleanUrl) return false;
+  restoreSelection();
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return false;
+  const range = selection.getRangeAt(0);
+  if (!els.visualEditor.contains(range.commonAncestorContainer)) return false;
+
+  const container = range.commonAncestorContainer.nodeType === Node.TEXT_NODE ? range.commonAncestorContainer.parentElement : range.commonAncestorContainer;
+  if (container?.closest?.("input, textarea, select, button, .block-settings, .block-dropdown")) return false;
+
+  const anchor = document.createElement("a");
+  anchor.href = cleanUrl;
+  anchor.target = "_blank";
+  anchor.rel = "noreferrer";
+
+  if (range.collapsed) {
+    anchor.textContent = cleanUrl;
+    range.insertNode(anchor);
+  } else {
+    const selected = range.extractContents();
+    anchor.appendChild(selected);
+    if (!anchor.textContent.trim()) anchor.textContent = cleanUrl;
+    range.insertNode(anchor);
+  }
+
+  const newRange = document.createRange();
+  newRange.setStartAfter(anchor);
+  newRange.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(newRange);
+  savedRange = newRange.cloneRange();
+  lastSelectionSavedAt = Date.now();
+  normalizeEditorContent(anchor.parentElement || els.visualEditor);
+  saveProject();
+  return true;
+}
 function handlePaste(event) {
   const text = event.clipboardData?.getData("text/plain") || "";
   if (isImageUrl(text)) {
@@ -2494,7 +2567,10 @@ function handlePaste(event) {
   }
   if (isUrl(text)) {
     event.preventDefault();
-    insertHtmlAtCursor(`<a href="${escapeHtml(text)}" target="_blank" rel="noreferrer">${escapeHtml(text)}</a>&nbsp;`);
+    const linkHtml = `<a href="${escapeHtml(text)}" target="_blank" rel="noreferrer">${escapeHtml(text)}</a>&nbsp;`;
+    if (!insertInlineHtmlAtCursor(linkHtml, { allowOldSelection: false })) {
+      insertHtmlAtCursor(`<p>${linkHtml}</p>`, { allowOldSelection: false });
+    }
   }
 }
 
