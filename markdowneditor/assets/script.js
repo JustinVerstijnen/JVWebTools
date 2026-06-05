@@ -339,10 +339,10 @@ const blocks = [
   { id: "h6", command: "/h6", icon: "fa-heading", category: "Text", sidebar: false, name: "Heading 6", description: "Small heading", html: "<h6><br></h6><p><br></p>" },
   { id: "paragraph", command: "/paragraph", icon: "fa-align-left", category: "Text", sidebar: true, name: "Paragraph", description: "Simple text block", html: "<p><br></p>" },
   { id: "quote", command: "/quote", icon: "fa-quote-left", category: "Text", sidebar: true, name: "Blockquote", description: "Markdown quote block", html: "<blockquote><br></blockquote><p><br></p>" },
-  { id: "ul", command: "/ul", icon: "fa-list-ul", category: "Lists", sidebar: true, name: "Bullet list", description: "Unordered Markdown list", html: "<ul><li><br></li></ul><p><br></p>" },
-  { id: "ol", command: "/ol", icon: "fa-list-ol", category: "Lists", sidebar: true, name: "Numbered list", description: "Ordered Markdown list", html: "<ol><li><br></li></ol><p><br></p>" },
+  { id: "ul", command: "/ul", icon: "fa-list-ul", category: "Text", sidebar: true, name: "Bullet list", description: "Unordered Markdown list", html: "<ul><li><br></li></ul><p><br></p>" },
+  { id: "ol", command: "/ol", icon: "fa-list-ol", category: "Text", sidebar: true, name: "Numbered list", description: "Ordered Markdown list", html: "<ol><li><br></li></ol><p><br></p>" },
   { id: "link", command: "/link", icon: "fa-link", category: "Content", sidebar: true, name: "Link", description: "Clickable link opening in a new tab", html: "<p><a href=\"https://example.com\" target=\"_blank\" rel=\"noreferrer\">https://example.com</a></p>" },
-  { id: "image", command: "/image", icon: "fa-image", category: "Media", sidebar: true, name: "Image", description: "Insert an image at the cursor", action: "image" },
+  { id: "image", command: "/image", icon: "fa-image", category: "Content", sidebar: true, name: "Image", description: "Insert an image at the cursor", action: "image" },
   { id: "table", command: "/table", icon: "fa-table", category: "Content", sidebar: true, name: "Table", description: "Choose columns, body rows and alignment", action: "table" },
   { id: "separator", command: "/separator", icon: "fa-minus", category: "Content", sidebar: true, name: "Separator", description: "Horizontal divider", html: "<hr><p><br></p>" },
   { id: "button", command: "/button", icon: "fa-square-up-right", category: "Content", sidebar: true, name: "Button", description: "Bootstrap / Docsy style link", html: "<p><a class=\"btn btn-primary btn-lg\" href=\"/docs/\" target=\"_blank\" rel=\"noreferrer\">Read the documentation</a></p>" },
@@ -370,7 +370,7 @@ const blocks = [
   { id: "section", command: "/section", icon: "fa-layer-group", category: "Docsy", sidebar: true, name: "Docsy Section", description: "Docsy section container", html: shortcodeCard("Docsy Section", "{{< blocks/section color=\"light\" type=\"container\" >}}\n## Section title\n\nWrite your section content here.\n{{< /blocks/section >}}") }
 ];
 
-const sidebarCategoryOrder = ["Text", "Lists", "Media", "Content", "Code", "Alerts", "Docsy"];
+const sidebarCategoryOrder = ["Text", "Content", "Code", "Alerts", "Docsy"];
 
 function buildFrontMatter() {
   const m = state.metadata || {};
@@ -1454,6 +1454,7 @@ function handleImagePanelPaste(event) {
   event.preventDefault();
   if (source.type === "text") {
     els.imageUrl.value = source.value;
+    if (!els.imageAlt.value.trim()) els.imageAlt.value = guessAltTextFromUrl(source.value);
     if (!els.imageLink.value.trim()) els.imageLink.value = source.value;
     return;
   }
@@ -2561,7 +2562,7 @@ function handlePaste(event) {
   const text = event.clipboardData?.getData("text/plain") || "";
   if (isImageUrl(text)) {
     event.preventDefault();
-    insertHtmlAtCursor(imageHtml(text, "Image", "Optional caption"));
+    insertHtmlAtCursor(imageHtml(text, guessAltTextFromUrl(text), "Optional caption"));
     showToast("Image inserted from URL");
     return;
   }
