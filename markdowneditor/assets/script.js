@@ -1380,6 +1380,8 @@ function addTableRow(after = true) {
   for (let i = 0; i < colCount; i++) newRow.appendChild(createTableCell(tagName));
   row[after ? "after" : "before"](newRow);
   focusTableCell(newRow.children[Math.max(0, colIndex)] || newRow.firstElementChild);
+  table.dataset.dragHandlesReady = "false";
+  ensureTableDragHandles(table);
   saveProject();
   showToast(after ? "Row added" : "Row inserted above");
 }
@@ -1399,6 +1401,8 @@ function removeTableRow() {
   }
   const targetRow = fallbackRow && fallbackRow.isConnected ? fallbackRow : (table.querySelector("tbody tr") || table.querySelector("thead tr"));
   focusTableCell(targetRow?.children[Math.max(0, Math.min(colIndex, (targetRow?.children.length || 1) - 1))]);
+  table.dataset.dragHandlesReady = "false";
+  ensureTableDragHandles(table);
   saveProject();
   showToast("Row removed");
 }
@@ -1415,6 +1419,8 @@ function addTableColumn(after = true) {
   });
   const targetRow = getCurrentTableContext().row || table.querySelector("tbody tr") || table.querySelector("thead tr");
   focusTableCell(targetRow?.children[after ? colIndex + 1 : colIndex]);
+  table.dataset.dragHandlesReady = "false";
+  ensureTableDragHandles(table);
   saveProject();
   showToast(after ? "Column added" : "Column inserted left");
 }
@@ -1427,6 +1433,8 @@ function removeTableColumn() {
   const targetRow = getCurrentTableContext().row || table.querySelector("tbody tr") || table.querySelector("thead tr");
   const nextIndex = Math.max(0, Math.min(colIndex, (targetRow?.children.length || 1) - 1));
   focusTableCell(targetRow?.children[nextIndex]);
+  table.dataset.dragHandlesReady = "false";
+  ensureTableDragHandles(table);
   saveProject();
   showToast("Column removed");
 }
@@ -2376,17 +2384,23 @@ function stripTableDragHandlesFromCell(cell) {
   return clone.innerHTML || "<br>";
 }
 function ensureTableDragHandles(table) {
-  if (!table || table.dataset.dragHandlesReady === "true" && table.querySelector(".table-row-drag-handle")) return;
+  if (!table) return;
+  table.classList.add("table-drag-enabled");
+  if (table.dataset.dragHandlesReady === "true" && table.querySelector(".table-column-drag-handle")) return;
   table.dataset.dragHandlesReady = "true";
   table.querySelectorAll(".table-drag-handle").forEach(handle => handle.remove());
-  table.querySelectorAll("tr").forEach(row => {
+
+  const bodyRows = Array.from(table.querySelectorAll("tbody tr"));
+  const rowsForDrag = bodyRows.length ? bodyRows : Array.from(table.querySelectorAll("tr")).slice(1);
+  rowsForDrag.forEach(row => {
     const firstCell = row.children[0];
     if (!firstCell) return;
-    firstCell.insertAdjacentHTML("afterbegin", '<span class="table-drag-handle table-row-drag-handle" draggable="true" contenteditable="false" title="Drag row">↕</span>');
+    firstCell.insertAdjacentHTML("afterbegin", '<span class="table-drag-handle table-row-drag-handle" draggable="true" contenteditable="false" title="Drag row" aria-label="Drag row">↕</span>');
   });
+
   const headerRow = table.querySelector("thead tr") || table.querySelector("tr");
   Array.from(headerRow?.children || []).forEach((cell, index) => {
-    cell.insertAdjacentHTML("afterbegin", `<span class="table-drag-handle table-column-drag-handle" draggable="true" contenteditable="false" data-column-index="${index}" title="Drag column">↔</span>`);
+    cell.insertAdjacentHTML("afterbegin", `<span class="table-drag-handle table-column-drag-handle" draggable="true" contenteditable="false" data-column-index="${index}" title="Drag column" aria-label="Drag column">↔</span>`);
   });
 }
 function moveTableColumn(table, fromIndex, toIndex) {
@@ -2440,6 +2454,8 @@ function handleTableDrop(event) {
       const rows = Array.from(targetRow.parentElement.children);
       if (rows.indexOf(draggedTableRow) < rows.indexOf(targetRow)) targetRow.after(draggedTableRow);
       else targetRow.before(draggedTableRow);
+      table.dataset.dragHandlesReady = "false";
+      ensureTableDragHandles(table);
       saveProject();
       showToast("Row moved");
     }

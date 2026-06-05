@@ -817,7 +817,7 @@ select:hover,
   box-shadow: 0 0 0 4px rgba(119, 176, 222, 0.22), 0 6px 18px rgba(15, 30, 50, 0.06);
 }
 
-/* v18: Draw.io placement, wider embed input, stable alert link insertion, Docsy button round-trip, and draggable table rows/columns */
+/* v19: smoother table drag controls outside cells */
 .fa-diagram-project::before { content: "◇"; }
 .modal-card.modal-wide { width: min(920px, calc(100vw - 36px)); }
 #drawioPanel .field,
@@ -840,21 +840,56 @@ select:hover,
   min-height: 220px;
   font-family: var(--mono);
 }
+.visual-editor table.table-drag-enabled {
+  width: calc(100% - 36px);
+  margin: 42px 0 18px 36px;
+  overflow: visible;
+}
+.visual-editor table.table-drag-enabled th,
+.visual-editor table.table-drag-enabled td {
+  overflow: visible;
+}
 .table-drag-handle {
-  display: inline-grid;
+  position: absolute;
+  z-index: 18;
+  display: grid;
   place-items: center;
   width: 22px;
   height: 22px;
-  margin: 0 6px 2px 0;
+  margin: 0;
   border-radius: 999px;
-  background: rgba(119, 176, 222, 0.22);
+  border: 1px solid rgba(18, 32, 51, 0.10);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 18px rgba(15, 30, 50, 0.14);
   color: #1d4b6c;
   font-size: 12px;
   font-weight: 900;
+  line-height: 1;
   cursor: grab;
   user-select: none;
-  vertical-align: middle;
+  opacity: .46;
+  transition: opacity 160ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
+.table-row-drag-handle {
+  left: -30px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.table-column-drag-handle {
+  left: 50%;
+  top: -31px;
+  transform: translateX(-50%);
+}
+.visual-editor table.table-drag-enabled:hover .table-drag-handle,
+.table-drag-handle:hover,
+.table-drag-handle:focus-visible {
+  opacity: 1;
+  box-shadow: 0 10px 22px rgba(15, 30, 50, 0.20);
+}
+.table-row-drag-handle:hover,
+.table-row-drag-handle:focus-visible { transform: translateY(-50%) scale(1.06); }
+.table-column-drag-handle:hover,
+.table-column-drag-handle:focus-visible { transform: translateX(-50%) scale(1.06); }
 .table-drag-handle:active { cursor: grabbing; }
 .visual-editor tr.table-dragging { opacity: .48; }
 .visual-editor table.table-dragging-column th,
