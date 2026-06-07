@@ -1,5 +1,5 @@
-const STORAGE_KEY = "markdown-editor-project-v17";
-const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v16", "markdown-editor-project-v15", "markdown-editor-project-v14", "markdown-editor-project-v13", "markdown-editor-project-v12", "markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
+const STORAGE_KEY = "markdown-editor-project-v18";
+const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v17", "markdown-editor-project-v16", "markdown-editor-project-v15", "markdown-editor-project-v14", "markdown-editor-project-v13", "markdown-editor-project-v12", "markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
 
 const LANGUAGES = [
   ["powershell", "PowerShell"], ["cmd", "cmd"], ["bash", "Bash"], ["json", "JSON"], ["csv", "CSV"],
@@ -61,6 +61,12 @@ const els = {
   buttonStyle: document.getElementById("buttonStyle"),
   cancelButtonBtn: document.getElementById("cancelButtonBtn"),
   insertButtonBtn: document.getElementById("insertButtonBtn"),
+  quizPanel: document.getElementById("quizPanel"),
+  quizIntro: document.getElementById("quizIntro"),
+  quizQuestions: document.getElementById("quizQuestions"),
+  addQuizQuestionBtn: document.getElementById("addQuizQuestionBtn"),
+  cancelQuizBtn: document.getElementById("cancelQuizBtn"),
+  insertQuizBtn: document.getElementById("insertQuizBtn"),
   slashMenu: document.getElementById("slashMenu"),
   toast: document.getElementById("toast")
 };
@@ -95,6 +101,7 @@ let pendingButtonEditAnchor = null;
 let pendingImageEditFigure = null;
 let pendingTableEditTarget = null;
 let pendingDrawioEditCard = null;
+let pendingQuizEditCard = null;
 let draggedTableRow = null;
 let draggedTableColumnIndex = -1;
 let normalizeFrame = 0;
@@ -320,6 +327,79 @@ function shortcodeCard(title, shortcode) {
 function rawHtmlCard(title, html) {
   return `<div class="raw-html-card editable-card" data-raw-html="true" contenteditable="false"><div class="block-settings"><span><i class="fa-brands fa-html5"></i> ${escapeHtml(title)}</span></div><textarea>${escapeHtml(html)}</textarea></div><p><br></p>`;
 }
+function getDefaultQuizData() {
+  return {
+    intro: "Answer these questions to check your understanding of this post.",
+    questions: [
+      {
+        question: "Add your question here",
+        reference: "See the section: Section title",
+        referenceUrl: "#section-title",
+        answers: [
+          { text: "Correct answer", correct: true, message: "Correct! This is the right answer." },
+          { text: "Incorrect answer", correct: false, message: "Incorrect. Review the referenced section and try again." }
+        ]
+      }
+    ]
+  };
+}
+function normalizeQuizData(data = {}) {
+  const source = data && typeof data === "object" ? data : {};
+  const normalized = {
+    intro: String(source.intro || "Answer these questions to check your understanding of this post.").trim(),
+    questions: Array.isArray(source.questions) ? source.questions.map(question => {
+      const answers = Array.isArray(question?.answers) ? question.answers.map(answer => ({
+        text: String(answer?.text || "").trim(),
+        correct: answer?.correct === true,
+        message: String(answer?.message || "").trim()
+      })) : [];
+      const cleanAnswers = answers.length ? answers : [
+        { text: "Correct answer", correct: true, message: "Correct! This is the right answer." },
+        { text: "Incorrect answer", correct: false, message: "Incorrect. Review the referenced section and try again." }
+      ];
+      if (cleanAnswers.length === 1) cleanAnswers.push({ text: "Incorrect answer", correct: false, message: "Incorrect. Review the referenced section and try again." });
+      if (!cleanAnswers.some(answer => answer.correct)) cleanAnswers[0].correct = true;
+      return {
+        question: String(question?.question || "Add your question here").trim(),
+        reference: String(question?.reference || "See the section: Section title").trim(),
+        referenceUrl: String(question?.referenceUrl || "#section-title").trim(),
+        answers: cleanAnswers
+      };
+    }) : []
+  };
+  if (!normalized.questions.length) normalized.questions = getDefaultQuizData().questions;
+  return normalized;
+}
+function parseQuizJson(value) {
+  try {
+    return normalizeQuizData(JSON.parse(String(value || "{}")));
+  } catch (error) {
+    console.warn("Invalid quiz JSON", error);
+    return getDefaultQuizData();
+  }
+}
+function getQuizDataFromCard(card) {
+  const json = card?.querySelector?.(".quiz-json-source")?.value || card?.dataset?.quizJson || "";
+  return parseQuizJson(json);
+}
+function buildQuizShortcode(data) {
+  return `{{< quiz >}}
+${JSON.stringify(normalizeQuizData(data), null, 2)}
+{{< /quiz >}}`;
+}
+function quizPreviewQuestionHtml(question, index) {
+  const correctAnswer = question.answers.find(answer => answer.correct) || question.answers[0] || {};
+  return `<div class="quiz-preview-question">
+    <div class="quiz-preview-question-title"><span>Question ${index + 1}</span>${escapeHtml(question.question)}</div>
+    <div class="quiz-preview-meta"><span>${question.answers.length} answers</span><span>Correct: ${escapeHtml(correctAnswer.text || "Not set")}</span></div>
+    <div class="quiz-preview-reference">${escapeHtml(question.reference || "No reference set")} ${question.referenceUrl ? `<code>${escapeHtml(question.referenceUrl)}</code>` : ""}</div>
+  </div>`;
+}
+function quizBlockHtml(data = getDefaultQuizData()) {
+  const quiz = normalizeQuizData(data);
+  const json = JSON.stringify(quiz);
+  return `<div class="quiz-card editable-card" data-quiz="true" contenteditable="false"><div class="block-settings" contenteditable="false"><span><i class="fa-solid fa-circle-question"></i> Quiz shortcode</span><small>${quiz.questions.length} question${quiz.questions.length === 1 ? "" : "s"}</small></div><textarea class="quiz-json-source" hidden>${escapeHtml(json)}</textarea><div class="quiz-preview" contenteditable="false"><p class="quiz-preview-intro">${escapeHtml(quiz.intro)}</p>${quiz.questions.map(quizPreviewQuestionHtml).join("")}</div></div><p><br></p>`;
+}
 function imageHtml(src, alt = "Image", caption = "Optional caption", href = "") {
   const linkTarget = String(href || "").trim() || src;
   return `<figure class="image-block" data-resizable="true" data-link="${escapeHtml(linkTarget)}"><a class="image-link" href="${escapeHtml(linkTarget)}" target="_blank" rel="noreferrer"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"></a><figcaption contenteditable="true">${escapeHtml(caption)}</figcaption></figure><p><br></p>`;
@@ -375,6 +455,7 @@ const blocks = [
   { id: "failuredocsy", command: "/failuredocsy", icon: "fa-circle-xmark", category: "Docsy", sidebar: false, name: "Docsy Failure", description: "Docsy failure alert shortcode", html: alertBlockHtml("docsy", "danger") },
   { id: "errordocsy", command: "/errordocsy", icon: "fa-circle-xmark", category: "Docsy", sidebar: false, name: "Docsy Error", description: "Docsy error alert shortcode", html: alertBlockHtml("docsy", "danger") },
   { id: "successdocsy", command: "/successdocsy", icon: "fa-circle-check", category: "Docsy", sidebar: false, name: "Docsy Success", description: "Docsy success alert shortcode", html: alertBlockHtml("docsy", "success") },
+  { id: "quiz", command: "/quiz", icon: "fa-circle-question", category: "Docsy", sidebar: true, name: "Docsy Quiz", description: "Interactive quiz shortcode with questions, answers and feedback", action: "quiz" },
   { id: "adsdocsy", command: "/ads", icon: "fa-rectangle-ad", category: "Docsy", sidebar: true, name: "Docsy Ads", description: "Insert ads shortcode", html: shortcodeCard("Docsy Ads", "{{< ads >}}") },
   { id: "articledocsy", command: "/article-footer", icon: "fa-shoe-prints", category: "Docsy", sidebar: true, name: "Docsy Article Footer", description: "Insert article footer shortcode", html: shortcodeCard("Docsy Article Footer", "{{< article-footer >}}") },
   { id: "pageinfo", command: "/pageinfo", icon: "fa-circle-info", category: "Docsy", sidebar: true, name: "Docsy Pageinfo", description: "Docsy page info block", html: shortcodeCard("Docsy Pageinfo", "{{% pageinfo color=\"primary\" %}}\nThis page contains extra context.\n{{% /pageinfo %}}") },
@@ -579,6 +660,11 @@ function alertContentToMarkdown(alertBlock) {
 function nodeToMarkdown(node) {
   if (node.nodeType === Node.TEXT_NODE) return node.textContent.replace(/\u00a0/g, " ");
   if (node.nodeType !== Node.ELEMENT_NODE) return "";
+  if (node.matches(".quiz-card")) return `
+
+${buildQuizShortcode(getQuizDataFromCard(node))}
+
+`;
   if (node.matches(".shortcode-card")) return `
 
 ${node.querySelector("textarea")?.value.trim() || ""}
@@ -857,6 +943,11 @@ function markdownToHtml(markdown) {
     const title = getShortcodeAttribute(attrs, "title") || getDefaultDocsyAlertTitle(color);
     const token = `__TOKEN_${tokens.length}__`;
     tokens.push(alertBlockHtml("docsy", color, body.trim(), title));
+    return token;
+  });
+  text = text.replace(/{{<\s*quiz\s*>}}([\s\S]*?){{<\s*\/quiz\s*>}}/g, (_, body) => {
+    const token = `__TOKEN_${tokens.length}__`;
+    tokens.push(quizBlockHtml(parseQuizJson(body.trim())));
     return token;
   });
   text = text.replace(/{{<\s*ads\s*>}}/g, match => {
@@ -1154,6 +1245,7 @@ function insertBlock(blockId, options = {}) {
   if (block.action === "table") { openTablePanel(insertionOptions); return; }
   if (block.action === "buttondocsy") { openButtonPanel(insertionOptions); return; }
   if (block.action === "drawio") { openDrawioPanel(insertionOptions); return; }
+  if (block.action === "quiz") { openQuizPanel(insertionOptions); return; }
   insertHtmlAtCursor(block.html, insertionOptions);
   showToast(`${block.name} inserted`);
 }
@@ -1696,6 +1788,111 @@ function saveDrawioFromPanel() {
   pendingDrawioEditCard = null;
   els.insertDrawioBtn.textContent = "Insert draw.io";
 }
+function quizAnswerFormHtml(answer, qIndex, aIndex) {
+  return `<div class="quiz-answer-editor" data-answer-index="${aIndex}">
+    <div class="quiz-answer-correct-wrap"><input class="quiz-answer-correct" type="radio" name="quiz-correct-${qIndex}" ${answer.correct ? "checked" : ""} aria-label="Correct answer"></div>
+    <div class="field quiz-answer-text-field"><label>Answer text</label><textarea class="quiz-answer-text" rows="2" placeholder="Answer option">${escapeHtml(answer.text)}</textarea></div>
+    <div class="field quiz-answer-message-field"><label>Feedback message</label><textarea class="quiz-answer-message" rows="2" placeholder="Feedback shown after this answer is selected">${escapeHtml(answer.message)}</textarea></div>
+    <button class="pill danger quiz-remove-answer" type="button" title="Remove answer" aria-label="Remove answer"><i class="fa-solid fa-xmark"></i></button>
+  </div>`;
+}
+function quizQuestionFormHtml(question, qIndex) {
+  return `<section class="quiz-question-editor" data-question-index="${qIndex}">
+    <div class="quiz-question-editor-head">
+      <h3>Question ${qIndex + 1}</h3>
+      <button class="pill danger quiz-remove-question" type="button"><i class="fa-solid fa-trash-can"></i> Remove question</button>
+    </div>
+    <div class="field"><label>Question</label><textarea class="quiz-question-text" rows="2" placeholder="Question text">${escapeHtml(question.question)}</textarea></div>
+    <div class="quiz-reference-grid">
+      <div class="field"><label>Reference text</label><input class="quiz-reference" type="text" value="${escapeHtml(question.reference)}" placeholder="See the section: Section title" /></div>
+      <div class="field"><label>Reference URL / anchor</label><input class="quiz-reference-url" type="text" value="${escapeHtml(question.referenceUrl)}" placeholder="#section-title" /></div>
+    </div>
+    <div class="quiz-answer-list">${question.answers.map((answer, aIndex) => quizAnswerFormHtml(answer, qIndex, aIndex)).join("")}</div>
+    <button class="pill quiz-add-answer" type="button"><i class="fa-solid fa-plus"></i> Add answer</button>
+  </section>`;
+}
+function renderQuizForm(data = getDefaultQuizData()) {
+  const quiz = normalizeQuizData(data);
+  els.quizIntro.value = quiz.intro;
+  els.quizQuestions.innerHTML = quiz.questions.map(quizQuestionFormHtml).join("");
+}
+function collectQuizFormData() {
+  const questions = Array.from(els.quizQuestions.querySelectorAll(".quiz-question-editor")).map(questionEl => {
+    const answers = Array.from(questionEl.querySelectorAll(".quiz-answer-editor")).map(answerEl => ({
+      text: answerEl.querySelector(".quiz-answer-text")?.value || "",
+      correct: !!answerEl.querySelector(".quiz-answer-correct")?.checked,
+      message: answerEl.querySelector(".quiz-answer-message")?.value || ""
+    }));
+    return {
+      question: questionEl.querySelector(".quiz-question-text")?.value || "",
+      reference: questionEl.querySelector(".quiz-reference")?.value || "",
+      referenceUrl: questionEl.querySelector(".quiz-reference-url")?.value || "",
+      answers
+    };
+  });
+  return normalizeQuizData({ intro: els.quizIntro.value, questions });
+}
+function closeQuizPanel() {
+  els.quizPanel.classList.remove("open");
+  pendingInsertAnchorBlock = null;
+  if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove();
+  pendingInsertMarker = null;
+  pendingQuizEditCard = null;
+  els.insertQuizBtn.textContent = "Insert quiz";
+}
+function handleQuizPanelKeydown(event) {
+  if (event.key !== "Escape") return;
+  event.preventDefault();
+  closeQuizPanel();
+  restoreSelection();
+}
+function openQuizPanel(options = {}) {
+  pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false, marker: options.marker && options.marker.isConnected ? options.marker : null };
+  const insertionRange = getPanelInsertionRange(options);
+  pendingInsertMarker = options.marker && options.marker.isConnected ? options.marker : null;
+  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(insertionRange);
+  pendingQuizEditCard = options.editCard || null;
+  if (insertionRange) {
+    savedRange = insertionRange.cloneRange();
+    lastSelectionSavedAt = Date.now();
+  } else {
+    savedRange = createEndRange();
+    lastSelectionSavedAt = Date.now();
+    pendingPanelInsertOptions.allowOldSelection = false;
+  }
+  renderQuizForm(options.editCard ? getQuizDataFromCard(options.editCard) : getDefaultQuizData());
+  els.insertQuizBtn.textContent = options.editCard ? "Update quiz" : "Insert quiz";
+  els.quizPanel.classList.add("open");
+  setTimeout(() => els.quizIntro.focus(), 80);
+}
+function saveQuizFromPanel() {
+  const data = collectQuizFormData();
+  const invalidQuestion = data.questions.find(question => !question.question.trim() || question.answers.length < 2 || question.answers.filter(answer => answer.text.trim()).length < 2);
+  if (invalidQuestion) {
+    showToast("Add a question text and at least two answers");
+    return;
+  }
+  const html = quizBlockHtml(data);
+  els.quizPanel.classList.remove("open");
+  if (pendingQuizEditCard && pendingQuizEditCard.isConnected) {
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = html;
+    const newCard = wrapper.querySelector(".quiz-card");
+    if (newCard) {
+      pendingQuizEditCard.replaceWith(newCard);
+      normalizeEditorContent(newCard);
+      saveProject();
+      showToast("Quiz updated");
+    }
+  } else {
+    insertHtmlAtCursor(html, { ...pendingPanelInsertOptions, marker: pendingInsertMarker, anchorBlock: pendingInsertAnchorBlock });
+    showToast("Quiz inserted");
+  }
+  pendingInsertAnchorBlock = null;
+  pendingInsertMarker = null;
+  pendingQuizEditCard = null;
+  els.insertQuizBtn.textContent = "Insert quiz";
+}
 
 function fillPostInfoForm() {
   const m = state.metadata;
@@ -1867,6 +2064,14 @@ function normalizeEditorContent(scope = els.visualEditor) {
     card.querySelectorAll(".block-settings").forEach(settings => { settings.contentEditable = "false"; });
     const textarea = card.querySelector("textarea");
     if (textarea && isDrawioHtml(textarea.value)) card.dataset.drawio = "true";
+  });
+
+  const quizCards = [];
+  if (root.matches?.('.quiz-card')) quizCards.push(root);
+  root.querySelectorAll?.('.quiz-card').forEach(card => quizCards.push(card));
+  quizCards.forEach(card => {
+    card.contentEditable = "false";
+    card.querySelectorAll(".block-settings, .quiz-preview").forEach(item => { item.contentEditable = "false"; });
   });
 
   const tables = [];
@@ -2909,6 +3114,10 @@ els.visualEditor.addEventListener("click", event => {
       openTablePanel({ editTable: block, anchorBlock: block, allowOldSelection: true });
       return;
     }
+    if (block?.matches?.('.quiz-card[data-quiz="true"]')) {
+      openQuizPanel({ editCard: block, anchorBlock: block, allowOldSelection: true });
+      return;
+    }
     if (block?.matches?.('.raw-html-card[data-drawio="true"]')) {
       openDrawioPanel({ editCard: block, anchorBlock: block, allowOldSelection: true });
       return;
@@ -2974,6 +3183,47 @@ els.cancelDrawioBtn.addEventListener("click", () => { els.drawioPanel.classList.
 els.insertDrawioBtn.addEventListener("click", saveDrawioFromPanel);
 els.drawioPanel.addEventListener("click", event => { if (event.target === els.drawioPanel) { els.drawioPanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingDrawioEditCard = null; els.insertDrawioBtn.textContent = "Insert draw.io"; } });
 els.drawioPanel.addEventListener("keydown", handlePanelKeydown);
+els.cancelQuizBtn.addEventListener("click", closeQuizPanel);
+els.insertQuizBtn.addEventListener("click", saveQuizFromPanel);
+els.addQuizQuestionBtn.addEventListener("click", () => {
+  const data = collectQuizFormData();
+  data.questions.push({
+    question: "Add your question here",
+    reference: "See the section: Section title",
+    referenceUrl: "#section-title",
+    answers: [
+      { text: "Correct answer", correct: true, message: "Correct! This is the right answer." },
+      { text: "Incorrect answer", correct: false, message: "Incorrect. Review the referenced section and try again." }
+    ]
+  });
+  renderQuizForm(data);
+});
+els.quizQuestions.addEventListener("click", event => {
+  const data = collectQuizFormData();
+  const questionEl = event.target.closest(".quiz-question-editor");
+  const qIndex = Number(questionEl?.dataset?.questionIndex || 0);
+  if (event.target.closest(".quiz-add-answer")) {
+    data.questions[qIndex].answers.push({ text: "New answer", correct: false, message: "Add feedback for this answer." });
+    renderQuizForm(data);
+    return;
+  }
+  if (event.target.closest(".quiz-remove-answer")) {
+    const answerEl = event.target.closest(".quiz-answer-editor");
+    const aIndex = Number(answerEl?.dataset?.answerIndex || 0);
+    if (data.questions[qIndex].answers.length <= 2) { showToast("A question needs at least two answers"); return; }
+    data.questions[qIndex].answers.splice(aIndex, 1);
+    if (!data.questions[qIndex].answers.some(answer => answer.correct)) data.questions[qIndex].answers[0].correct = true;
+    renderQuizForm(data);
+    return;
+  }
+  if (event.target.closest(".quiz-remove-question")) {
+    if (data.questions.length <= 1) { showToast("A quiz needs at least one question"); return; }
+    data.questions.splice(qIndex, 1);
+    renderQuizForm(data);
+  }
+});
+els.quizPanel.addEventListener("click", event => { if (event.target === els.quizPanel) closeQuizPanel(); });
+els.quizPanel.addEventListener("keydown", handleQuizPanelKeydown);
 document.addEventListener("keydown", event => {
   const active = document.activeElement;
   if (els.slashMenu.classList.contains("open") && (selectionInsideEditor() || els.visualEditor.contains(active) || els.slashMenu.contains(active) || active === document.body)) {

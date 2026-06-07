@@ -151,6 +151,19 @@
     </div>
   </div>
 
+  <div class="modal-panel" id="quizPanel" role="dialog" aria-label="Insert quiz shortcode">
+    <div class="modal-card panel-animate modal-wide quiz-modal">
+      <h2>Quiz shortcode</h2>
+      <p>Create and edit the full Docsy quiz shortcode without manually writing JSON. Add questions, answers, feedback messages and section references.</p>
+      <div class="field"><label for="quizIntro">Intro text</label><textarea id="quizIntro" rows="3" placeholder="Answer these questions to check your understanding of this post."></textarea></div>
+      <div class="quiz-builder" id="quizQuestions" aria-label="Quiz questions"></div>
+      <div class="quiz-builder-actions">
+        <button class="pill" id="addQuizQuestionBtn" type="button"><i class="fa-solid fa-plus"></i> Add question</button>
+      </div>
+      <div class="panel-actions"><button class="pill" id="cancelQuizBtn" type="button">Cancel</button><button class="pill primary" id="insertQuizBtn" type="button">Insert quiz</button></div>
+    </div>
+  </div>
+
   <div class="slash-menu" id="slashMenu" role="listbox" aria-label="Command menu"></div>
   <div class="toast" id="toast"></div>
 
