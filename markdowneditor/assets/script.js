@@ -13,6 +13,7 @@ const ALERTS = [
   ["success", "Success", "TIP"]
 ];
 const DOCSY_ALERT_TITLE = { info: "Info", warning: "Warning", danger: "Failure", success: "Success" };
+const DEFAULT_QUIZ_INTRO = "Answer these questions to check your understanding of this post.";
 
 const els = {
   editorBtn: document.getElementById("editorBtn"),
@@ -62,7 +63,6 @@ const els = {
   cancelButtonBtn: document.getElementById("cancelButtonBtn"),
   insertButtonBtn: document.getElementById("insertButtonBtn"),
   quizPanel: document.getElementById("quizPanel"),
-  quizIntro: document.getElementById("quizIntro"),
   quizQuestions: document.getElementById("quizQuestions"),
   addQuizQuestionBtn: document.getElementById("addQuizQuestionBtn"),
   cancelQuizBtn: document.getElementById("cancelQuizBtn"),
@@ -329,7 +329,7 @@ function rawHtmlCard(title, html) {
 }
 function getDefaultQuizData() {
   return {
-    intro: "Answer these questions to check your understanding of this post.",
+    intro: DEFAULT_QUIZ_INTRO,
     questions: [
       {
         question: "Add your question here",
@@ -346,7 +346,7 @@ function getDefaultQuizData() {
 function normalizeQuizData(data = {}) {
   const source = data && typeof data === "object" ? data : {};
   const normalized = {
-    intro: String(source.intro || "Answer these questions to check your understanding of this post.").trim(),
+    intro: DEFAULT_QUIZ_INTRO,
     questions: Array.isArray(source.questions) ? source.questions.map(question => {
       const answers = Array.isArray(question?.answers) ? question.answers.map(answer => ({
         text: String(answer?.text || "").trim(),
@@ -1813,7 +1813,6 @@ function quizQuestionFormHtml(question, qIndex) {
 }
 function renderQuizForm(data = getDefaultQuizData()) {
   const quiz = normalizeQuizData(data);
-  els.quizIntro.value = quiz.intro;
   els.quizQuestions.innerHTML = quiz.questions.map(quizQuestionFormHtml).join("");
 }
 function collectQuizFormData() {
@@ -1830,7 +1829,7 @@ function collectQuizFormData() {
       answers
     };
   });
-  return normalizeQuizData({ intro: els.quizIntro.value, questions });
+  return normalizeQuizData({ intro: DEFAULT_QUIZ_INTRO, questions });
 }
 function closeQuizPanel() {
   els.quizPanel.classList.remove("open");
@@ -1863,7 +1862,7 @@ function openQuizPanel(options = {}) {
   renderQuizForm(options.editCard ? getQuizDataFromCard(options.editCard) : getDefaultQuizData());
   els.insertQuizBtn.textContent = options.editCard ? "Update quiz" : "Insert quiz";
   els.quizPanel.classList.add("open");
-  setTimeout(() => els.quizIntro.focus(), 80);
+  setTimeout(() => (els.quizQuestions.querySelector(".quiz-question-text") || els.addQuizQuestionBtn)?.focus(), 80);
 }
 function saveQuizFromPanel() {
   const data = collectQuizFormData();
