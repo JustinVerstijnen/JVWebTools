@@ -13,7 +13,7 @@ const ALERTS = [
   ["success", "Success", "TIP"]
 ];
 const DOCSY_ALERT_TITLE = { info: "Info", warning: "Warning", danger: "Failure", success: "Success" };
-const DEFAULT_QUIZ_INTRO = "Answer these questions to test your understanding of this post. Your answers are not saved or sent anywhere; this is simply a personal knowledge check. If you refresh the page, your answers will be cleared.";
+const DEFAULT_QUIZ_INTRO = "Answer these question(s) to test your understanding of this post. Your answers are not saved or sent anywhere; this is simply a personal knowledge check. If you refresh the page, your answers will be cleared.";
 
 const els = {
   editorBtn: document.getElementById("editorBtn"),
