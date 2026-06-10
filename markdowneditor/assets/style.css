@@ -39,6 +39,7 @@
 .fa-folder-tree::before { content: "▤"; }
 .fa-layer-group::before { content: "▥"; }
 .fa-window-maximize::before { content: "□"; }
+.fa-github::before { content: "GH"; font-size: .72em; letter-spacing: -0.04em; }
 
 :root {
   --accent: #77B0DE;

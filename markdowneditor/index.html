@@ -77,6 +77,7 @@
           <button type="button" data-format="table-add-column"><i class="fa-solid fa-table-columns"></i> Add column</button>
           <button type="button" data-format="table-remove-column"><i class="fa-solid fa-trash-can"></i> Remove column</button>
           <button type="button" data-format="buttondocsy"><i class="fa-solid fa-square-up-right"></i> Docsy button</button>
+          <button type="button" data-format="buttondocsygithub"><i class="fa-brands fa-github"></i> GitHub button</button>
           <button type="button" data-format="drawio"><i class="fa-solid fa-diagram-project"></i> Draw.io</button>
           <button type="button" data-format="code"><i class="fa-solid fa-code"></i> Code</button>
           <button type="button" data-format="codedocsy"><i class="fa-solid fa-file-code"></i> Docsy code</button>
@@ -148,6 +149,16 @@
       <div class="field"><label for="buttonUrl">Button link</label><input id="buttonUrl" type="url" placeholder="https://example.com/docs" /></div>
       <div class="field"><label for="buttonStyle">Style</label><select id="buttonStyle"><option value="btn btn-primary">Primary</option><option value="btn btn-secondary">Secondary</option><option value="btn btn-outline-primary">Outline primary</option><option value="btn btn-lg btn-primary">Large primary</option></select></div>
       <div class="panel-actions"><button class="pill" id="cancelButtonBtn" type="button">Cancel</button><button class="pill primary" id="insertButtonBtn" type="button">Save button</button></div>
+    </div>
+  </div>
+
+  <div class="modal-panel" id="githubButtonPanel" role="dialog" aria-label="Insert GitHub Docsy button">
+    <div class="modal-card panel-animate">
+      <h2>GitHub Docsy button</h2>
+      <p>The text and style are fixed. Paste only the GitHub link.</p>
+      <div class="field"><label for="githubButtonUrl">GitHub link</label><input id="githubButtonUrl" type="url" placeholder="https://github.com/JustinVerstijnen/JV-AzureServerUpgradeDisk" /></div>
+      <div class="field-help">This inserts: View on my GitHub page</div>
+      <div class="panel-actions"><button class="pill" id="cancelGithubButtonBtn" type="button">Cancel</button><button class="pill primary" id="insertGithubButtonBtn" type="button">Save GitHub button</button></div>
     </div>
   </div>
 

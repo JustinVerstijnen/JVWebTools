@@ -14,6 +14,9 @@ const ALERTS = [
 ];
 const DOCSY_ALERT_TITLE = { info: "Info", warning: "Warning", danger: "Failure", success: "Success" };
 const DEFAULT_QUIZ_INTRO = "Answer these question(s) to test your understanding of this post. Your answers are not saved or sent anywhere; this is simply a personal knowledge check. If you refresh the page, your answers will be cleared.";
+const DOCSY_GITHUB_BUTTON_TEXT = "View on my GitHub page";
+const DOCSY_GITHUB_BUTTON_CLASS = "btn btn-primary";
+const DOCSY_GITHUB_BUTTON_DEFAULT_URL = "https://github.com/JustinVerstijnen/JV-AzureServerUpgradeDisk";
 
 const els = {
   editorBtn: document.getElementById("editorBtn"),
@@ -62,6 +65,10 @@ const els = {
   buttonStyle: document.getElementById("buttonStyle"),
   cancelButtonBtn: document.getElementById("cancelButtonBtn"),
   insertButtonBtn: document.getElementById("insertButtonBtn"),
+  githubButtonPanel: document.getElementById("githubButtonPanel"),
+  githubButtonUrl: document.getElementById("githubButtonUrl"),
+  cancelGithubButtonBtn: document.getElementById("cancelGithubButtonBtn"),
+  insertGithubButtonBtn: document.getElementById("insertGithubButtonBtn"),
   quizPanel: document.getElementById("quizPanel"),
   quizQuestions: document.getElementById("quizQuestions"),
   addQuizQuestionBtn: document.getElementById("addQuizQuestionBtn"),
@@ -98,6 +105,7 @@ let pendingPanelInsertOptions = {};
 let pendingInsertAnchorBlock = null;
 let pendingInsertMarker = null;
 let pendingButtonEditAnchor = null;
+let pendingGitHubButtonEditAnchor = null;
 let pendingImageEditFigure = null;
 let pendingTableEditTarget = null;
 let pendingDrawioEditCard = null;
@@ -407,6 +415,16 @@ function imageHtml(src, alt = "Image", caption = "Optional caption", href = "") 
 function docsyButtonHtml(text = "Read the documentation", href = "/docs/", classes = "btn btn-primary") {
   return `<p><a class="${escapeHtml(classes)}" href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${escapeHtml(text)}</a></p>`;
 }
+function docsyGitHubButtonHtml(href = DOCSY_GITHUB_BUTTON_DEFAULT_URL) {
+  const targetHref = String(href || "").trim() || DOCSY_GITHUB_BUTTON_DEFAULT_URL;
+  return `<p><a class="${DOCSY_GITHUB_BUTTON_CLASS}" href="${escapeHtml(targetHref)}" target="_blank" rel="noreferrer" data-docsy-github-button="true">${DOCSY_GITHUB_BUTTON_TEXT}</a></p>`;
+}
+function isDocsyGitHubButtonAnchor(anchor) {
+  if (!anchor?.classList?.contains("btn")) return false;
+  const text = String(anchor.textContent || "").trim();
+  const classes = String(anchor.getAttribute("class") || "").trim();
+  return anchor.dataset.docsyGithubButton === "true" || (text === DOCSY_GITHUB_BUTTON_TEXT && classes === DOCSY_GITHUB_BUTTON_CLASS);
+}
 function guessAltTextFromUrl(url = "") {
   const clean = String(url || "").trim().split("#")[0].split("?")[0];
   const file = clean.split("/").filter(Boolean).pop() || "";
@@ -438,6 +456,7 @@ const blocks = [
   { id: "separator", command: "/separator", icon: "fa-minus", category: "Content", sidebar: true, name: "Separator", description: "Horizontal divider", html: "<hr><p><br></p>" },
   { id: "button", command: "/button", icon: "fa-square-up-right", category: "Content", sidebar: true, name: "Button", description: "Bootstrap / Docsy style link", html: "<p><a class=\"btn btn-primary btn-lg\" href=\"/docs/\" target=\"_blank\" rel=\"noreferrer\">Read the documentation</a></p>" },
   { id: "buttondocsy", command: "/buttondocsy", icon: "fa-square-up-right", category: "Docsy", sidebar: true, name: "Docsy Button", description: "Insert a website styled Docsy button", html: "<p><a class=\"btn btn-primary\" href=\"/blog/\">Go back to Blog homepage</a></p>" },
+  { id: "buttondocsygithub", command: "/buttondocsygithub", icon: "fa-brands fa-github", category: "Docsy", sidebar: true, name: "GitHub Button", description: "Fixed GitHub button; only set the link", action: "buttondocsygithub" },
   { id: "code", command: "/code", icon: "fa-code", category: "Code", sidebar: true, name: "Code", description: "Generic fenced code block", html: codeBlockHtml() },
   { id: "codedocsy", command: "/codedocsy", icon: "fa-file-code", category: "Docsy", sidebar: true, name: "Docsy Code", description: "Docsy card code shortcode", html: docsyCodeBlockHtml() },
   { id: "html", command: "/html", icon: "fa-brands fa-html5", category: "Code", sidebar: true, name: "HTML", description: "HTML code block", html: htmlBlockHtml() },
@@ -1244,6 +1263,7 @@ function insertBlock(blockId, options = {}) {
   if (block.action === "image") { openImagePanel(insertionOptions); return; }
   if (block.action === "table") { openTablePanel(insertionOptions); return; }
   if (block.action === "buttondocsy") { openButtonPanel(insertionOptions); return; }
+  if (block.action === "buttondocsygithub") { openGitHubButtonPanel(insertionOptions); return; }
   if (block.action === "drawio") { openDrawioPanel(insertionOptions); return; }
   if (block.action === "quiz") { openQuizPanel(insertionOptions); return; }
   insertHtmlAtCursor(block.html, insertionOptions);
@@ -1374,6 +1394,7 @@ function execFormat(format) {
   if (format === "code") insertBlock("code");
   if (format === "codedocsy") insertBlock("codedocsy");
   if (format === "buttondocsy") insertBlock("buttondocsy");
+  if (format === "buttondocsygithub") insertBlock("buttondocsygithub");
   if (format === "drawio") insertBlock("drawio");
   if (format === "html") insertBlock("html");
   if (format === "separator") insertBlock("separator");
@@ -1545,6 +1566,7 @@ function handlePanelKeydown(event) {
   event.preventDefault();
   if (panel === els.imagePanel) insertImageFromPanel();
   if (panel === els.buttonPanel) saveButtonFromPanel();
+  if (panel === els.githubButtonPanel) saveGitHubButtonFromPanel();
   if (panel === els.tablePanel) insertTableFromPanel();
   if (panel === els.drawioPanel) saveDrawioFromPanel();
 }
@@ -1686,6 +1708,46 @@ function saveButtonFromPanel() {
   pendingInsertAnchorBlock = null;
   pendingInsertMarker = null;
   pendingButtonEditAnchor = null;
+}
+function openGitHubButtonPanel(options = {}) {
+  pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false, marker: options.marker && options.marker.isConnected ? options.marker : null };
+  const insertionRange = getPanelInsertionRange(options);
+  pendingInsertMarker = options.marker && options.marker.isConnected ? options.marker : null;
+  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(insertionRange);
+  pendingGitHubButtonEditAnchor = options.editAnchor || null;
+  if (insertionRange) {
+    savedRange = insertionRange.cloneRange();
+    lastSelectionSavedAt = Date.now();
+  } else {
+    savedRange = createEndRange();
+    lastSelectionSavedAt = Date.now();
+    pendingPanelInsertOptions.allowOldSelection = false;
+  }
+  const anchor = options.editAnchor || null;
+  els.githubButtonUrl.value = anchor?.getAttribute?.("href") || DOCSY_GITHUB_BUTTON_DEFAULT_URL;
+  els.githubButtonPanel.classList.add("open");
+  setTimeout(() => els.githubButtonUrl.focus(), 80);
+}
+function saveGitHubButtonFromPanel() {
+  const hrefValue = els.githubButtonUrl.value.trim() || DOCSY_GITHUB_BUTTON_DEFAULT_URL;
+  els.githubButtonPanel.classList.remove("open");
+  if (pendingGitHubButtonEditAnchor && pendingGitHubButtonEditAnchor.isConnected) {
+    pendingGitHubButtonEditAnchor.textContent = DOCSY_GITHUB_BUTTON_TEXT;
+    pendingGitHubButtonEditAnchor.setAttribute("href", hrefValue);
+    pendingGitHubButtonEditAnchor.setAttribute("class", DOCSY_GITHUB_BUTTON_CLASS);
+    pendingGitHubButtonEditAnchor.setAttribute("target", "_blank");
+    pendingGitHubButtonEditAnchor.setAttribute("rel", "noreferrer");
+    pendingGitHubButtonEditAnchor.dataset.docsyGithubButton = "true";
+    normalizeEditorContent(pendingGitHubButtonEditAnchor.closest("p") || pendingGitHubButtonEditAnchor);
+    saveProject();
+    showToast("GitHub button updated");
+  } else {
+    insertHtmlAtCursor(docsyGitHubButtonHtml(hrefValue), { ...pendingPanelInsertOptions, marker: pendingInsertMarker, anchorBlock: pendingInsertAnchorBlock });
+    showToast("GitHub button inserted");
+  }
+  pendingInsertAnchorBlock = null;
+  pendingInsertMarker = null;
+  pendingGitHubButtonEditAnchor = null;
 }
 function openTablePanel(options = {}) {
   pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false, marker: options.marker && options.marker.isConnected ? options.marker : null };
@@ -2189,7 +2251,7 @@ function insertSlashSelection() {
   slashRange.deleteContents();
 
   let marker = null;
-  if (block.action === "image" || block.action === "table" || block.action === "buttondocsy" || block.action === "drawio") {
+  if (block.action === "image" || block.action === "table" || block.action === "buttondocsy" || block.action === "buttondocsygithub" || block.action === "drawio") {
     marker = document.createElement("span");
     marker.className = "slash-insert-marker";
     marker.setAttribute("data-slash-insert-marker", "true");
@@ -3106,7 +3168,11 @@ els.visualEditor.addEventListener("click", event => {
     }
     if (isButtonHost(block)) {
       const anchor = block.querySelector(':scope > a.btn');
-      openButtonPanel({ editAnchor: anchor, anchorBlock: block, allowOldSelection: true });
+      if (isDocsyGitHubButtonAnchor(anchor)) {
+        openGitHubButtonPanel({ editAnchor: anchor, anchorBlock: block, allowOldSelection: true });
+      } else {
+        openButtonPanel({ editAnchor: anchor, anchorBlock: block, allowOldSelection: true });
+      }
       return;
     }
     if (isTableHost(block)) {
@@ -3131,7 +3197,11 @@ els.visualEditor.addEventListener("click", event => {
   if (anchor?.classList.contains("btn") && !event.ctrlKey && !event.metaKey) {
     event.preventDefault();
     event.stopPropagation();
-    openButtonPanel({ editAnchor: anchor, anchorBlock: anchor.closest("p") || null, allowOldSelection: true });
+    if (isDocsyGitHubButtonAnchor(anchor)) {
+      openGitHubButtonPanel({ editAnchor: anchor, anchorBlock: anchor.closest("p") || null, allowOldSelection: true });
+    } else {
+      openButtonPanel({ editAnchor: anchor, anchorBlock: anchor.closest("p") || null, allowOldSelection: true });
+    }
     return;
   }
   if (anchor && (event.ctrlKey || event.metaKey || anchor.classList.contains("image-link"))) window.open(anchor.href, "_blank", "noopener");
@@ -3163,6 +3233,8 @@ els.cancelImageBtn.addEventListener("click", () => { els.imagePanel.classList.re
 els.insertImageBtn.addEventListener("click", insertImageFromPanel);
 els.cancelButtonBtn.addEventListener("click", () => { els.buttonPanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingButtonEditAnchor = null; });
 els.insertButtonBtn.addEventListener("click", saveButtonFromPanel);
+els.cancelGithubButtonBtn.addEventListener("click", () => { els.githubButtonPanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingGitHubButtonEditAnchor = null; });
+els.insertGithubButtonBtn.addEventListener("click", saveGitHubButtonFromPanel);
 els.imageUrl.addEventListener("input", () => {
   if (!els.imageAlt.value.trim()) els.imageAlt.value = guessAltTextFromUrl(els.imageUrl.value);
   if (!els.imageLink.value.trim() || els.imageLink.value.trim() === els.imageLink.dataset.autoValue) {
@@ -3174,6 +3246,8 @@ els.imagePanel.addEventListener("click", event => { if (event.target === els.ima
 els.imagePanel.addEventListener("keydown", handlePanelKeydown);
 els.buttonPanel.addEventListener("click", event => { if (event.target === els.buttonPanel) { els.buttonPanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingButtonEditAnchor = null; } });
 els.buttonPanel.addEventListener("keydown", handlePanelKeydown);
+els.githubButtonPanel.addEventListener("click", event => { if (event.target === els.githubButtonPanel) { els.githubButtonPanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingGitHubButtonEditAnchor = null; } });
+els.githubButtonPanel.addEventListener("keydown", handlePanelKeydown);
 els.cancelTableBtn.addEventListener("click", () => { els.tablePanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingTableEditTarget = null; els.insertTableBtn.textContent = "Insert table"; });
 els.insertTableBtn.addEventListener("click", insertTableFromPanel);
 els.tablePanel.addEventListener("click", event => { if (event.target === els.tablePanel) { els.tablePanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingTableEditTarget = null; els.insertTableBtn.textContent = "Insert table"; } });
