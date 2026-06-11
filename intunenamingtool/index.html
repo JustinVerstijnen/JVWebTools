@@ -28,7 +28,7 @@
                 </span>
                 <span class="tab-text">
                     <strong>Intune Resource</strong>
-                    <small>Configuration, updates, Autopilot, Windows 365 & Endpoint Security</small>
+                    <small>Generate a name for any type of item in Intune</small>
                 </span>
             </button>
             <button class="object-tab" id="groupTab" type="button" data-mode="group" aria-selected="false">
@@ -37,7 +37,7 @@
                 </span>
                 <span class="tab-text">
                     <strong>Group</strong>
-                    <small>Security, dynamic, assigned & Microsoft 365 groups</small>
+                    <small>Generate a name for a Security or Microsoft 365 group</small>
                 </span>
             </button>
         </nav>
@@ -54,26 +54,26 @@
                 <div class="form-grid">
                     <div class="field">
                         <label for="prefixInput">Prefix</label>
-                        <input type="text" id="prefixInput" value="JV" maxlength="12" autocomplete="off" spellcheck="false">
-                        <small>Customer, department or owner prefix.</small>
+                        <input type="text" id="prefixInput" value="" maxlength="12" autocomplete="off" spellcheck="false">
+                        <small>A shortened department, project, customer or other prefix.</small>
                     </div>
 
                     <div class="field">
                         <label for="targetSelect">Target</label>
                         <select id="targetSelect"></select>
-                        <small>User or device targeting.</small>
+                        <small>Target the item to a User or Device.</small>
                     </div>
 
                     <div class="field field-wide" id="resourceTypeField">
                         <label for="resourceTypeSearchInput">Resource type</label>
-                        <input type="text" id="resourceTypeSearchInput" placeholder="Search by code, type or category..." autocomplete="off" spellcheck="false">
+                        <input type="text" id="resourceTypeSearchInput" placeholder="Type here to search the catalog for items..." autocomplete="off" spellcheck="false">
                         <select id="resourceTypeSelect" aria-label="Filtered resource type results"></select>
                         <small id="resourceTypeDescription">Select a type from your Intune framework.</small>
                     </div>
 
                     <div class="field field-wide hidden" id="groupTypeField">
                         <label for="groupTypeSearchInput">Group type</label>
-                        <input type="text" id="groupTypeSearchInput" placeholder="Search by code, type or category..." autocomplete="off" spellcheck="false">
+                        <input type="text" id="groupTypeSearchInput" placeholder="Type here to search the catalog for group types..." autocomplete="off" spellcheck="false">
                         <select id="groupTypeSelect" aria-label="Filtered group type results"></select>
                         <small id="groupTypeDescription">Select the group abbreviation.</small>
                     </div>
@@ -81,13 +81,13 @@
                     <div class="field">
                         <label for="osSelect">OS</label>
                         <select id="osSelect"></select>
-                        <small>Operating system scope.</small>
+                        <small>Select the OS you want to target</small>
                     </div>
 
                     <div class="field">
                         <label for="goalInput">Name / goal</label>
-                        <input type="text" id="goalInput" value="OneDrive" placeholder="OneDrive, FSLogix, BitLocker, All Devices" autocomplete="off" spellcheck="false">
-                        <small>Spaces become hyphens. Special characters are removed.</small>
+                        <input type="text" id="goalInput" value="" placeholder="Such as OneDrive, FSLogix, BitLocker, All Devices" autocomplete="off" spellcheck="false">
+                        <small>Spaces become hyphens. Special characters are removed. Keep this as short/clear as possible.</small>
                     </div>
                 </div>
 
@@ -102,12 +102,12 @@
                 <div class="section-heading compact">
                     <div>
                         <h2>Generated name</h2>
-                        <p>Click the name or use the copy button.</p>
+                        <p>Click the name to copy to clipboard.</p>
                     </div>
                 </div>
 
-                <button id="generatedName" class="generated-name" type="button" title="Click to copy">JV-CP-D-Win-OneDrive</button>
-                <div id="validationMessage" class="validation-message valid">Looks good.</div>
+                <button id="generatedName" class="generated-name" type="button" title="Click to copy">Your-Group-Name</button>
+                <div id="validationMessage" class="validation-message valid">Your name has been verified and should work!</div>
 
                 <div class="parts-box">
                     <h3>Name parts</h3>
@@ -131,7 +131,7 @@
                     <span class="collapse-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm3.92 6.46-1.88 5.58-5.58 1.88 1.88-5.58 5.58-1.88ZM12 13.1a1.1 1.1 0 1 1 0-2.2 1.1 1.1 0 0 1 0 2.2Z"/></svg></span>
                     <span>
                         <strong>Framework overview</strong>
-                        <small>Collapsed by default. Expand to view and select abbreviations.</small>
+                        <small>Click here to expand the framework details.</small>
                     </span>
                 </span>
                 <span class="collapse-label">Expand</span>
@@ -139,13 +139,12 @@
             <div class="collapsible-panel" id="frameworkPanel" hidden>
                 <div class="section-heading framework-heading">
                     <div>
-                        <h2>Quick type overview</h2>
-                        <p>Click a type to use it in the builder.</p>
+                        <p>Click a type to use it in the name builder or search for items.</p>
                     </div>
                 </div>
                 <div class="framework-search-wrap">
                     <label class="visually-hidden" for="typeSearchInput">Search framework overview</label>
-                    <input type="text" id="typeSearchInput" placeholder="Search framework by code, type or category..." autocomplete="off" spellcheck="false">
+                    <input type="text" id="typeSearchInput" placeholder="Type here to search the catalog for items..." autocomplete="off" spellcheck="false">
                 </div>
                 <div id="typeOverview" class="type-overview"></div>
             </div>
@@ -166,7 +165,7 @@
                 <div class="section-heading">
                     <div>
                         <h2>Recently generated</h2>
-                        <p>Stored only in this browser session.</p>
+                        <p>Click here to view your latest generated names. These are stored until a page refresh.</p>
                     </div>
                     <div class="history-actions">
                         <button id="exportCsvBtn" class="export-btn icon-btn" type="button"><svg class="btn-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M11 3h2v9l3.5-3.5 1.42 1.42L12 15.84 6.08 9.92 7.5 8.5 11 12V3ZM5 19h14v2H5v-2Z"/></svg>Export CSV</button>
@@ -197,7 +196,7 @@
             <a href="https://github.com/JustinVerstijnen/IntuneNamingTool" target="_blank" rel="noopener noreferrer">© 2026 Intune Naming tool by Justin Verstijnen. Click here to visit GitHub project.</a>
         </footer>
 
-        <div id="toast" class="toast" role="status" aria-live="polite">Copied to clipboard.</div>
+        <div id="toast" class="toast" role="status" aria-live="polite">Copied generated name to clipboard!</div>
     </main>
     <script src="app.js?v=20260611-polish-1"></script>
 <script src="app.js"></script>
