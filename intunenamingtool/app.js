@@ -2,7 +2,7 @@ const resourceCategories = [
     {
         category: "Device Configuration",
         items: [
-            { code: "CP", label: "Config Profile" },
+            { code: "CP", label: "Configuration Profile" },
             { code: "SCR", label: "Script (PowerShell / Custom)" }
         ]
     },
