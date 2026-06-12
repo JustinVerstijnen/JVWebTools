@@ -89,6 +89,8 @@ const targetOptions = [
 
 const osOptions = [
     { code: "Win", label: "Windows" },
+    { code: "AVD", label: "Azure Virtual Desktop" },
+    { code: "W365", label: "Windows 365" },
     { code: "And", label: "Android" },
     { code: "Lin", label: "Linux" },
     { code: "macOS", label: "macOS" },
