@@ -79,6 +79,7 @@
           <button type="button" data-format="buttondocsy"><i class="fa-solid fa-square-up-right"></i> Docsy button</button>
           <button type="button" data-format="buttondocsygithub"><i class="fa-brands fa-github"></i> GitHub button</button>
           <button type="button" data-format="drawio"><i class="fa-solid fa-diagram-project"></i> Draw.io</button>
+          <button type="button" data-format="youtube"><i class="fa-brands fa-youtube"></i> YouTube</button>
           <button type="button" data-format="code"><i class="fa-solid fa-code"></i> Code</button>
           <button type="button" data-format="codedocsy"><i class="fa-solid fa-file-code"></i> Docsy code</button>
           <button type="button" data-format="separator"><i class="fa-solid fa-minus"></i> Separator</button>
@@ -138,6 +139,16 @@
       <div class="field"><label for="drawioEmbed">HTML embed</label><textarea id="drawioEmbed" spellcheck="false" placeholder="Paste the draw.io iframe or full embed HTML here"></textarea></div>
       <div class="field-help">On export this is saved as raw HTML with a <code>drawio-white-background</code> wrapper.</div>
       <div class="panel-actions"><button class="pill" id="cancelDrawioBtn" type="button">Cancel</button><button class="pill primary" id="insertDrawioBtn" type="button">Insert draw.io</button></div>
+    </div>
+  </div>
+
+  <div class="modal-panel" id="youtubePanel" role="dialog" aria-label="Insert YouTube video">
+    <div class="modal-card panel-animate">
+      <h2>YouTube video</h2>
+      <p>Paste a YouTube URL. The editor will convert it to the Docsy-compatible iframe embed on export.</p>
+      <div class="field"><label for="youtubeUrl">YouTube URL</label><input id="youtubeUrl" type="url" placeholder="https://www.youtube.com/watch?v=jCInuPETL10" /></div>
+      <div class="field-help">Supports normal YouTube links, youtu.be links, shorts, live URLs and embed URLs.</div>
+      <div class="panel-actions"><button class="pill" id="cancelYoutubeBtn" type="button">Cancel</button><button class="pill primary" id="insertYoutubeBtn" type="button">Insert YouTube video</button></div>
     </div>
   </div>
 

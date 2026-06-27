@@ -1044,3 +1044,31 @@ select:hover,
     justify-content: start;
   }
 }
+
+
+/* v19: YouTube embed block and insertion fixes */
+.fa-youtube::before { content: "▶"; font-size: .82em; }
+.raw-html-card[data-youtube="true"] .block-settings {
+  background: rgba(239, 68, 68, 0.12);
+}
+.raw-html-card[data-youtube="true"] .block-settings small {
+  color: var(--muted);
+  font-weight: 900;
+}
+.raw-html-card[data-youtube="true"] textarea {
+  min-height: 170px;
+  font-family: var(--mono);
+}
+.youtube-preview {
+  padding: 14px;
+}
+.youtube-preview iframe {
+  display: block;
+  width: 100%;
+  max-width: 960px;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  border: 0;
+  border-radius: 16px;
+  background: #000;
+}

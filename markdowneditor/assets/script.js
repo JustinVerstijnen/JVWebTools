@@ -1,5 +1,5 @@
-const STORAGE_KEY = "markdown-editor-project-v18";
-const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v17", "markdown-editor-project-v16", "markdown-editor-project-v15", "markdown-editor-project-v14", "markdown-editor-project-v13", "markdown-editor-project-v12", "markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
+const STORAGE_KEY = "markdown-editor-project-v19";
+const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v18", "markdown-editor-project-v17", "markdown-editor-project-v16", "markdown-editor-project-v15", "markdown-editor-project-v14", "markdown-editor-project-v13", "markdown-editor-project-v12", "markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
 
 const LANGUAGES = [
   ["powershell", "PowerShell"], ["cmd", "cmd"], ["bash", "Bash"], ["json", "JSON"], ["csv", "CSV"],
@@ -17,6 +17,7 @@ const DEFAULT_QUIZ_INTRO = "Answer these question(s) to test your understanding 
 const DOCSY_GITHUB_BUTTON_TEXT = "View on my GitHub page";
 const DOCSY_GITHUB_BUTTON_CLASS = "btn btn-primary";
 const DOCSY_GITHUB_BUTTON_DEFAULT_URL = "https://github.com/JustinVerstijnen/JV-AzureServerUpgradeDisk";
+const DEFAULT_YOUTUBE_URL = "https://www.youtube.com/watch?v=jCInuPETL10";
 
 const els = {
   editorBtn: document.getElementById("editorBtn"),
@@ -57,6 +58,10 @@ const els = {
   drawioEmbed: document.getElementById("drawioEmbed"),
   cancelDrawioBtn: document.getElementById("cancelDrawioBtn"),
   insertDrawioBtn: document.getElementById("insertDrawioBtn"),
+  youtubePanel: document.getElementById("youtubePanel"),
+  youtubeUrl: document.getElementById("youtubeUrl"),
+  cancelYoutubeBtn: document.getElementById("cancelYoutubeBtn"),
+  insertYoutubeBtn: document.getElementById("insertYoutubeBtn"),
   cancelTableBtn: document.getElementById("cancelTableBtn"),
   insertTableBtn: document.getElementById("insertTableBtn"),
   buttonPanel: document.getElementById("buttonPanel"),
@@ -109,6 +114,7 @@ let pendingGitHubButtonEditAnchor = null;
 let pendingImageEditFigure = null;
 let pendingTableEditTarget = null;
 let pendingDrawioEditCard = null;
+let pendingYoutubeEditCard = null;
 let pendingQuizEditCard = null;
 let draggedTableRow = null;
 let draggedTableColumnIndex = -1;
@@ -297,6 +303,57 @@ ${inner}
 function drawioBlockHtml(html = getDefaultDrawioEmbed()) {
   return rawHtmlCard("Draw.io diagram", cleanDrawioEmbed(html)).replace('data-raw-html="true"', 'data-raw-html="true" data-drawio="true"');
 }
+function getYouTubeVideoId(value = "") {
+  const raw = String(value || "").trim();
+  if (/^[a-zA-Z0-9_-]{11}$/.test(raw)) return raw;
+  try {
+    const url = new URL(raw);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "").replace(/^m\./, "");
+    if (host === "youtu.be") return (url.pathname.split("/").filter(Boolean)[0] || "").slice(0, 11);
+    if (host.endsWith("youtube.com") || host.endsWith("youtube-nocookie.com")) {
+      const byQuery = url.searchParams.get("v");
+      if (byQuery) return byQuery.slice(0, 11);
+      const parts = url.pathname.split("/").filter(Boolean);
+      const markerIndex = parts.findIndex(part => ["embed", "shorts", "live"].includes(part));
+      if (markerIndex >= 0 && parts[markerIndex + 1]) return parts[markerIndex + 1].slice(0, 11);
+    }
+  } catch (error) {
+    // Fall back to regex parsing below.
+  }
+  const match = raw.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?[^\s#]*v=|embed\/|shorts\/|live\/))([a-zA-Z0-9_-]{11})/i);
+  return match ? match[1] : "";
+}
+function getYouTubeEmbedSrc(value = DEFAULT_YOUTUBE_URL) {
+  const videoId = getYouTubeVideoId(value) || getYouTubeVideoId(DEFAULT_YOUTUBE_URL);
+  return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`;
+}
+function buildYouTubeIframe(value = DEFAULT_YOUTUBE_URL) {
+  const src = getYouTubeEmbedSrc(value);
+  return `<iframe
+width="960"
+height="540"
+src="${src}"
+title="JV video player"
+frameborder="0"
+allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+allowfullscreen>
+</iframe>`;
+}
+function isYouTubeHtml(html = "") {
+  return /<iframe[\s\S]+(?:youtube(?:-nocookie)?\.com\/embed\/|youtu\.be\/)/i.test(String(html || ""));
+}
+function getYouTubeSourceFromCard(card) {
+  const raw = card?.querySelector?.("textarea")?.value || card?.dataset?.youtubeUrl || DEFAULT_YOUTUBE_URL;
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = raw;
+  const iframeSrc = wrapper.querySelector("iframe")?.getAttribute("src") || raw;
+  return iframeSrc;
+}
+function youtubeBlockHtml(value = DEFAULT_YOUTUBE_URL) {
+  const iframe = buildYouTubeIframe(value);
+  const videoId = getYouTubeVideoId(value) || getYouTubeVideoId(DEFAULT_YOUTUBE_URL);
+  return `<div class="raw-html-card youtube-card editable-card" data-raw-html="true" data-youtube="true" data-youtube-url="${escapeHtml(value || DEFAULT_YOUTUBE_URL)}" contenteditable="false"><div class="block-settings" contenteditable="false"><span><i class="fa-brands fa-youtube"></i> YouTube video</span><small>${escapeHtml(videoId)}</small></div><textarea>${escapeHtml(iframe)}</textarea><div class="youtube-preview" contenteditable="false">${iframe}</div></div><p><br></p>`;
+}
 function isDrawioHtml(html = "") {
   return /drawio-white-background|viewer\.diagrams\.net|app\.diagrams\.net/i.test(String(html || ""));
 }
@@ -310,6 +367,7 @@ function htmlBlockToInteractiveBlock(html = "") {
     return `<p>${anchor.outerHTML}</p>`;
   }
   if (isDrawioHtml(value)) return drawioBlockHtml(value);
+  if (isYouTubeHtml(value)) return youtubeBlockHtml(value);
   return rawHtmlCard("Raw HTML", value);
 }
 function markdownFragmentToHtml(markdown) {
@@ -462,6 +520,7 @@ const blocks = [
   { id: "html", command: "/html", icon: "fa-brands fa-html5", category: "Code", sidebar: true, name: "HTML", description: "HTML code block", html: htmlBlockHtml() },
   { id: "htmldocsy", command: "/htmldocsy", icon: "fa-brands fa-html5", category: "Docsy", sidebar: true, name: "Docsy Raw HTML", description: "Insert raw HTML", html: rawHtmlDocsyBlockHtml() },
   { id: "drawio", command: "/drawio", icon: "fa-diagram-project", category: "Content", sidebar: true, name: "Draw.io diagram", description: "Paste a diagrams.net HTML embed with light/dark wrapper", action: "drawio" },
+  { id: "youtube", command: "/youtube", icon: "fa-youtube", category: "Content", sidebar: true, name: "YouTube video", description: "Embed a YouTube video iframe", action: "youtube" },
   { id: "alert", command: "/alert", icon: "fa-bell", category: "Alerts", sidebar: true, name: "Alert", description: "Markdown alert", html: alertBlockHtml("markdown", "info") },
   { id: "info", command: "/info", icon: "fa-circle-info", category: "Alerts", sidebar: false, name: "Info", description: "Markdown info alert", html: alertBlockHtml("markdown", "info") },
   { id: "warning", command: "/warning", icon: "fa-triangle-exclamation", category: "Alerts", sidebar: true, name: "Warning", description: "Markdown warning alert", html: alertBlockHtml("markdown", "warning") },
@@ -1106,7 +1165,11 @@ function renderGallery() {
         <small class="command-pill">${block.command}</small>
       </button>`).join("")}</section>`;
   }).join("");
+  els.blockGallery.addEventListener("pointerdown", event => {
+    if (event.target.closest(".block-chip")) saveSelection();
+  }, { once: true });
   els.blockGallery.querySelectorAll(".block-chip").forEach(button => {
+    button.addEventListener("pointerdown", () => saveSelection());
     button.addEventListener("click", () => insertBlock(button.dataset.block, { fromSidebar: true }));
     button.addEventListener("dragstart", event => {
       event.dataTransfer.setData("text/plain", button.dataset.block);
@@ -1265,6 +1328,7 @@ function insertBlock(blockId, options = {}) {
   if (block.action === "buttondocsy") { openButtonPanel(insertionOptions); return; }
   if (block.action === "buttondocsygithub") { openGitHubButtonPanel(insertionOptions); return; }
   if (block.action === "drawio") { openDrawioPanel(insertionOptions); return; }
+  if (block.action === "youtube") { openYoutubePanel(insertionOptions); return; }
   if (block.action === "quiz") { openQuizPanel(insertionOptions); return; }
   insertHtmlAtCursor(block.html, insertionOptions);
   showToast(`${block.name} inserted`);
@@ -1396,6 +1460,7 @@ function execFormat(format) {
   if (format === "buttondocsy") insertBlock("buttondocsy");
   if (format === "buttondocsygithub") insertBlock("buttondocsygithub");
   if (format === "drawio") insertBlock("drawio");
+  if (format === "youtube") insertBlock("youtube");
   if (format === "html") insertBlock("html");
   if (format === "separator") insertBlock("separator");
   if (format === "delete-block") deleteCurrentBlock();
@@ -1569,21 +1634,11 @@ function handlePanelKeydown(event) {
   if (panel === els.githubButtonPanel) saveGitHubButtonFromPanel();
   if (panel === els.tablePanel) insertTableFromPanel();
   if (panel === els.drawioPanel) saveDrawioFromPanel();
+  if (panel === els.youtubePanel) saveYoutubeFromPanel();
 }
 function openImagePanel(options = {}) {
-  pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false, marker: options.marker && options.marker.isConnected ? options.marker : null };
-  const insertionRange = getPanelInsertionRange(options);
-  pendingInsertMarker = options.marker && options.marker.isConnected ? options.marker : null;
-  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(insertionRange);
+  preparePanelInsertion(options, !!options.editFigure);
   pendingImageEditFigure = options.editFigure || null;
-  if (insertionRange) {
-    savedRange = insertionRange.cloneRange();
-    lastSelectionSavedAt = Date.now();
-  } else {
-    savedRange = createEndRange();
-    lastSelectionSavedAt = Date.now();
-    pendingPanelInsertOptions.allowOldSelection = false;
-  }
   const figure = options.editFigure || null;
   const img = figure?.querySelector?.("img") || null;
   const anchor = figure?.querySelector?.(":scope > a.image-link") || figure?.querySelector?.("a.image-link") || null;
@@ -1663,20 +1718,52 @@ function insertImageFromPanel() {
   pendingInsertMarker = null;
   pendingImageEditFigure = null;
 }
-function openButtonPanel(options = {}) {
-  pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false, marker: options.marker && options.marker.isConnected ? options.marker : null };
+function createInsertionMarkerAtRange(range) {
+  if (!range || !els.visualEditor.contains(range.commonAncestorContainer)) return null;
+  const marker = document.createElement("span");
+  marker.className = "slash-insert-marker";
+  marker.setAttribute("data-panel-insert-marker", "true");
+  marker.contentEditable = "false";
+  marker.style.display = "none";
+  const markerRange = range.cloneRange();
+  markerRange.collapse(false);
+  markerRange.insertNode(marker);
+  const afterMarkerRange = document.createRange();
+  afterMarkerRange.setStartAfter(marker);
+  afterMarkerRange.collapse(true);
+  savedRange = afterMarkerRange.cloneRange();
+  lastSelectionSavedAt = Date.now();
+  return marker;
+}
+function preparePanelInsertion(options = {}, isEditing = false) {
+  const explicitMarker = options.marker && options.marker.isConnected ? options.marker : null;
   const insertionRange = getPanelInsertionRange(options);
-  pendingInsertMarker = options.marker && options.marker.isConnected ? options.marker : null;
-  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(insertionRange);
-  pendingButtonEditAnchor = options.editAnchor || null;
-  if (insertionRange) {
+  const marker = isEditing ? explicitMarker : (explicitMarker || createInsertionMarkerAtRange(insertionRange));
+  const anchorBlock = options.anchorBlock || (marker ? getBlockAnchorFromNode(marker) : getBlockAnchorFromRange(insertionRange));
+  if (!marker && insertionRange) {
     savedRange = insertionRange.cloneRange();
     lastSelectionSavedAt = Date.now();
-  } else {
+  }
+  if (!marker && !insertionRange) {
     savedRange = createEndRange();
     lastSelectionSavedAt = Date.now();
-    pendingPanelInsertOptions.allowOldSelection = false;
   }
+  pendingPanelInsertOptions = {
+    allowOldSelection: options.allowOldSelection !== false && !!(marker || insertionRange),
+    marker
+  };
+  pendingInsertMarker = marker;
+  pendingInsertAnchorBlock = anchorBlock && anchorBlock.isConnected ? anchorBlock : null;
+  return { insertionRange, marker, anchorBlock: pendingInsertAnchorBlock };
+}
+function clearPendingPanelInsertion() {
+  pendingInsertAnchorBlock = null;
+  if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove();
+  pendingInsertMarker = null;
+}
+function openButtonPanel(options = {}) {
+  preparePanelInsertion(options, !!options.editAnchor);
+  pendingButtonEditAnchor = options.editAnchor || null;
   const anchor = options.editAnchor || null;
   els.buttonText.value = anchor?.textContent?.trim() || "Go back to Blog homepage";
   els.buttonUrl.value = anchor?.getAttribute?.("href") || "/blog/";
@@ -1710,19 +1797,8 @@ function saveButtonFromPanel() {
   pendingButtonEditAnchor = null;
 }
 function openGitHubButtonPanel(options = {}) {
-  pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false, marker: options.marker && options.marker.isConnected ? options.marker : null };
-  const insertionRange = getPanelInsertionRange(options);
-  pendingInsertMarker = options.marker && options.marker.isConnected ? options.marker : null;
-  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(insertionRange);
+  preparePanelInsertion(options, !!options.editAnchor);
   pendingGitHubButtonEditAnchor = options.editAnchor || null;
-  if (insertionRange) {
-    savedRange = insertionRange.cloneRange();
-    lastSelectionSavedAt = Date.now();
-  } else {
-    savedRange = createEndRange();
-    lastSelectionSavedAt = Date.now();
-    pendingPanelInsertOptions.allowOldSelection = false;
-  }
   const anchor = options.editAnchor || null;
   els.githubButtonUrl.value = anchor?.getAttribute?.("href") || DOCSY_GITHUB_BUTTON_DEFAULT_URL;
   els.githubButtonPanel.classList.add("open");
@@ -1750,19 +1826,8 @@ function saveGitHubButtonFromPanel() {
   pendingGitHubButtonEditAnchor = null;
 }
 function openTablePanel(options = {}) {
-  pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false, marker: options.marker && options.marker.isConnected ? options.marker : null };
-  const insertionRange = getPanelInsertionRange(options);
-  pendingInsertMarker = options.marker && options.marker.isConnected ? options.marker : null;
-  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(insertionRange);
+  preparePanelInsertion(options, !!options.editTable);
   pendingTableEditTarget = options.editTable || null;
-  if (insertionRange) {
-    savedRange = insertionRange.cloneRange();
-    lastSelectionSavedAt = Date.now();
-  } else {
-    savedRange = createEndRange();
-    lastSelectionSavedAt = Date.now();
-    pendingPanelInsertOptions.allowOldSelection = false;
-  }
   const editTable = options.editTable || null;
   els.tableColumns.value = editTable?.querySelector?.("tr")?.children?.length || 3;
   els.tableRows.value = editTable?.querySelectorAll?.("tbody tr")?.length || 3;
@@ -1810,19 +1875,8 @@ function insertTableFromPanel() {
 }
 
 function openDrawioPanel(options = {}) {
-  pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false, marker: options.marker && options.marker.isConnected ? options.marker : null };
-  const insertionRange = getPanelInsertionRange(options);
-  pendingInsertMarker = options.marker && options.marker.isConnected ? options.marker : null;
-  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(insertionRange);
+  preparePanelInsertion(options, !!options.editCard);
   pendingDrawioEditCard = options.editCard || null;
-  if (insertionRange) {
-    savedRange = insertionRange.cloneRange();
-    lastSelectionSavedAt = Date.now();
-  } else {
-    savedRange = createEndRange();
-    lastSelectionSavedAt = Date.now();
-    pendingPanelInsertOptions.allowOldSelection = false;
-  }
   els.drawioEmbed.value = options.editCard?.querySelector?.("textarea")?.value || getDefaultDrawioEmbed();
   els.insertDrawioBtn.textContent = options.editCard ? "Update draw.io" : "Insert draw.io";
   els.drawioPanel.classList.add("open");
@@ -1850,6 +1904,42 @@ function saveDrawioFromPanel() {
   pendingDrawioEditCard = null;
   els.insertDrawioBtn.textContent = "Insert draw.io";
 }
+function openYoutubePanel(options = {}) {
+  preparePanelInsertion(options, !!options.editCard);
+  pendingYoutubeEditCard = options.editCard || null;
+  els.youtubeUrl.value = options.editCard ? getYouTubeSourceFromCard(options.editCard) : DEFAULT_YOUTUBE_URL;
+  els.insertYoutubeBtn.textContent = options.editCard ? "Update YouTube video" : "Insert YouTube video";
+  els.youtubePanel.classList.add("open");
+  setTimeout(() => els.youtubeUrl.focus(), 80);
+}
+function saveYoutubeFromPanel() {
+  const inputValue = els.youtubeUrl.value.trim() || DEFAULT_YOUTUBE_URL;
+  const videoId = getYouTubeVideoId(inputValue);
+  if (!videoId) {
+    showToast("Paste a valid YouTube URL first");
+    return;
+  }
+  const html = youtubeBlockHtml(inputValue);
+  els.youtubePanel.classList.remove("open");
+  if (pendingYoutubeEditCard && pendingYoutubeEditCard.isConnected) {
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = html;
+    const newCard = wrapper.querySelector(".youtube-card");
+    if (newCard) {
+      pendingYoutubeEditCard.replaceWith(newCard);
+      normalizeEditorContent(newCard);
+      saveProject();
+      showToast("YouTube video updated");
+    }
+  } else {
+    insertHtmlAtCursor(html, { ...pendingPanelInsertOptions, marker: pendingInsertMarker, anchorBlock: pendingInsertAnchorBlock });
+    showToast("YouTube video inserted");
+  }
+  clearPendingPanelInsertion();
+  pendingYoutubeEditCard = null;
+  els.insertYoutubeBtn.textContent = "Insert YouTube video";
+}
+
 function quizAnswerFormHtml(answer, qIndex, aIndex) {
   return `<div class="quiz-answer-editor" data-answer-index="${aIndex}">
     <div class="quiz-answer-correct-wrap"><input class="quiz-answer-correct" type="radio" name="quiz-correct-${qIndex}" ${answer.correct ? "checked" : ""} aria-label="Correct answer"></div>
@@ -1908,19 +1998,8 @@ function handleQuizPanelKeydown(event) {
   restoreSelection();
 }
 function openQuizPanel(options = {}) {
-  pendingPanelInsertOptions = { allowOldSelection: options.allowOldSelection !== false, marker: options.marker && options.marker.isConnected ? options.marker : null };
-  const insertionRange = getPanelInsertionRange(options);
-  pendingInsertMarker = options.marker && options.marker.isConnected ? options.marker : null;
-  pendingInsertAnchorBlock = options.anchorBlock || getBlockAnchorFromRange(insertionRange);
+  preparePanelInsertion(options, !!options.editCard);
   pendingQuizEditCard = options.editCard || null;
-  if (insertionRange) {
-    savedRange = insertionRange.cloneRange();
-    lastSelectionSavedAt = Date.now();
-  } else {
-    savedRange = createEndRange();
-    lastSelectionSavedAt = Date.now();
-    pendingPanelInsertOptions.allowOldSelection = false;
-  }
   renderQuizForm(options.editCard ? getQuizDataFromCard(options.editCard) : getDefaultQuizData());
   els.insertQuizBtn.textContent = options.editCard ? "Update quiz" : "Insert quiz";
   els.quizPanel.classList.add("open");
@@ -2125,6 +2204,7 @@ function normalizeEditorContent(scope = els.visualEditor) {
     card.querySelectorAll(".block-settings").forEach(settings => { settings.contentEditable = "false"; });
     const textarea = card.querySelector("textarea");
     if (textarea && isDrawioHtml(textarea.value)) card.dataset.drawio = "true";
+    if (textarea && isYouTubeHtml(textarea.value)) card.dataset.youtube = "true";
   });
 
   const quizCards = [];
@@ -2282,7 +2362,7 @@ function normalizeMarkdownListSpacing(markdown) {
   }
   return output.join("\n");
 }
-const AUTO_LIST_TEXT_BLOCK_SELECTOR = "p, h1, h2, h3, h4, h5, h6, blockquote";
+const AUTO_LIST_TEXT_BLOCK_SELECTOR = "p, blockquote";
 
 function isEditableLineDiv(element) {
   if (!element || element === els.visualEditor || !els.visualEditor.contains(element)) return false;
@@ -2775,32 +2855,38 @@ function handleEditorKeydown(event) {
   }
 }
 function autoLinkCurrentText(event) {
-  if (!event || !["insertText", "insertParagraph"].includes(event.inputType)) return;
+  const shouldAutolink = event?.inputType === "insertParagraph" || (event?.inputType === "insertText" && /\s/.test(event.data || ""));
+  if (!shouldAutolink) return;
   const selection = window.getSelection();
   if (!selection.rangeCount) return;
   const range = selection.getRangeAt(0);
   const node = range.startContainer;
   if (node.nodeType !== Node.TEXT_NODE) return;
   const before = node.textContent.slice(0, range.startOffset);
-  const match = before.match(/(https?:\/\/[^\s<]+)(\s|$)$/i);
+  const match = before.match(/(https?:\/\/[^\s<]+)(\s*)$/i);
   if (!match) return;
   const url = match[1];
+  const trailingWhitespace = match[2] || "";
   if (!isUrl(url)) return;
-  const start = range.startOffset - match[0].length;
+
+  const start = range.startOffset - trailingWhitespace.length - url.length;
+  const end = start + url.length;
   const linkRange = range.cloneRange();
   linkRange.setStart(node, start);
-  linkRange.setEnd(node, start + url.length);
+  linkRange.setEnd(node, end);
   linkRange.deleteContents();
+
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.target = "_blank";
   anchor.rel = "noreferrer";
   anchor.textContent = url;
   linkRange.insertNode(anchor);
-  const spacer = document.createTextNode(" ");
-  anchor.after(spacer);
+
   const newRange = document.createRange();
-  newRange.setStartAfter(spacer);
+  const afterAnchor = anchor.nextSibling;
+  if (trailingWhitespace && afterAnchor?.nodeType === Node.TEXT_NODE) newRange.setStart(afterAnchor, Math.min(afterAnchor.textContent.length, trailingWhitespace.length));
+  else newRange.setStartAfter(anchor);
   newRange.collapse(true);
   selection.removeAllRanges();
   selection.addRange(newRange);
@@ -3183,6 +3269,10 @@ els.visualEditor.addEventListener("click", event => {
       openQuizPanel({ editCard: block, anchorBlock: block, allowOldSelection: true });
       return;
     }
+    if (block?.matches?.('.raw-html-card[data-youtube="true"], .youtube-card')) {
+      openYoutubePanel({ editCard: block, anchorBlock: block, allowOldSelection: true });
+      return;
+    }
     if (block?.matches?.('.raw-html-card[data-drawio="true"]')) {
       openDrawioPanel({ editCard: block, anchorBlock: block, allowOldSelection: true });
       return;
@@ -3256,6 +3346,10 @@ els.cancelDrawioBtn.addEventListener("click", () => { els.drawioPanel.classList.
 els.insertDrawioBtn.addEventListener("click", saveDrawioFromPanel);
 els.drawioPanel.addEventListener("click", event => { if (event.target === els.drawioPanel) { els.drawioPanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingDrawioEditCard = null; els.insertDrawioBtn.textContent = "Insert draw.io"; } });
 els.drawioPanel.addEventListener("keydown", handlePanelKeydown);
+els.cancelYoutubeBtn.addEventListener("click", () => { els.youtubePanel.classList.remove("open"); clearPendingPanelInsertion(); pendingYoutubeEditCard = null; els.insertYoutubeBtn.textContent = "Insert YouTube video"; });
+els.insertYoutubeBtn.addEventListener("click", saveYoutubeFromPanel);
+els.youtubePanel.addEventListener("click", event => { if (event.target === els.youtubePanel) { els.youtubePanel.classList.remove("open"); clearPendingPanelInsertion(); pendingYoutubeEditCard = null; els.insertYoutubeBtn.textContent = "Insert YouTube video"; } });
+els.youtubePanel.addEventListener("keydown", handlePanelKeydown);
 els.cancelQuizBtn.addEventListener("click", closeQuizPanel);
 els.insertQuizBtn.addEventListener("click", saveQuizFromPanel);
 els.addQuizQuestionBtn.addEventListener("click", () => {
