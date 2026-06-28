@@ -53,6 +53,7 @@ const els = {
   projectName: document.getElementById("projectName"),
   saveStatus: document.getElementById("saveStatus"),
   blockGallery: document.getElementById("blockGallery"),
+  headingToc: document.getElementById("headingToc"),
   visualEditor: document.getElementById("visualEditor"),
   markdownEditor: document.getElementById("markdownEditor"),
   editorToolbar: document.getElementById("editorToolbar"),
@@ -192,6 +193,82 @@ function updateEditorPlaceholder() {
 }
 function clearEditorPlaceholderBeforeInput() {
   // Placeholder text is CSS-only/disabled; keep this as a no-op for safe older calls.
+}
+
+function cleanHeadingOutlineText(value = "") {
+  return String(value || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/_([^_]+)_/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+function getVisualHeadingOutlineItems() {
+  return Array.from(els.visualEditor.querySelectorAll("h2, h3"))
+    .map((heading, index) => ({
+      level: heading.tagName.toLowerCase(),
+      text: cleanHeadingOutlineText(heading.textContent),
+      index
+    }))
+    .filter(item => item.text);
+}
+function getMarkdownHeadingOutlineItems() {
+  const value = els.markdownEditor?.value || state.markdownCache || "";
+  const { body } = splitMarkdownFrontMatter(value);
+  const items = [];
+  let inFence = false;
+  String(body || "").split(/\r?\n/).forEach((line, lineIndex) => {
+    if (/^\s*(```|~~~)/.test(line)) {
+      inFence = !inFence;
+      return;
+    }
+    if (inFence) return;
+    const match = line.match(/^(#{2,3})(?!#)\s+(.+?)\s*#*\s*$/);
+    if (!match) return;
+    const text = cleanHeadingOutlineText(match[2]);
+    if (!text) return;
+    items.push({ level: match[1].length === 2 ? "h2" : "h3", text, line: lineIndex });
+  });
+  return items;
+}
+function updateHeadingOutline() {
+  if (!els.headingToc) return;
+  const useMarkdown = state.view === "markdown" && els.markdownEditor.style.display === "block";
+  const items = useMarkdown ? getMarkdownHeadingOutlineItems() : getVisualHeadingOutlineItems();
+  if (!items.length) {
+    els.headingToc.innerHTML = '<p class="heading-toc-empty">No H2 or H3 yet</p>';
+    return;
+  }
+  els.headingToc.innerHTML = items.map((item, index) => `
+    <button type="button" class="heading-toc-link level-${item.level}" data-outline-index="${index}" data-outline-line="${item.line ?? ""}">
+      <span class="heading-toc-level">${item.level.toUpperCase()}</span>
+      <span class="heading-toc-text">${escapeHtml(item.text)}</span>
+    </button>
+  `).join("");
+}
+function focusHeadingOutlineItem(button) {
+  if (!button) return;
+  const index = Number(button.dataset.outlineIndex || 0);
+  if (state.view === "markdown" && els.markdownEditor.style.display === "block") {
+    const line = Number(button.dataset.outlineLine || 0);
+    const lines = els.markdownEditor.value.split(/\r?\n/);
+    const offset = lines.slice(0, line).reduce((sum, current) => sum + current.length + 1, 0);
+    els.markdownEditor.focus();
+    els.markdownEditor.setSelectionRange(offset, Math.min(offset + (lines[line] || "").length, els.markdownEditor.value.length));
+    const lineHeight = parseFloat(getComputedStyle(els.markdownEditor).lineHeight) || 20;
+    els.markdownEditor.scrollTop = Math.max(0, line * lineHeight - els.markdownEditor.clientHeight / 3);
+    return;
+  }
+  const heading = Array.from(els.visualEditor.querySelectorAll("h2, h3"))[index];
+  if (!heading) return;
+  heading.scrollIntoView({ block: "center", behavior: "smooth" });
+  placeCursorAtStart(heading);
+  saveSelection();
 }
 
 function escapeHtml(value) {
@@ -1730,6 +1807,7 @@ function markdownTableToHtml(lines) {
 
 function saveProject() {
   updateEditorPlaceholder();
+  updateHeadingOutline();
   if (document.activeElement === els.projectName) setMetadataTitleFromProjectName();
   syncMarkdownEditorFrontMatter();
   clearTimeout(saveTimer);
@@ -1786,6 +1864,7 @@ function render() {
   updateEditorPlaceholder();
   fillPostInfoForm();
   renderGallery();
+  updateHeadingOutline();
   updateTableToolbarVisibility();
   updateBlobSettingsButton();
   setView("editor");
@@ -2042,6 +2121,7 @@ function setView(view) {
     els.markdownEditor.value = state.markdownCache;
     applyViewChrome("markdown");
   }
+  updateHeadingOutline();
   saveProject();
 }
 function execFormat(format) {
@@ -2748,6 +2828,7 @@ function resetProject() {
 `;
     els.markdownEditor.value = state.markdownCache;
   }
+  updateHeadingOutline();
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   markProjectSaved();
@@ -3904,6 +3985,10 @@ els.importFile?.addEventListener("change", event => {
   importMarkdownFile(event.target.files?.[0]);
   event.target.value = "";
 });
+els.headingToc?.addEventListener("click", event => {
+  const button = event.target.closest(".heading-toc-link");
+  if (button) focusHeadingOutlineItem(button);
+});
 els.exportBtn.addEventListener("click", exportMarkdown);
 els.resetBtn.addEventListener("click", resetProject);
 els.projectName.addEventListener("input", () => {
@@ -4044,6 +4129,7 @@ els.markdownEditor.addEventListener("input", () => {
   const { frontMatter } = splitMarkdownFrontMatter(els.markdownEditor.value);
   rememberRawFrontMatter(frontMatter);
   applyParsedFrontMatter(frontMatter);
+  updateHeadingOutline();
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));

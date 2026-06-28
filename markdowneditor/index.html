@@ -66,15 +66,15 @@
             <option value="h5">Heading 5</option>
             <option value="h6">Heading 6</option>
           </select>
-          <button type="button" data-format="separator" title="Separator" aria-label="Separator"><i class="fa-solid fa-minus"></i></button>
-          <button type="button" data-format="bold" title="Bold" aria-label="Bold"><i class="fa-solid fa-bold"></i></button>
-          <button type="button" data-format="italic" title="Italic" aria-label="Italic"><i class="fa-solid fa-italic"></i></button>
-          <button type="button" data-format="image" title="Image" aria-label="Image"><i class="fa-solid fa-image"></i></button>
-          <button type="button" data-format="table" title="Table" aria-label="Table"><i class="fa-solid fa-table"></i></button>
-          <button type="button" data-format="link" title="Link" aria-label="Link"><i class="fa-solid fa-link"></i></button>
-          <button type="button" data-format="iframe" title="Iframe" aria-label="Iframe"><i class="fa-solid fa-window-maximize"></i></button>
-          <button type="button" data-format="code" title="Code block" aria-label="Code block"><i class="fa-solid fa-code"></i></button>
-          <button type="button" data-format="delete-block" title="Remove block" aria-label="Remove block"><i class="fa-solid fa-trash-can"></i></button>
+          <button type="button" data-format="separator" title="Separator" aria-label="Separator"><i class="fa-solid fa-minus"></i> Separator</button>
+          <button type="button" data-format="bold" title="Bold" aria-label="Bold"><i class="fa-solid fa-bold"></i> Bold</button>
+          <button type="button" data-format="italic" title="Italic" aria-label="Italic"><i class="fa-solid fa-italic"></i> Italic</button>
+          <button type="button" data-format="image" title="Image" aria-label="Image"><i class="fa-solid fa-image"></i> Image</button>
+          <button type="button" data-format="table" title="Table" aria-label="Table"><i class="fa-solid fa-table"></i> Table</button>
+          <button type="button" data-format="link" title="Link" aria-label="Link"><i class="fa-solid fa-link"></i> Link</button>
+          <button type="button" data-format="iframe" title="Iframe" aria-label="Iframe"><i class="fa-solid fa-window-maximize"></i> Iframe</button>
+          <button type="button" data-format="code" title="Code block" aria-label="Code block"><i class="fa-solid fa-code"></i> Code</button>
+          <button type="button" data-format="delete-block" title="Remove block" aria-label="Remove block"><i class="fa-solid fa-trash-can"></i> Remove block</button>
         </div>
 
         <div class="workspace-body">
@@ -82,6 +82,11 @@
           <textarea id="markdownEditor" class="code-textarea" spellcheck="false" aria-label="Markdown code editor"></textarea>
         </div>
       </section>
+
+      <aside class="toc-sidebar" aria-label="Page headings">
+        <h2>Headings</h2>
+        <div class="heading-toc" id="headingToc"></div>
+      </aside>
     </main>
   </div>
 
