@@ -490,7 +490,7 @@ function guessAltTextFromUrl(url = "") {
 }
 function tableHtml(cols = 3, rows = 3, align = "left") {
   cols = Math.max(1, Math.min(12, Number(cols) || 3));
-  rows = Math.max(1, Math.min(30, Number(rows) || 3));
+  rows = Math.max(1, Number(rows) || 3);
   const cls = align === "center" ? "table-center" : "table-left";
   const head = Array.from({ length: cols }, () => `<th contenteditable="true"><br></th>`).join("");
   const bodyRows = Array.from({ length: rows }, () => `<tr>${Array.from({ length: cols }, () => `<td contenteditable="true"><br></td>`).join("")}</tr>`).join("");
