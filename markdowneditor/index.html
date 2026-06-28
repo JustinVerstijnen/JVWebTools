@@ -80,6 +80,7 @@
           <button type="button" data-format="buttondocsygithub"><i class="fa-brands fa-github"></i> GitHub button</button>
           <button type="button" data-format="drawio"><i class="fa-solid fa-diagram-project"></i> Draw.io</button>
           <button type="button" data-format="youtube"><i class="fa-brands fa-youtube"></i> YouTube</button>
+          <button type="button" data-format="iframe"><i class="fa-solid fa-window-maximize"></i> Iframe</button>
           <button type="button" data-format="code"><i class="fa-solid fa-code"></i> Code</button>
           <button type="button" data-format="codedocsy"><i class="fa-solid fa-file-code"></i> Docsy code</button>
           <button type="button" data-format="separator"><i class="fa-solid fa-minus"></i> Separator</button>
@@ -146,9 +147,20 @@
     <div class="modal-card panel-animate">
       <h2>YouTube video</h2>
       <p>Paste a YouTube URL. The editor will convert it to the Docsy-compatible iframe embed on export.</p>
-      <div class="field"><label for="youtubeUrl">YouTube URL</label><input id="youtubeUrl" type="url" placeholder="https://www.youtube.com/watch?v=jCInuPETL10" /></div>
+      <div class="field"><label for="youtubeUrl">YouTube URL</label><input id="youtubeUrl" type="url" placeholder="" /></div>
       <div class="field-help">Supports normal YouTube links, youtu.be links, shorts, live URLs and embed URLs.</div>
       <div class="panel-actions"><button class="pill" id="cancelYoutubeBtn" type="button">Cancel</button><button class="pill primary" id="insertYoutubeBtn" type="button">Insert YouTube video</button></div>
+    </div>
+  </div>
+
+  <div class="modal-panel" id="iframePanel" role="dialog" aria-label="Insert iframe">
+    <div class="modal-card panel-animate">
+      <h2>Iframe</h2>
+      <p>Paste a URL. The editor will insert a standard iframe with a fixed 960 × 540 size.</p>
+      <div class="field"><label for="iframeUrl">Iframe URL</label><input id="iframeUrl" type="url" placeholder="" /></div>
+      <div class="field"><label for="iframeTitle">Title</label><input id="iframeTitle" type="text" placeholder="Bijv. Crossing the USA map" /></div>
+      <div class="field-help">Output format: <code>&lt;iframe frameborder=&quot;0&quot; width=&quot;960&quot; height=&quot;540&quot; src=&quot;...&quot; title=&quot;...&quot;&gt;&lt;/iframe&gt;</code></div>
+      <div class="panel-actions"><button class="pill" id="cancelIframeBtn" type="button">Cancel</button><button class="pill primary" id="insertIframeBtn" type="button">Insert iframe</button></div>
     </div>
   </div>
 

@@ -1072,3 +1072,30 @@ select:hover,
   border-radius: 16px;
   background: #000;
 }
+
+
+/* v20: Generic iframe block */
+.raw-html-card[data-iframe="true"] .block-settings {
+  background: rgba(59, 130, 246, 0.12);
+}
+.raw-html-card[data-iframe="true"] .block-settings small {
+  color: var(--muted);
+  font-weight: 900;
+}
+.raw-html-card[data-iframe="true"] textarea {
+  min-height: 120px;
+  font-family: var(--mono);
+}
+.iframe-preview {
+  padding: 14px;
+}
+.iframe-preview iframe {
+  display: block;
+  width: 100%;
+  max-width: 960px;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  border: 0;
+  border-radius: 16px;
+  background: #ffffff;
+}

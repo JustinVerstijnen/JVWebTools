@@ -1,5 +1,5 @@
-const STORAGE_KEY = "markdown-editor-project-v19";
-const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v18", "markdown-editor-project-v17", "markdown-editor-project-v16", "markdown-editor-project-v15", "markdown-editor-project-v14", "markdown-editor-project-v13", "markdown-editor-project-v12", "markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
+const STORAGE_KEY = "markdown-editor-project-v20";
+const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v19", "markdown-editor-project-v18", "markdown-editor-project-v17", "markdown-editor-project-v16", "markdown-editor-project-v15", "markdown-editor-project-v14", "markdown-editor-project-v13", "markdown-editor-project-v12", "markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
 
 const LANGUAGES = [
   ["powershell", "PowerShell"], ["cmd", "cmd"], ["bash", "Bash"], ["json", "JSON"], ["csv", "CSV"],
@@ -17,7 +17,9 @@ const DEFAULT_QUIZ_INTRO = "Answer these question(s) to test your understanding 
 const DOCSY_GITHUB_BUTTON_TEXT = "View on my GitHub page";
 const DOCSY_GITHUB_BUTTON_CLASS = "btn btn-primary";
 const DOCSY_GITHUB_BUTTON_DEFAULT_URL = "https://github.com/JustinVerstijnen/JV-AzureServerUpgradeDisk";
-const DEFAULT_YOUTUBE_URL = "https://www.youtube.com/watch?v=jCInuPETL10";
+const DEFAULT_YOUTUBE_URL = "";
+const DEFAULT_IFRAME_URL = "";
+const DEFAULT_IFRAME_TITLE = "";
 
 const els = {
   editorBtn: document.getElementById("editorBtn"),
@@ -62,6 +64,11 @@ const els = {
   youtubeUrl: document.getElementById("youtubeUrl"),
   cancelYoutubeBtn: document.getElementById("cancelYoutubeBtn"),
   insertYoutubeBtn: document.getElementById("insertYoutubeBtn"),
+  iframePanel: document.getElementById("iframePanel"),
+  iframeUrl: document.getElementById("iframeUrl"),
+  iframeTitle: document.getElementById("iframeTitle"),
+  cancelIframeBtn: document.getElementById("cancelIframeBtn"),
+  insertIframeBtn: document.getElementById("insertIframeBtn"),
   cancelTableBtn: document.getElementById("cancelTableBtn"),
   insertTableBtn: document.getElementById("insertTableBtn"),
   buttonPanel: document.getElementById("buttonPanel"),
@@ -115,6 +122,7 @@ let pendingImageEditFigure = null;
 let pendingTableEditTarget = null;
 let pendingDrawioEditCard = null;
 let pendingYoutubeEditCard = null;
+let pendingIframeEditCard = null;
 let pendingQuizEditCard = null;
 let draggedTableRow = null;
 let draggedTableColumnIndex = -1;
@@ -324,11 +332,12 @@ function getYouTubeVideoId(value = "") {
   return match ? match[1] : "";
 }
 function getYouTubeEmbedSrc(value = DEFAULT_YOUTUBE_URL) {
-  const videoId = getYouTubeVideoId(value) || getYouTubeVideoId(DEFAULT_YOUTUBE_URL);
-  return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`;
+  const videoId = getYouTubeVideoId(value);
+  return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1` : "";
 }
 function buildYouTubeIframe(value = DEFAULT_YOUTUBE_URL) {
   const src = getYouTubeEmbedSrc(value);
+  if (!src) return "";
   return `<iframe
 width="960"
 height="540"
@@ -350,9 +359,43 @@ function getYouTubeSourceFromCard(card) {
   return iframeSrc;
 }
 function youtubeBlockHtml(value = DEFAULT_YOUTUBE_URL) {
-  const iframe = buildYouTubeIframe(value);
-  const videoId = getYouTubeVideoId(value) || getYouTubeVideoId(DEFAULT_YOUTUBE_URL);
-  return `<div class="raw-html-card youtube-card editable-card" data-raw-html="true" data-youtube="true" data-youtube-url="${escapeHtml(value || DEFAULT_YOUTUBE_URL)}" contenteditable="false"><div class="block-settings" contenteditable="false"><span><i class="fa-brands fa-youtube"></i> YouTube video</span><small>${escapeHtml(videoId)}</small></div><textarea>${escapeHtml(iframe)}</textarea><div class="youtube-preview" contenteditable="false">${iframe}</div></div><p><br></p>`;
+  const cleanValue = String(value || "").trim();
+  const iframe = buildYouTubeIframe(cleanValue);
+  const videoId = getYouTubeVideoId(cleanValue);
+  return `<div class="raw-html-card youtube-card editable-card" data-raw-html="true" data-youtube="true" data-youtube-url="${escapeHtml(cleanValue)}" contenteditable="false"><div class="block-settings" contenteditable="false"><span><i class="fa-brands fa-youtube"></i> YouTube video</span><small>${escapeHtml(videoId)}</small></div><textarea>${escapeHtml(iframe)}</textarea><div class="youtube-preview" contenteditable="false">${iframe}</div></div><p><br></p>`;
+}
+function isStandardIframeHtml(html = "") {
+  const value = String(html || "");
+  return /<iframe\b[\s\S]*?>[\s\S]*?<\/iframe>/i.test(value) && !isYouTubeHtml(value) && !isDrawioHtml(value);
+}
+function buildStandardIframe(url = DEFAULT_IFRAME_URL, title = DEFAULT_IFRAME_TITLE) {
+  const src = String(url || "").trim();
+  const iframeTitle = String(title ?? DEFAULT_IFRAME_TITLE).trim();
+  return `<iframe frameborder="0" width="960" height="540" src="${escapeHtml(src)}" title="${escapeHtml(iframeTitle)}"></iframe>`;
+}
+function getIframeDataFromHtml(html = "") {
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = String(html || "");
+  const iframe = wrapper.querySelector("iframe");
+  return {
+    url: iframe?.getAttribute("src") || "",
+    title: iframe?.getAttribute("title") || DEFAULT_IFRAME_TITLE
+  };
+}
+function getStandardIframeDataFromCard(card) {
+  const raw = card?.querySelector?.("textarea")?.value || "";
+  const parsed = getIframeDataFromHtml(raw);
+  return {
+    url: parsed.url || card?.dataset?.iframeUrl || DEFAULT_IFRAME_URL,
+    title: parsed.title || card?.dataset?.iframeTitle || DEFAULT_IFRAME_TITLE
+  };
+}
+function standardIframeBlockHtml(url = DEFAULT_IFRAME_URL, title = DEFAULT_IFRAME_TITLE) {
+  const cleanUrl = String(url || "").trim();
+  const cleanTitle = String(title ?? DEFAULT_IFRAME_TITLE).trim();
+  const iframe = buildStandardIframe(cleanUrl, cleanTitle);
+  const label = cleanUrl || "No URL set";
+  return `<div class="raw-html-card iframe-card editable-card" data-raw-html="true" data-iframe="true" data-iframe-url="${escapeHtml(cleanUrl)}" data-iframe-title="${escapeHtml(cleanTitle)}" contenteditable="false"><div class="block-settings" contenteditable="false"><span><i class="fa-solid fa-window-maximize"></i> Iframe</span><small>${escapeHtml(label)}</small></div><textarea>${escapeHtml(iframe)}</textarea><div class="iframe-preview" contenteditable="false">${cleanUrl ? iframe : ""}</div></div><p><br></p>`;
 }
 function isDrawioHtml(html = "") {
   return /drawio-white-background|viewer\.diagrams\.net|app\.diagrams\.net/i.test(String(html || ""));
@@ -368,6 +411,10 @@ function htmlBlockToInteractiveBlock(html = "") {
   }
   if (isDrawioHtml(value)) return drawioBlockHtml(value);
   if (isYouTubeHtml(value)) return youtubeBlockHtml(value);
+  if (isStandardIframeHtml(value)) {
+    const iframeData = getIframeDataFromHtml(value);
+    return standardIframeBlockHtml(iframeData.url, iframeData.title);
+  }
   return rawHtmlCard("Raw HTML", value);
 }
 function markdownFragmentToHtml(markdown) {
@@ -521,6 +568,7 @@ const blocks = [
   { id: "htmldocsy", command: "/htmldocsy", icon: "fa-brands fa-html5", category: "Docsy", sidebar: true, name: "Docsy Raw HTML", description: "Insert raw HTML", html: rawHtmlDocsyBlockHtml() },
   { id: "drawio", command: "/drawio", icon: "fa-diagram-project", category: "Content", sidebar: true, name: "Draw.io diagram", description: "Paste a diagrams.net HTML embed with light/dark wrapper", action: "drawio" },
   { id: "youtube", command: "/youtube", icon: "fa-youtube", category: "Content", sidebar: true, name: "YouTube video", description: "Embed a YouTube video iframe", action: "youtube" },
+  { id: "iframe", command: "/iframe", icon: "fa-window-maximize", category: "Content", sidebar: true, name: "Iframe", description: "Insert a standard iframe with your own URL", action: "iframe" },
   { id: "alert", command: "/alert", icon: "fa-bell", category: "Alerts", sidebar: true, name: "Alert", description: "Markdown alert", html: alertBlockHtml("markdown", "info") },
   { id: "info", command: "/info", icon: "fa-circle-info", category: "Alerts", sidebar: false, name: "Info", description: "Markdown info alert", html: alertBlockHtml("markdown", "info") },
   { id: "warning", command: "/warning", icon: "fa-triangle-exclamation", category: "Alerts", sidebar: true, name: "Warning", description: "Markdown warning alert", html: alertBlockHtml("markdown", "warning") },
@@ -1329,6 +1377,7 @@ function insertBlock(blockId, options = {}) {
   if (block.action === "buttondocsygithub") { openGitHubButtonPanel(insertionOptions); return; }
   if (block.action === "drawio") { openDrawioPanel(insertionOptions); return; }
   if (block.action === "youtube") { openYoutubePanel(insertionOptions); return; }
+  if (block.action === "iframe") { openIframePanel(insertionOptions); return; }
   if (block.action === "quiz") { openQuizPanel(insertionOptions); return; }
   insertHtmlAtCursor(block.html, insertionOptions);
   showToast(`${block.name} inserted`);
@@ -1461,6 +1510,7 @@ function execFormat(format) {
   if (format === "buttondocsygithub") insertBlock("buttondocsygithub");
   if (format === "drawio") insertBlock("drawio");
   if (format === "youtube") insertBlock("youtube");
+  if (format === "iframe") insertBlock("iframe");
   if (format === "html") insertBlock("html");
   if (format === "separator") insertBlock("separator");
   if (format === "delete-block") deleteCurrentBlock();
@@ -1635,6 +1685,7 @@ function handlePanelKeydown(event) {
   if (panel === els.tablePanel) insertTableFromPanel();
   if (panel === els.drawioPanel) saveDrawioFromPanel();
   if (panel === els.youtubePanel) saveYoutubeFromPanel();
+  if (panel === els.iframePanel) saveIframeFromPanel();
 }
 function openImagePanel(options = {}) {
   preparePanelInsertion(options, !!options.editFigure);
@@ -1913,7 +1964,7 @@ function openYoutubePanel(options = {}) {
   setTimeout(() => els.youtubeUrl.focus(), 80);
 }
 function saveYoutubeFromPanel() {
-  const inputValue = els.youtubeUrl.value.trim() || DEFAULT_YOUTUBE_URL;
+  const inputValue = els.youtubeUrl.value.trim();
   const videoId = getYouTubeVideoId(inputValue);
   if (!videoId) {
     showToast("Paste a valid YouTube URL first");
@@ -1938,6 +1989,43 @@ function saveYoutubeFromPanel() {
   clearPendingPanelInsertion();
   pendingYoutubeEditCard = null;
   els.insertYoutubeBtn.textContent = "Insert YouTube video";
+}
+function openIframePanel(options = {}) {
+  preparePanelInsertion(options, !!options.editCard);
+  pendingIframeEditCard = options.editCard || null;
+  const iframeData = options.editCard ? getStandardIframeDataFromCard(options.editCard) : { url: DEFAULT_IFRAME_URL, title: DEFAULT_IFRAME_TITLE };
+  els.iframeUrl.value = iframeData.url || DEFAULT_IFRAME_URL;
+  els.iframeTitle.value = iframeData.title || DEFAULT_IFRAME_TITLE;
+  els.insertIframeBtn.textContent = options.editCard ? "Update iframe" : "Insert iframe";
+  els.iframePanel.classList.add("open");
+  setTimeout(() => els.iframeUrl.focus(), 80);
+}
+function saveIframeFromPanel() {
+  const inputValue = els.iframeUrl.value.trim();
+  const titleValue = els.iframeTitle.value.trim();
+  if (!inputValue) {
+    showToast("Paste an iframe URL first");
+    return;
+  }
+  const html = standardIframeBlockHtml(inputValue, titleValue);
+  els.iframePanel.classList.remove("open");
+  if (pendingIframeEditCard && pendingIframeEditCard.isConnected) {
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = html;
+    const newCard = wrapper.querySelector(".iframe-card");
+    if (newCard) {
+      pendingIframeEditCard.replaceWith(newCard);
+      normalizeEditorContent(newCard);
+      saveProject();
+      showToast("Iframe updated");
+    }
+  } else {
+    insertHtmlAtCursor(html, { ...pendingPanelInsertOptions, marker: pendingInsertMarker, anchorBlock: pendingInsertAnchorBlock });
+    showToast("Iframe inserted");
+  }
+  clearPendingPanelInsertion();
+  pendingIframeEditCard = null;
+  els.insertIframeBtn.textContent = "Insert iframe";
 }
 
 function quizAnswerFormHtml(answer, qIndex, aIndex) {
@@ -2205,6 +2293,7 @@ function normalizeEditorContent(scope = els.visualEditor) {
     const textarea = card.querySelector("textarea");
     if (textarea && isDrawioHtml(textarea.value)) card.dataset.drawio = "true";
     if (textarea && isYouTubeHtml(textarea.value)) card.dataset.youtube = "true";
+    if (textarea && isStandardIframeHtml(textarea.value)) card.dataset.iframe = "true";
   });
 
   const quizCards = [];
@@ -3273,6 +3362,10 @@ els.visualEditor.addEventListener("click", event => {
       openYoutubePanel({ editCard: block, anchorBlock: block, allowOldSelection: true });
       return;
     }
+    if (block?.matches?.('.raw-html-card[data-iframe="true"], .iframe-card')) {
+      openIframePanel({ editCard: block, anchorBlock: block, allowOldSelection: true });
+      return;
+    }
     if (block?.matches?.('.raw-html-card[data-drawio="true"]')) {
       openDrawioPanel({ editCard: block, anchorBlock: block, allowOldSelection: true });
       return;
@@ -3350,6 +3443,10 @@ els.cancelYoutubeBtn.addEventListener("click", () => { els.youtubePanel.classLis
 els.insertYoutubeBtn.addEventListener("click", saveYoutubeFromPanel);
 els.youtubePanel.addEventListener("click", event => { if (event.target === els.youtubePanel) { els.youtubePanel.classList.remove("open"); clearPendingPanelInsertion(); pendingYoutubeEditCard = null; els.insertYoutubeBtn.textContent = "Insert YouTube video"; } });
 els.youtubePanel.addEventListener("keydown", handlePanelKeydown);
+els.cancelIframeBtn.addEventListener("click", () => { els.iframePanel.classList.remove("open"); clearPendingPanelInsertion(); pendingIframeEditCard = null; els.insertIframeBtn.textContent = "Insert iframe"; });
+els.insertIframeBtn.addEventListener("click", saveIframeFromPanel);
+els.iframePanel.addEventListener("click", event => { if (event.target === els.iframePanel) { els.iframePanel.classList.remove("open"); clearPendingPanelInsertion(); pendingIframeEditCard = null; els.insertIframeBtn.textContent = "Insert iframe"; } });
+els.iframePanel.addEventListener("keydown", handlePanelKeydown);
 els.cancelQuizBtn.addEventListener("click", closeQuizPanel);
 els.insertQuizBtn.addEventListener("click", saveQuizFromPanel);
 els.addQuizQuestionBtn.addEventListener("click", () => {
