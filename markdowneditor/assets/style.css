@@ -365,6 +365,12 @@ textarea:focus,
 .blob-settings-status { min-height: 18px; }
 .blob-settings-status.error { color: #9f1239; font-weight: 800; }
 .blob-settings-status.success { color: #047857; font-weight: 800; }
+.cors-help {
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.13);
+  color: #7c2d12;
+}
 .modal-panel {
   position: fixed;
   inset: 0;
@@ -386,6 +392,7 @@ textarea:focus,
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .panel-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+.panel-actions-left { justify-content: flex-start; margin: -2px 0 13px; }
 .slash-menu {
   position: fixed;
   z-index: 90;

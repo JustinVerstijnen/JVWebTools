@@ -71,16 +71,21 @@ const els = {
   imageUrl: document.getElementById("imageUrl"),
   imageAlt: document.getElementById("imageAlt"),
   imageLink: document.getElementById("imageLink"),
+  imageUploadFile: document.getElementById("imageUploadFile"),
+  uploadImageFileBtn: document.getElementById("uploadImageFileBtn"),
   cancelImageBtn: document.getElementById("cancelImageBtn"),
   insertImageBtn: document.getElementById("insertImageBtn"),
   blobSettingsPanel: document.getElementById("blobSettingsPanel"),
   blobAccountName: document.getElementById("blobAccountName"),
-  blobEndpointSuffix: document.getElementById("blobEndpointSuffix"),
   blobAccessKey: document.getElementById("blobAccessKey"),
   blobContainer: document.getElementById("blobContainer"),
+  blobContainerOptions: document.getElementById("blobContainerOptions"),
   blobFolderPath: document.getElementById("blobFolderPath"),
+  blobFolderOptions: document.getElementById("blobFolderOptions"),
   blobPostId: document.getElementById("blobPostId"),
   blobSettingsStatus: document.getElementById("blobSettingsStatus"),
+  connectBlobBtn: document.getElementById("connectBlobBtn"),
+  loadBlobFoldersBtn: document.getElementById("loadBlobFoldersBtn"),
   cancelBlobSettingsBtn: document.getElementById("cancelBlobSettingsBtn"),
   saveBlobSettingsBtn: document.getElementById("saveBlobSettingsBtn"),
   clearBlobSettingsBtn: document.getElementById("clearBlobSettingsBtn"),
@@ -267,14 +272,6 @@ function showToast(message) {
 }
 function isUrl(value) { return /^https?:\/\/[^\s<]+$/i.test(value.trim()); }
 function isImageUrl(value) { return /^https?:\/\/\S+\.(png|jpe?g|gif|webp|svg)(\?\S*)?$/i.test(value.trim()); }
-function normalizeEndpointSuffix(value = "") {
-  return String(value || DEFAULT_BLOB_SETTINGS.endpointSuffix)
-    .trim()
-    .replace(/^https?:\/\//i, "")
-    .replace(/^blob\./i, "")
-    .replace(/\/.*$/, "")
-    .replace(/^\.+|\.+$/g, "") || DEFAULT_BLOB_SETTINGS.endpointSuffix;
-}
 function normalizeBlobFolderPath(value = "") {
   return String(value || "")
     .trim()
@@ -287,7 +284,7 @@ function normalizeBlobSettings(value = {}) {
   const settings = { ...DEFAULT_BLOB_SETTINGS, ...(value || {}) };
   return {
     accountName: String(settings.accountName || "").trim(),
-    endpointSuffix: normalizeEndpointSuffix(settings.endpointSuffix),
+    endpointSuffix: DEFAULT_BLOB_SETTINGS.endpointSuffix,
     accessKey: String(settings.accessKey || "").trim(),
     container: String(settings.container || "").trim(),
     folderPath: normalizeBlobFolderPath(settings.folderPath),
@@ -305,7 +302,6 @@ function loadBlobSettings() {
 function getBlobSettingsError(settings = blobSettings) {
   const normalized = normalizeBlobSettings(settings);
   if (!normalized.accountName) return "Enter a storage account.";
-  if (!normalized.endpointSuffix) return "Enter an endpoint suffix.";
   if (!normalized.accessKey) return "Enter an access key.";
   if (!normalized.container) return "Enter a container.";
   if (!normalized.folderPath) return "Enter a folder / blob prefix.";
@@ -331,7 +327,6 @@ function updateBlobSettingsButton() {
 function fillBlobSettingsForm() {
   const settings = normalizeBlobSettings(blobSettings);
   if (els.blobAccountName) els.blobAccountName.value = settings.accountName;
-  if (els.blobEndpointSuffix) els.blobEndpointSuffix.value = settings.endpointSuffix;
   if (els.blobAccessKey) els.blobAccessKey.value = settings.accessKey;
   if (els.blobContainer) els.blobContainer.value = settings.container;
   if (els.blobFolderPath) els.blobFolderPath.value = settings.folderPath;
@@ -342,7 +337,6 @@ function fillBlobSettingsForm() {
 function readBlobSettingsForm() {
   return normalizeBlobSettings({
     accountName: els.blobAccountName?.value,
-    endpointSuffix: els.blobEndpointSuffix?.value,
     accessKey: els.blobAccessKey?.value,
     container: els.blobContainer?.value,
     folderPath: els.blobFolderPath?.value,
@@ -375,6 +369,8 @@ function saveBlobSettingsFromForm() {
 function clearBlobSettings() {
   blobSettings = normalizeBlobSettings();
   localStorage.removeItem(BLOB_SETTINGS_KEY);
+  setDatalistOptions(els.blobContainerOptions, []);
+  setDatalistOptions(els.blobFolderOptions, []);
   fillBlobSettingsForm();
   updateBlobSettingsButton();
   setBlobSettingsStatus("Blob settings cleared.", "success");
@@ -441,11 +437,12 @@ function getCanonicalizedHeaders(headers) {
     .join("\n");
 }
 async function buildAzureAuthorizationHeader({ method, contentLength, contentType, canonicalizedResource, headers, accountName, accessKey }) {
+  const contentLengthValue = contentLength === undefined || contentLength === null ? "" : String(contentLength);
   const stringToSign = [
     method,
     "",
     "",
-    String(contentLength || ""),
+    contentLengthValue,
     "",
     contentType || "",
     "",
@@ -460,10 +457,189 @@ async function buildAzureAuthorizationHeader({ method, contentLength, contentTyp
   const signature = await hmacSha256Base64(accessKey, stringToSign);
   return `SharedKey ${accountName}:${signature}`;
 }
+function getBlobStorageBaseUrl(settings = blobSettings) {
+  const normalized = normalizeBlobSettings(settings);
+  return `https://${normalized.accountName}.blob.${normalized.endpointSuffix}`;
+}
+function getBlobConnectionError(settings = blobSettings) {
+  const normalized = normalizeBlobSettings(settings);
+  if (!normalized.accountName) return "Enter a storage account.";
+  if (!normalized.accessKey) return "Enter an access key.";
+  return "";
+}
+function getBlobFolderLoadError(settings = blobSettings) {
+  const connectionError = getBlobConnectionError(settings);
+  if (connectionError) return connectionError;
+  if (!normalizeBlobSettings(settings).container) return "Enter or select a container.";
+  return "";
+}
+function getAzureCorsHelp() {
+  return "Azure CORS is blocking this browser request. Allow this editor origin with GET, PUT, OPTIONS and the Authorization, Content-Type and x-ms-* headers.";
+}
+function getAzureRequestErrorMessage(error) {
+  const message = String(error?.message || error || "");
+  if (/failed to fetch|networkerror|cors/i.test(message)) return getAzureCorsHelp();
+  return message || "Azure request failed.";
+}
+async function invokeAzureBlobRequest({ settings, method, url, canonicalizedResource, body = null, contentType = "", extraHeaders = {} }) {
+  const normalized = normalizeBlobSettings(settings);
+  const headers = {
+    "x-ms-date": new Date().toUTCString(),
+    "x-ms-version": AZURE_BLOB_API_VERSION,
+    ...extraHeaders
+  };
+  const bodyBytes = body instanceof ArrayBuffer ? body : null;
+  const authorization = await buildAzureAuthorizationHeader({
+    method,
+    contentLength: bodyBytes ? bodyBytes.byteLength : null,
+    contentType,
+    canonicalizedResource,
+    headers,
+    accountName: normalized.accountName,
+    accessKey: normalized.accessKey
+  });
+  const fetchHeaders = {
+    ...headers,
+    Authorization: authorization
+  };
+  if (contentType) fetchHeaders["Content-Type"] = contentType;
+
+  let response;
+  try {
+    response = await fetch(url, {
+      method,
+      headers: fetchHeaders,
+      body: bodyBytes || undefined
+    });
+  } catch (error) {
+    throw new Error(getAzureRequestErrorMessage(error));
+  }
+
+  const responseText = await response.text().catch(() => "");
+  if (!response.ok) {
+    throw new Error(`Azure request failed (${response.status}): ${responseText || response.statusText}`);
+  }
+  return responseText;
+}
+function parseAzureXml(xmlText) {
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(String(xmlText || ""), "application/xml");
+  if (xml.querySelector("parsererror")) throw new Error("Azure returned invalid XML.");
+  return xml;
+}
+async function getContainerList(settings = blobSettings) {
+  const normalized = normalizeBlobSettings(settings);
+  const baseUrl = getBlobStorageBaseUrl(normalized);
+  const xmlText = await invokeAzureBlobRequest({
+    settings: normalized,
+    method: "GET",
+    url: `${baseUrl}/?comp=list`,
+    canonicalizedResource: `/${normalized.accountName}/\ncomp:list`
+  });
+  return Array.from(parseAzureXml(xmlText).querySelectorAll("Containers > Container > Name"))
+    .map(node => node.textContent.trim())
+    .filter(Boolean);
+}
+async function getBlobListPage(settings = blobSettings, marker = "", maxResults = 5000) {
+  const normalized = normalizeBlobSettings(settings);
+  const baseUrl = getBlobStorageBaseUrl(normalized);
+  const encodedContainer = encodeURIComponent(normalized.container);
+  const queryParts = ["restype=container", "comp=list", `maxresults=${maxResults}`];
+  if (marker) queryParts.push(`marker=${encodeURIComponent(marker)}`);
+  const canonicalizedResource = [
+    `/${normalized.accountName}/${normalized.container}`,
+    "comp:list",
+    marker ? `marker:${marker}` : "",
+    `maxresults:${maxResults}`,
+    "restype:container"
+  ].filter(Boolean).join("\n");
+  const xmlText = await invokeAzureBlobRequest({
+    settings: normalized,
+    method: "GET",
+    url: `${baseUrl}/${encodedContainer}?${queryParts.join("&")}`,
+    canonicalizedResource
+  });
+  const xml = parseAzureXml(xmlText);
+  return {
+    blobNames: Array.from(xml.querySelectorAll("Blobs > Blob > Name"))
+      .map(node => node.textContent.trim())
+      .filter(Boolean),
+    nextMarker: (xml.querySelector("NextMarker")?.textContent || "").trim()
+  };
+}
+async function getBlobNames(settings = blobSettings) {
+  const all = [];
+  let marker = "";
+  do {
+    const page = await getBlobListPage(settings, marker);
+    all.push(...page.blobNames);
+    marker = page.nextMarker;
+  } while (marker);
+  return all;
+}
+function getFolderSuggestionsFromBlobNames(blobNames = []) {
+  const folders = new Set();
+  blobNames.forEach(blobName => {
+    const segments = String(blobName || "").replace(/\\/g, "/").split("/").filter(Boolean);
+    for (let index = 0; index < segments.length - 1; index += 1) {
+      folders.add(segments.slice(0, index + 1).join("/"));
+    }
+  });
+  return Array.from(folders).sort((a, b) => a.localeCompare(b));
+}
+function setDatalistOptions(datalist, values = []) {
+  if (!datalist) return;
+  datalist.innerHTML = values.map(value => `<option value="${escapeHtml(value)}"></option>`).join("");
+}
+async function connectBlobStorage() {
+  const settings = readBlobSettingsForm();
+  const error = getBlobConnectionError(settings);
+  if (error) {
+    setBlobSettingsStatus(error, "error");
+    return;
+  }
+  els.connectBlobBtn.disabled = true;
+  setBlobSettingsStatus("Connecting to Azure...", "");
+  try {
+    const containers = await getContainerList(settings);
+    setDatalistOptions(els.blobContainerOptions, containers);
+    if (!els.blobContainer.value.trim() && containers.length) els.blobContainer.value = containers[0];
+    setBlobSettingsStatus(`${containers.length} container${containers.length === 1 ? "" : "s"} loaded.`, "success");
+    if (els.blobContainer.value.trim()) await loadBlobFoldersFromForm(true);
+  } catch (error) {
+    console.error(error);
+    setBlobSettingsStatus(getAzureRequestErrorMessage(error), "error");
+  } finally {
+    els.connectBlobBtn.disabled = false;
+  }
+}
+async function loadBlobFoldersFromForm(fromConnect = false) {
+  const settings = readBlobSettingsForm();
+  const error = getBlobFolderLoadError(settings);
+  if (error) {
+    setBlobSettingsStatus(error, "error");
+    return [];
+  }
+  els.loadBlobFoldersBtn.disabled = true;
+  setBlobSettingsStatus("Loading folders from container...", "");
+  try {
+    const folders = getFolderSuggestionsFromBlobNames(await getBlobNames(settings));
+    setDatalistOptions(els.blobFolderOptions, folders);
+    setBlobSettingsStatus(`${folders.length} folder suggestion${folders.length === 1 ? "" : "s"} loaded.`, "success");
+    return folders;
+  } catch (error) {
+    console.error(error);
+    setBlobSettingsStatus(getAzureRequestErrorMessage(error), "error");
+    if (!fromConnect) showToast("Could not load folders");
+    return [];
+  } finally {
+    els.loadBlobFoldersBtn.disabled = false;
+  }
+}
 function getUploadErrorMessage(error) {
   const message = String(error?.message || error || "");
   if (/failed to fetch|networkerror|cors/i.test(message)) {
-    return "Upload failed. Check Azure CORS and blob settings.";
+    return "Upload blocked by Azure CORS. Open Blob settings.";
   }
   return message || "Upload failed";
 }
@@ -574,6 +750,15 @@ async function uploadImageSourceToPanel(source) {
     showToast(getUploadErrorMessage(error));
     return true;
   }
+}
+async function uploadImageFileFromPanel(file) {
+  if (!file) return;
+  if (!isBlobUploadConfigured()) {
+    openBlobSettingsPanel();
+    showToast("Set blob settings first");
+    return;
+  }
+  await uploadImageSourceToPanel({ type: "file", value: file });
 }
 function languageOptions(selected = "powershell") {
   return LANGUAGES.map(([value, label]) => `<option value="${value}" ${value === selected ? "selected" : ""}>${label}</option>`).join("");
@@ -3779,8 +3964,23 @@ els.imageUrl.addEventListener("input", () => {
     els.imageLink.dataset.autoValue = els.imageUrl.value.trim();
   }
 });
+els.uploadImageFileBtn?.addEventListener("click", () => {
+  if (!isBlobUploadConfigured()) {
+    openBlobSettingsPanel();
+    showToast("Set blob settings first");
+    return;
+  }
+  els.imageUploadFile?.click();
+});
+els.imageUploadFile?.addEventListener("change", event => {
+  uploadImageFileFromPanel(event.target.files?.[0]);
+  event.target.value = "";
+});
 els.imagePanel.addEventListener("click", event => { if (event.target === els.imagePanel) { els.imagePanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingImageEditFigure = null; } });
 els.imagePanel.addEventListener("keydown", handlePanelKeydown);
+els.connectBlobBtn?.addEventListener("click", connectBlobStorage);
+els.loadBlobFoldersBtn?.addEventListener("click", () => loadBlobFoldersFromForm(false));
+els.blobContainer?.addEventListener("change", () => loadBlobFoldersFromForm(false));
 els.cancelBlobSettingsBtn?.addEventListener("click", closeBlobSettingsPanel);
 els.saveBlobSettingsBtn?.addEventListener("click", saveBlobSettingsFromForm);
 els.clearBlobSettingsBtn?.addEventListener("click", clearBlobSettings);
