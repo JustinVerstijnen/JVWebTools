@@ -36,6 +36,7 @@
       </div>
       <div class="top-actions">
         <button class="pill" id="postInfoBtn" type="button"><i class="fa-solid fa-circle-info"></i> Post Information</button>
+        <button class="pill" id="blobSettingsBtn" type="button"><i class="fa-solid fa-cloud-arrow-up"></i> Blob settings</button>
         <button class="pill" id="importBtn" type="button"><i class="fa-solid fa-file-import"></i> Import .md</button>
         <input id="importFile" type="file" accept=".md,.markdown,text/markdown,text/plain" hidden />
         <button class="pill primary" id="exportBtn" type="button"><i class="fa-solid fa-file-export"></i> Export .md</button>
@@ -119,6 +120,21 @@
       <div class="field"><label for="imageLink">Link target</label><input id="imageLink" type="url" placeholder="https://example.com/original-image.jpg" /></div>
       <div class="field-help">Leave empty to link to the image file itself.</div>
       <div class="panel-actions"><button class="pill" id="cancelImageBtn" type="button">Cancel</button><button class="pill primary" id="insertImageBtn" type="button">Insert image</button></div>
+    </div>
+  </div>
+
+  <div class="modal-panel" id="blobSettingsPanel" role="dialog" aria-label="Blob settings">
+    <div class="modal-card panel-animate">
+      <h2>Blob settings</h2>
+      <div class="field"><label for="blobAccountName">Storage account</label><input id="blobAccountName" type="text" placeholder="sajvwebsiteblobstorage" autocomplete="off" /></div>
+      <div class="field"><label for="blobEndpointSuffix">Endpoint suffix</label><input id="blobEndpointSuffix" type="text" placeholder="core.windows.net" autocomplete="off" /></div>
+      <div class="field"><label for="blobAccessKey">Access key</label><input id="blobAccessKey" type="password" placeholder="Storage account key" autocomplete="off" /></div>
+      <div class="field"><label for="blobContainer">Container</label><input id="blobContainer" type="text" placeholder="blog" autocomplete="off" /></div>
+      <div class="field"><label for="blobFolderPath">Folder / blob prefix</label><input id="blobFolderPath" type="text" placeholder="tools-2375" autocomplete="off" /></div>
+      <div class="field"><label for="blobPostId">Post ID</label><input id="blobPostId" type="text" inputmode="numeric" placeholder="7000" autocomplete="off" /></div>
+      <div class="field-help">Pasted image files use jv-media-{postId}-{sha256}.ext. These settings are stored in this browser.</div>
+      <div class="field-help blob-settings-status" id="blobSettingsStatus" aria-live="polite"></div>
+      <div class="panel-actions"><button class="pill danger" id="clearBlobSettingsBtn" type="button">Clear</button><button class="pill" id="cancelBlobSettingsBtn" type="button">Cancel</button><button class="pill primary" id="saveBlobSettingsBtn" type="button">Save settings</button></div>
     </div>
   </div>
 

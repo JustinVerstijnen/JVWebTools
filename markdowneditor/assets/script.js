@@ -1,5 +1,25 @@
 const STORAGE_KEY = "markdown-editor-project-v20";
 const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v19", "markdown-editor-project-v18", "markdown-editor-project-v17", "markdown-editor-project-v16", "markdown-editor-project-v15", "markdown-editor-project-v14", "markdown-editor-project-v13", "markdown-editor-project-v12", "markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
+const BLOB_SETTINGS_KEY = "markdown-editor-azure-blob-settings-v1";
+const AZURE_BLOB_API_VERSION = "2023-11-03";
+const DEFAULT_BLOB_SETTINGS = {
+  accountName: "",
+  endpointSuffix: "core.windows.net",
+  accessKey: "",
+  container: "",
+  folderPath: "",
+  postId: "7000"
+};
+const IMAGE_MIME_EXTENSIONS = {
+  "image/png": ".png",
+  "image/jpeg": ".jpg",
+  "image/gif": ".gif",
+  "image/webp": ".webp",
+  "image/svg+xml": ".svg",
+  "image/avif": ".avif",
+  "image/bmp": ".bmp",
+  "image/tiff": ".tif"
+};
 
 const LANGUAGES = [
   ["powershell", "PowerShell"], ["cmd", "cmd"], ["bash", "Bash"], ["json", "JSON"], ["csv", "CSV"],
@@ -25,6 +45,7 @@ const els = {
   editorBtn: document.getElementById("editorBtn"),
   codeBtn: document.getElementById("codeBtn"),
   postInfoBtn: document.getElementById("postInfoBtn"),
+  blobSettingsBtn: document.getElementById("blobSettingsBtn"),
   importBtn: document.getElementById("importBtn"),
   importFile: document.getElementById("importFile"),
   exportBtn: document.getElementById("exportBtn"),
@@ -52,6 +73,17 @@ const els = {
   imageLink: document.getElementById("imageLink"),
   cancelImageBtn: document.getElementById("cancelImageBtn"),
   insertImageBtn: document.getElementById("insertImageBtn"),
+  blobSettingsPanel: document.getElementById("blobSettingsPanel"),
+  blobAccountName: document.getElementById("blobAccountName"),
+  blobEndpointSuffix: document.getElementById("blobEndpointSuffix"),
+  blobAccessKey: document.getElementById("blobAccessKey"),
+  blobContainer: document.getElementById("blobContainer"),
+  blobFolderPath: document.getElementById("blobFolderPath"),
+  blobPostId: document.getElementById("blobPostId"),
+  blobSettingsStatus: document.getElementById("blobSettingsStatus"),
+  cancelBlobSettingsBtn: document.getElementById("cancelBlobSettingsBtn"),
+  saveBlobSettingsBtn: document.getElementById("saveBlobSettingsBtn"),
+  clearBlobSettingsBtn: document.getElementById("clearBlobSettingsBtn"),
   tablePanel: document.getElementById("tablePanel"),
   tableColumns: document.getElementById("tableColumns"),
   tableRows: document.getElementById("tableRows"),
@@ -106,6 +138,8 @@ const state = {
     hidden: "false"
   }
 };
+
+let blobSettings = loadBlobSettings();
 
 let savedRange = null;
 let saveTimer = null;
@@ -233,6 +267,314 @@ function showToast(message) {
 }
 function isUrl(value) { return /^https?:\/\/[^\s<]+$/i.test(value.trim()); }
 function isImageUrl(value) { return /^https?:\/\/\S+\.(png|jpe?g|gif|webp|svg)(\?\S*)?$/i.test(value.trim()); }
+function normalizeEndpointSuffix(value = "") {
+  return String(value || DEFAULT_BLOB_SETTINGS.endpointSuffix)
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/^blob\./i, "")
+    .replace(/\/.*$/, "")
+    .replace(/^\.+|\.+$/g, "") || DEFAULT_BLOB_SETTINGS.endpointSuffix;
+}
+function normalizeBlobFolderPath(value = "") {
+  return String(value || "")
+    .trim()
+    .replace(/\\/g, "/")
+    .replace(/^\/+/, "")
+    .replace(/\/+$/, "")
+    .replace(/\/+/g, "/");
+}
+function normalizeBlobSettings(value = {}) {
+  const settings = { ...DEFAULT_BLOB_SETTINGS, ...(value || {}) };
+  return {
+    accountName: String(settings.accountName || "").trim(),
+    endpointSuffix: normalizeEndpointSuffix(settings.endpointSuffix),
+    accessKey: String(settings.accessKey || "").trim(),
+    container: String(settings.container || "").trim(),
+    folderPath: normalizeBlobFolderPath(settings.folderPath),
+    postId: String(settings.postId || "").trim() || DEFAULT_BLOB_SETTINGS.postId
+  };
+}
+function loadBlobSettings() {
+  try {
+    return normalizeBlobSettings(JSON.parse(localStorage.getItem(BLOB_SETTINGS_KEY) || "{}"));
+  } catch (error) {
+    console.warn("Could not load blob settings", error);
+    return normalizeBlobSettings();
+  }
+}
+function getBlobSettingsError(settings = blobSettings) {
+  const normalized = normalizeBlobSettings(settings);
+  if (!normalized.accountName) return "Enter a storage account.";
+  if (!normalized.endpointSuffix) return "Enter an endpoint suffix.";
+  if (!normalized.accessKey) return "Enter an access key.";
+  if (!normalized.container) return "Enter a container.";
+  if (!normalized.folderPath) return "Enter a folder / blob prefix.";
+  if (!/^\d+$/.test(normalized.postId)) return "Post ID must be a whole number.";
+  return "";
+}
+function isBlobUploadConfigured(settings = blobSettings) {
+  return !getBlobSettingsError(settings);
+}
+function setBlobSettingsStatus(message = "", type = "") {
+  if (!els.blobSettingsStatus) return;
+  els.blobSettingsStatus.textContent = message;
+  els.blobSettingsStatus.classList.toggle("error", type === "error");
+  els.blobSettingsStatus.classList.toggle("success", type === "success");
+}
+function updateBlobSettingsButton() {
+  const configured = isBlobUploadConfigured();
+  els.blobSettingsBtn?.classList.toggle("configured", configured);
+  if (els.blobSettingsBtn) {
+    els.blobSettingsBtn.title = configured ? "Azure Blob upload is configured" : "Set Azure Blob upload settings";
+  }
+}
+function fillBlobSettingsForm() {
+  const settings = normalizeBlobSettings(blobSettings);
+  if (els.blobAccountName) els.blobAccountName.value = settings.accountName;
+  if (els.blobEndpointSuffix) els.blobEndpointSuffix.value = settings.endpointSuffix;
+  if (els.blobAccessKey) els.blobAccessKey.value = settings.accessKey;
+  if (els.blobContainer) els.blobContainer.value = settings.container;
+  if (els.blobFolderPath) els.blobFolderPath.value = settings.folderPath;
+  if (els.blobPostId) els.blobPostId.value = settings.postId;
+  const error = getBlobSettingsError(settings);
+  setBlobSettingsStatus(error ? "Incomplete settings." : "Ready to upload pasted images.", error ? "" : "success");
+}
+function readBlobSettingsForm() {
+  return normalizeBlobSettings({
+    accountName: els.blobAccountName?.value,
+    endpointSuffix: els.blobEndpointSuffix?.value,
+    accessKey: els.blobAccessKey?.value,
+    container: els.blobContainer?.value,
+    folderPath: els.blobFolderPath?.value,
+    postId: els.blobPostId?.value
+  });
+}
+function openBlobSettingsPanel() {
+  fillBlobSettingsForm();
+  els.blobSettingsPanel?.classList.add("open");
+  setTimeout(() => els.blobAccountName?.focus(), 80);
+}
+function closeBlobSettingsPanel() {
+  els.blobSettingsPanel?.classList.remove("open");
+  setBlobSettingsStatus("");
+}
+function saveBlobSettingsFromForm() {
+  const settings = readBlobSettingsForm();
+  const error = getBlobSettingsError(settings);
+  if (error) {
+    setBlobSettingsStatus(error, "error");
+    return false;
+  }
+  blobSettings = settings;
+  localStorage.setItem(BLOB_SETTINGS_KEY, JSON.stringify(settings));
+  updateBlobSettingsButton();
+  closeBlobSettingsPanel();
+  showToast("Blob settings saved");
+  return true;
+}
+function clearBlobSettings() {
+  blobSettings = normalizeBlobSettings();
+  localStorage.removeItem(BLOB_SETTINGS_KEY);
+  fillBlobSettingsForm();
+  updateBlobSettingsButton();
+  setBlobSettingsStatus("Blob settings cleared.", "success");
+}
+function getContentTypeFromExtension(extension = "") {
+  switch (String(extension || "").toLowerCase()) {
+    case ".png": return "image/png";
+    case ".jpg":
+    case ".jpeg": return "image/jpeg";
+    case ".gif": return "image/gif";
+    case ".webp": return "image/webp";
+    case ".svg": return "image/svg+xml";
+    case ".avif": return "image/avif";
+    case ".bmp": return "image/bmp";
+    case ".tif":
+    case ".tiff": return "image/tiff";
+    default: return "application/octet-stream";
+  }
+}
+function getImageExtension(file) {
+  const allowed = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif", ".bmp", ".tif", ".tiff"]);
+  const match = String(file?.name || "").match(/\.[a-z0-9]+$/i);
+  const byName = match ? match[0].toLowerCase() : "";
+  if (allowed.has(byName)) return byName;
+  return IMAGE_MIME_EXTENSIONS[String(file?.type || "").toLowerCase()] || ".png";
+}
+function encodeBlobPathForUrl(blobPath = "") {
+  return String(blobPath || "").split("/").map(segment => encodeURIComponent(segment)).join("/");
+}
+function bytesToHex(bytes) {
+  return Array.from(bytes).map(byte => byte.toString(16).padStart(2, "0")).join("");
+}
+function bytesToBase64(bytes) {
+  let binary = "";
+  bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+  return btoa(binary);
+}
+function base64ToBytes(value = "") {
+  const binary = atob(String(value || "").replace(/\s/g, ""));
+  return Uint8Array.from(binary, char => char.charCodeAt(0));
+}
+async function hmacSha256Base64(base64Key, message) {
+  if (!globalThis.crypto?.subtle) throw new Error("Web Crypto is not available in this browser context.");
+  const key = await globalThis.crypto.subtle.importKey(
+    "raw",
+    base64ToBytes(base64Key),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await globalThis.crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
+  return bytesToBase64(new Uint8Array(signature));
+}
+async function getArrayBufferHash12(buffer) {
+  if (!globalThis.crypto?.subtle) throw new Error("Web Crypto is not available in this browser context.");
+  const hash = await globalThis.crypto.subtle.digest("SHA-256", buffer);
+  return bytesToHex(new Uint8Array(hash)).slice(0, 12);
+}
+function getCanonicalizedHeaders(headers) {
+  return Object.keys(headers)
+    .filter(key => key.toLowerCase().startsWith("x-ms-"))
+    .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+    .map(key => `${key.toLowerCase().trim()}:${String(headers[key]).trim()}`)
+    .join("\n");
+}
+async function buildAzureAuthorizationHeader({ method, contentLength, contentType, canonicalizedResource, headers, accountName, accessKey }) {
+  const stringToSign = [
+    method,
+    "",
+    "",
+    String(contentLength || ""),
+    "",
+    contentType || "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    getCanonicalizedHeaders(headers),
+    canonicalizedResource
+  ].join("\n");
+  const signature = await hmacSha256Base64(accessKey, stringToSign);
+  return `SharedKey ${accountName}:${signature}`;
+}
+function getUploadErrorMessage(error) {
+  const message = String(error?.message || error || "");
+  if (/failed to fetch|networkerror|cors/i.test(message)) {
+    return "Upload failed. Check Azure CORS and blob settings.";
+  }
+  return message || "Upload failed";
+}
+async function uploadImageFileToBlob(file) {
+  const settings = normalizeBlobSettings(blobSettings);
+  const settingsError = getBlobSettingsError(settings);
+  if (settingsError) throw new Error(settingsError);
+
+  const body = await file.arrayBuffer();
+  const hash12 = await getArrayBufferHash12(body);
+  const extension = getImageExtension(file);
+  const contentType = getContentTypeFromExtension(extension);
+  const fileName = `jv-media-${settings.postId}-${hash12}${extension}`;
+  const blobPath = `${settings.folderPath}/${fileName}`;
+  const baseUrl = `https://${settings.accountName}.blob.${settings.endpointSuffix}`;
+  const encodedContainer = encodeURIComponent(settings.container);
+  const encodedBlobPath = encodeBlobPathForUrl(blobPath);
+  const url = `${baseUrl}/${encodedContainer}/${encodedBlobPath}`;
+  const headers = {
+    "x-ms-date": new Date().toUTCString(),
+    "x-ms-version": AZURE_BLOB_API_VERSION,
+    "x-ms-blob-type": "BlockBlob",
+    "x-ms-blob-content-type": contentType,
+    "x-ms-blob-content-disposition": "inline",
+    "x-ms-blob-cache-control": "no-cache"
+  };
+  const authorization = await buildAzureAuthorizationHeader({
+    method: "PUT",
+    contentLength: body.byteLength,
+    contentType,
+    canonicalizedResource: `/${settings.accountName}/${settings.container}/${blobPath}`,
+    headers,
+    accountName: settings.accountName,
+    accessKey: settings.accessKey
+  });
+
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: {
+      ...headers,
+      "Content-Type": contentType,
+      Authorization: authorization
+    },
+    body
+  });
+
+  if (!response.ok) {
+    const bodyText = await response.text().catch(() => "");
+    throw new Error(`Upload failed (${response.status}): ${bodyText || response.statusText}`);
+  }
+
+  return { url, fileName, blobPath };
+}
+function dataImageUrlToFile(dataUrl = "") {
+  const commaIndex = String(dataUrl).indexOf(",");
+  if (commaIndex < 0) throw new Error("Invalid image data URL.");
+  const meta = dataUrl.slice(0, commaIndex);
+  const data = dataUrl.slice(commaIndex + 1);
+  const mime = (meta.match(/^data:([^;]+)/i)?.[1] || "image/png").toLowerCase();
+  const isBase64 = /;base64/i.test(meta);
+  const binary = isBase64 ? atob(data) : decodeURIComponent(data);
+  const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+  const extension = IMAGE_MIME_EXTENSIONS[mime] || ".png";
+  return new File([bytes], `pasted-image${extension}`, { type: mime });
+}
+function getFileAltText(file, fallback = "Image") {
+  const name = String(file?.name || "").trim();
+  return name && name !== "image.png" ? name : fallback;
+}
+async function uploadImageSourceToBlob(source) {
+  const file = source?.type === "file" ? source.value : dataImageUrlToFile(source?.value || "");
+  return { file, result: await uploadImageFileToBlob(file) };
+}
+async function uploadAndInsertPastedImage(source) {
+  if (!isBlobUploadConfigured()) {
+    openBlobSettingsPanel();
+    showToast("Set blob settings first");
+    return;
+  }
+  const range = getCurrentEditorRange() || getFreshSavedRange(15000) || createEndRange();
+  const marker = createInsertionMarkerAtRange(range);
+  showToast("Uploading image...");
+  try {
+    const { file, result } = await uploadImageSourceToBlob(source);
+    insertHtmlAtCursor(imageHtml(result.url, getFileAltText(file, result.fileName), "Optional caption", result.url), { allowOldSelection: false, marker });
+    showToast("Image uploaded");
+  } catch (error) {
+    if (marker?.isConnected) marker.remove();
+    console.error(error);
+    showToast(getUploadErrorMessage(error));
+  }
+}
+async function uploadImageSourceToPanel(source) {
+  if (!isBlobUploadConfigured()) return false;
+  showToast("Uploading image...");
+  try {
+    const { file, result } = await uploadImageSourceToBlob(source);
+    els.imageUrl.value = result.url;
+    if (!els.imageAlt.value.trim()) els.imageAlt.value = getFileAltText(file, result.fileName);
+    if (!els.imageLink.value.trim() || els.imageLink.value.trim() === els.imageLink.dataset.autoValue) {
+      els.imageLink.value = result.url;
+      els.imageLink.dataset.autoValue = result.url;
+    }
+    showToast("Image uploaded");
+    return true;
+  } catch (error) {
+    console.error(error);
+    showToast(getUploadErrorMessage(error));
+    return true;
+  }
+}
 function languageOptions(selected = "powershell") {
   return LANGUAGES.map(([value, label]) => `<option value="${value}" ${value === selected ? "selected" : ""}>${label}</option>`).join("");
 }
@@ -1235,6 +1577,7 @@ function render() {
   fillPostInfoForm();
   renderGallery();
   updateTableToolbarVisibility();
+  updateBlobSettingsButton();
   setView("editor");
   saveProject();
 }
@@ -1680,6 +2023,7 @@ function handlePanelKeydown(event) {
   if (event.key !== "Enter") return;
   event.preventDefault();
   if (panel === els.imagePanel) insertImageFromPanel();
+  if (panel === els.blobSettingsPanel) saveBlobSettingsFromForm();
   if (panel === els.buttonPanel) saveButtonFromPanel();
   if (panel === els.githubButtonPanel) saveGitHubButtonFromPanel();
   if (panel === els.tablePanel) insertTableFromPanel();
@@ -1702,19 +2046,22 @@ function openImagePanel(options = {}) {
 function getImageSourceFromClipboard(event) {
   const clipboard = event.clipboardData;
   if (!clipboard) return null;
+  const imageItem = Array.from(clipboard.items || []).find(item => item.kind === "file" && /^image\//i.test(item.type));
+  if (imageItem) return { type: "file", value: imageItem.getAsFile() };
   const text = clipboard.getData("text/plain") || "";
   if (text.trim() && (isImageUrl(text) || /^data:image\//i.test(text.trim()))) return { type: "text", value: text.trim() };
   const html = clipboard.getData("text/html") || "";
   const match = html.match(/<img[^>]+src=["']([^"']+)["']/i);
   if (match?.[1]) return { type: "text", value: match[1] };
-  const imageItem = Array.from(clipboard.items || []).find(item => item.kind === "file" && /^image\//i.test(item.type));
-  if (imageItem) return { type: "file", value: imageItem.getAsFile() };
   return null;
 }
-function handleImagePanelPaste(event) {
+async function handleImagePanelPaste(event) {
   const source = getImageSourceFromClipboard(event);
   if (!source) return;
   event.preventDefault();
+  if ((source.type === "file" && source.value) || (source.type === "text" && /^data:image\//i.test(source.value))) {
+    if (await uploadImageSourceToPanel(source)) return;
+  }
   if (source.type === "text") {
     els.imageUrl.value = source.value;
     if (!els.imageAlt.value.trim()) els.imageAlt.value = guessAltTextFromUrl(source.value);
@@ -3050,8 +3397,14 @@ function createLinkAtSelection(url) {
   saveProject();
   return true;
 }
-function handlePaste(event) {
-  const text = event.clipboardData?.getData("text/plain") || "";
+async function handlePaste(event) {
+  const source = getImageSourceFromClipboard(event);
+  if ((source?.type === "file" && source.value) || (source?.type === "text" && /^data:image\//i.test(source.value))) {
+    event.preventDefault();
+    await uploadAndInsertPastedImage(source);
+    return;
+  }
+  const text = source?.type === "text" ? source.value : (event.clipboardData?.getData("text/plain") || "");
   if (isImageUrl(text)) {
     event.preventDefault();
     insertHtmlAtCursor(imageHtml(text, guessAltTextFromUrl(text), "Optional caption"));
@@ -3244,6 +3597,7 @@ function updateAlertColorSelect(select) {
 els.editorBtn.addEventListener("click", () => setView("editor"));
 els.codeBtn.addEventListener("click", () => setView("markdown"));
 els.postInfoBtn.addEventListener("click", () => { fillPostInfoForm(); els.metadataDrawer.classList.add("open"); });
+els.blobSettingsBtn?.addEventListener("click", openBlobSettingsPanel);
 els.closePostInfoBtn.addEventListener("click", () => els.metadataDrawer.classList.remove("open"));
 els.savePostInfoBtn.addEventListener("click", savePostInfoForm);
 els.fmTitle.addEventListener("input", () => {
@@ -3427,6 +3781,11 @@ els.imageUrl.addEventListener("input", () => {
 });
 els.imagePanel.addEventListener("click", event => { if (event.target === els.imagePanel) { els.imagePanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingImageEditFigure = null; } });
 els.imagePanel.addEventListener("keydown", handlePanelKeydown);
+els.cancelBlobSettingsBtn?.addEventListener("click", closeBlobSettingsPanel);
+els.saveBlobSettingsBtn?.addEventListener("click", saveBlobSettingsFromForm);
+els.clearBlobSettingsBtn?.addEventListener("click", clearBlobSettings);
+els.blobSettingsPanel?.addEventListener("click", event => { if (event.target === els.blobSettingsPanel) closeBlobSettingsPanel(); });
+els.blobSettingsPanel?.addEventListener("keydown", handlePanelKeydown);
 els.buttonPanel.addEventListener("click", event => { if (event.target === els.buttonPanel) { els.buttonPanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingButtonEditAnchor = null; } });
 els.buttonPanel.addEventListener("keydown", handlePanelKeydown);
 els.githubButtonPanel.addEventListener("click", event => { if (event.target === els.githubButtonPanel) { els.githubButtonPanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingGitHubButtonEditAnchor = null; } });

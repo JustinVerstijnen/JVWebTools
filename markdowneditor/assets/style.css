@@ -15,6 +15,7 @@
 .fa-circle-info::before { content: "i"; }
 .fa-file-import::before { content: "⇣"; }
 .fa-file-export::before { content: "⇡"; }
+.fa-cloud-arrow-up::before { content: "☁⇡"; font-size: .82em; }
 .fa-trash::before, .fa-trash-can::before { content: "🗑"; font-size: .9em; }
 .fa-bold::before { content: "B"; }
 .fa-italic::before { content: "I"; font-style: italic; }
@@ -128,6 +129,7 @@ button:active { transform: translateY(0); }
 .pill.primary { background: var(--accent); color: #082133; box-shadow: 0 12px 26px rgba(79, 148, 199, 0.30); }
 .pill.danger { color: #9f1239; }
 .pill.active { background: rgba(119, 176, 222, 0.34); color: #0e2a3f; border-color: rgba(79, 148, 199, 0.45); }
+.pill.configured { background: rgba(16, 185, 129, 0.18); color: #065f46; border-color: rgba(16, 185, 129, 0.35); }
 .main { display: grid; grid-template-columns: 320px 1fr; gap: 12px; min-height: 0; }
 .sidebar, .workspace, .metadata-drawer, .modal-card {
   border: 1px solid var(--border);
@@ -360,6 +362,9 @@ textarea:focus,
 .field { margin-bottom: 13px; }
 .field label { display: block; font-size: 12px; font-weight: 900; margin-bottom: 6px; color: #173247; }
 .field textarea { min-height: 82px; resize: vertical; }
+.blob-settings-status { min-height: 18px; }
+.blob-settings-status.error { color: #9f1239; font-weight: 800; }
+.blob-settings-status.success { color: #047857; font-weight: 800; }
 .modal-panel {
   position: fixed;
   inset: 0;
