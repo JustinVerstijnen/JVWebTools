@@ -28,7 +28,7 @@
       </a>
       <div class="brand">
         <h1>Markdown Editor</h1>
-        <p>Write visually, drag blocks, export clean Markdown for Docsy and GitHub Pages.</p>
+        <p>Write visually, drag blocks, export clean Markdown for Docsy and GitHub Pages. Optimized for desktop computers.</p>
       </div>
       <div class="view-switch" aria-label="Editor view">
         <button class="pill active" id="editorBtn" type="button"><i class="fa-solid fa-pen-to-square"></i> Editor</button>
@@ -37,10 +37,10 @@
       <div class="top-actions">
         <button class="pill" id="postInfoBtn" type="button"><i class="fa-solid fa-circle-info"></i> Post Information</button>
         <button class="pill" id="blobSettingsBtn" type="button"><i class="fa-solid fa-cloud-arrow-up"></i> Blob settings</button>
-        <button class="pill" id="importBtn" type="button"><i class="fa-solid fa-file-import"></i> Import .md</button>
+        <button class="pill" id="importBtn" type="button"><i class="fa-solid fa-file-import"></i> Import</button>
         <input id="importFile" type="file" accept=".md,.markdown,text/markdown,text/plain" hidden />
-        <button class="pill primary" id="exportBtn" type="button"><i class="fa-solid fa-file-export"></i> Export .md</button>
-        <button class="pill danger" id="resetBtn" type="button"><i class="fa-solid fa-trash"></i> Reset</button>
+        <button class="pill primary" id="exportBtn" type="button"><i class="fa-solid fa-file-export"></i> Export</button>
+        <button class="pill danger" id="resetBtn" type="button"><i class="fa-solid fa-trash"></i> Delete</button>
       </div>
     </header>
 
@@ -66,26 +66,15 @@
             <option value="h5">Heading 5</option>
             <option value="h6">Heading 6</option>
           </select>
-          <button type="button" data-format="bold"><i class="fa-solid fa-bold"></i> Bold</button>
-          <button type="button" data-format="italic"><i class="fa-solid fa-italic"></i> Italic</button>
-          <button type="button" data-format="link"><i class="fa-solid fa-link"></i> Link</button>
-          <button type="button" data-format="image"><i class="fa-solid fa-image"></i> Image</button>
-          <button type="button" data-format="table"><i class="fa-solid fa-table"></i> Table</button>
-          <button type="button" data-format="align-left"><i class="fa-solid fa-align-left"></i> Table left</button>
-          <button type="button" data-format="align-center"><i class="fa-solid fa-align-center"></i> Table center</button>
-          <button type="button" data-format="table-add-row"><i class="fa-solid fa-table-rows"></i> Add row</button>
-          <button type="button" data-format="table-remove-row"><i class="fa-solid fa-trash-can"></i> Remove row</button>
-          <button type="button" data-format="table-add-column"><i class="fa-solid fa-table-columns"></i> Add column</button>
-          <button type="button" data-format="table-remove-column"><i class="fa-solid fa-trash-can"></i> Remove column</button>
-          <button type="button" data-format="buttondocsy"><i class="fa-solid fa-square-up-right"></i> Docsy button</button>
-          <button type="button" data-format="buttondocsygithub"><i class="fa-brands fa-github"></i> GitHub button</button>
-          <button type="button" data-format="drawio"><i class="fa-solid fa-diagram-project"></i> Draw.io</button>
-          <button type="button" data-format="youtube"><i class="fa-brands fa-youtube"></i> YouTube</button>
-          <button type="button" data-format="iframe"><i class="fa-solid fa-window-maximize"></i> Iframe</button>
-          <button type="button" data-format="code"><i class="fa-solid fa-code"></i> Code</button>
-          <button type="button" data-format="codedocsy"><i class="fa-solid fa-file-code"></i> Docsy code</button>
-          <button type="button" data-format="separator"><i class="fa-solid fa-minus"></i> Separator</button>
-          <button type="button" data-format="delete-block"><i class="fa-solid fa-trash-can"></i> Remove block</button>
+          <button type="button" data-format="separator" title="Separator" aria-label="Separator"><i class="fa-solid fa-minus"></i></button>
+          <button type="button" data-format="bold" title="Bold" aria-label="Bold"><i class="fa-solid fa-bold"></i></button>
+          <button type="button" data-format="italic" title="Italic" aria-label="Italic"><i class="fa-solid fa-italic"></i></button>
+          <button type="button" data-format="image" title="Image" aria-label="Image"><i class="fa-solid fa-image"></i></button>
+          <button type="button" data-format="table" title="Table" aria-label="Table"><i class="fa-solid fa-table"></i></button>
+          <button type="button" data-format="link" title="Link" aria-label="Link"><i class="fa-solid fa-link"></i></button>
+          <button type="button" data-format="iframe" title="Iframe" aria-label="Iframe"><i class="fa-solid fa-window-maximize"></i></button>
+          <button type="button" data-format="code" title="Code block" aria-label="Code block"><i class="fa-solid fa-code"></i></button>
+          <button type="button" data-format="delete-block" title="Remove block" aria-label="Remove block"><i class="fa-solid fa-trash-can"></i></button>
         </div>
 
         <div class="workspace-body">
@@ -134,8 +123,7 @@
       <div class="field"><label for="blobFolderPath">Folder / blob prefix</label><input id="blobFolderPath" type="text" list="blobFolderOptions" placeholder="tools-2375" autocomplete="off" /><datalist id="blobFolderOptions"></datalist></div>
       <div class="panel-actions panel-actions-left"><button class="pill" id="loadBlobFoldersBtn" type="button"><i class="fa-solid fa-folder-tree"></i> Load folders</button></div>
       <div class="field"><label for="blobPostId">Post ID</label><input id="blobPostId" type="text" inputmode="numeric" placeholder="7000" autocomplete="off" /></div>
-      <div class="field-help">Pasted image files use jv-media-{postId}-{sha256}.ext. These settings are stored in this browser.</div>
-      <div class="field-help cors-help">CORS needs GET, PUT, OPTIONS and the Authorization, Content-Type and x-ms-* headers for this editor origin.</div>
+      <div class="field-help cors-help">Pasted image files use jv-media-{postId}-{sha256}.ext. These settings are stored in this browser. Set Azure CORS in the storage account to allow your endpoint/host with allowed headers authorization,content-type,x-ms-* and exposed headers to be x-ms-*</div>
       <div class="field-help blob-settings-status" id="blobSettingsStatus" aria-live="polite"></div>
       <div class="panel-actions"><button class="pill danger" id="clearBlobSettingsBtn" type="button">Clear</button><button class="pill" id="cancelBlobSettingsBtn" type="button">Cancel</button><button class="pill primary" id="saveBlobSettingsBtn" type="button">Save settings</button></div>
     </div>
@@ -219,12 +207,6 @@
   <div class="slash-menu" id="slashMenu" role="listbox" aria-label="Command menu"></div>
   <div class="toast" id="toast"></div>
 
-  <div class="ad-footer" aria-label="Advertisement">
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4082816808518335" crossorigin="anonymous"></script>
-    <ins class="adsbygoogle" style="display:block; text-align:center;" data-ad-layout="in-article" data-ad-format="fluid" data-ad-client="ca-pub-4082816808518335" data-ad-slot="9865066433"></ins>
-    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-  </div>
-  
   <script src="assets/script.js"></script>
 </body>
 </html>

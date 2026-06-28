@@ -148,6 +148,8 @@ let blobSettings = loadBlobSettings();
 
 let savedRange = null;
 let saveTimer = null;
+let lastSavedAt = 0;
+let saveStatusTimer = 0;
 let slashMatches = [];
 let activeSlashIndex = 0;
 let slashRange = null;
@@ -269,6 +271,25 @@ function showToast(message) {
   els.toast.classList.add("show");
   clearTimeout(showToast.timer);
   showToast.timer = setTimeout(() => els.toast.classList.remove("show"), 1800);
+}
+function formatRelativeSavedTime(timestamp) {
+  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (seconds < 60) return "saved just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `saved ${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `saved ${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  return `saved ${days} day${days === 1 ? "" : "s"} ago`;
+}
+function updateRelativeSaveStatus() {
+  if (!lastSavedAt) return;
+  els.saveStatus.textContent = formatRelativeSavedTime(lastSavedAt);
+}
+function markProjectSaved() {
+  lastSavedAt = Date.now();
+  updateRelativeSaveStatus();
+  if (!saveStatusTimer) saveStatusTimer = window.setInterval(updateRelativeSaveStatus, 60000);
 }
 function isUrl(value) { return /^https?:\/\/[^\s<]+$/i.test(value.trim()); }
 function isImageUrl(value) { return /^https?:\/\/\S+\.(png|jpe?g|gif|webp|svg)(\?\S*)?$/i.test(value.trim()); }
@@ -474,7 +495,7 @@ function getBlobFolderLoadError(settings = blobSettings) {
   return "";
 }
 function getAzureCorsHelp() {
-  return "Azure CORS is blocking this browser request. Allow this editor origin with GET, PUT, OPTIONS and the Authorization, Content-Type and x-ms-* headers.";
+  return "Azure CORS is blocking this browser request. Allow this editor origin/host with GET, PUT, OPTIONS, allowed headers authorization,content-type,x-ms-* and exposed headers x-ms-*.";
 }
 function getAzureRequestErrorMessage(error) {
   const message = String(error?.message || error || "");
@@ -1080,8 +1101,8 @@ const blocks = [
   { id: "h6", command: "/h6", icon: "fa-heading", category: "Text", sidebar: false, name: "Heading 6", description: "Small heading", html: "<h6><br></h6><p><br></p>" },
   { id: "paragraph", command: "/paragraph", icon: "fa-align-left", category: "Text", sidebar: true, name: "Paragraph", description: "Simple text block", html: "<p><br></p>" },
   { id: "quote", command: "/quote", icon: "fa-quote-left", category: "Text", sidebar: true, name: "Blockquote", description: "Markdown quote block", html: "<blockquote><br></blockquote><p><br></p>" },
-  { id: "ul", command: "/ul", icon: "fa-list-ul", category: "Text", sidebar: true, name: "Bullet list", description: "Unordered Markdown list", html: "<ul><li><br></li></ul><p><br></p>" },
-  { id: "ol", command: "/ol", icon: "fa-list-ol", category: "Text", sidebar: true, name: "Numbered list", description: "Ordered Markdown list", html: "<ol><li><br></li></ol><p><br></p>" },
+  { id: "ul", command: "/bl", icon: "fa-list-ul", category: "Text", sidebar: true, name: "Bullet points", description: "Unordered Markdown list", html: "<ul><li><br></li></ul><p><br></p>" },
+  { id: "ol", command: "/nl", icon: "fa-list-ol", category: "Text", sidebar: true, name: "Numbered list", description: "Ordered Markdown list", html: "<ol><li><br></li></ol><p><br></p>" },
   { id: "link", command: "/link", icon: "fa-link", category: "Content", sidebar: true, name: "Link", description: "Clickable link opening in a new tab", html: "<p><a href=\"https://example.com\" target=\"_blank\" rel=\"noreferrer\">https://example.com</a></p>" },
   { id: "image", command: "/image", icon: "fa-image", category: "Content", sidebar: true, name: "Image", description: "Insert an image at the cursor", action: "image" },
   { id: "table", command: "/table", icon: "fa-table", category: "Content", sidebar: true, name: "Table", description: "Choose columns, body rows and alignment", action: "table" },
@@ -1113,7 +1134,7 @@ const blocks = [
   { id: "articledocsy", command: "/article-footer", icon: "fa-shoe-prints", category: "Docsy", sidebar: true, name: "Docsy Article Footer", description: "Insert article footer shortcode", html: shortcodeCard("Docsy Article Footer", "{{< article-footer >}}") },
   { id: "pageinfo", command: "/pageinfo", icon: "fa-circle-info", category: "Docsy", sidebar: true, name: "Docsy Pageinfo", description: "Docsy page info block", html: shortcodeCard("Docsy Pageinfo", "{{% pageinfo color=\"primary\" %}}\nThis page contains extra context.\n{{% /pageinfo %}}") },
   { id: "tabpane", command: "/tabpane", icon: "fa-folder-tree", category: "Docsy", sidebar: true, name: "Docsy Tabpane", description: "Docsy tabs shortcode", html: shortcodeCard("Docsy Tabpane", "{{< tabpane text=true >}}\n  {{% tab header=\"Step 1\" %}}\n  Content for step 1.\n  {{% /tab %}}\n  {{% tab header=\"Step 2\" %}}\n  Content for step 2.\n  {{% /tab %}}\n{{< /tabpane >}}") },
-  { id: "cover", command: "/cover", icon: "fa-window-maximize", category: "Docsy", sidebar: true, name: "Docsy Cover", description: "Landing page hero block", html: shortcodeCard("Docsy Cover", "{{< blocks/cover title=\"Welcome\" height=\"auto td-below-navbar\" color=\"primary\" >}}\nWrite your hero text here.\n{{< /blocks/cover >}}") },
+  { id: "cover", command: "/cover", icon: "fa-panorama", category: "Docsy", sidebar: true, name: "Docsy Cover", description: "Landing page hero block", html: shortcodeCard("Docsy Cover", "{{< blocks/cover title=\"Welcome\" height=\"auto td-below-navbar\" color=\"primary\" >}}\nWrite your hero text here.\n{{< /blocks/cover >}}") },
   { id: "section", command: "/section", icon: "fa-layer-group", category: "Docsy", sidebar: true, name: "Docsy Section", description: "Docsy section container", html: shortcodeCard("Docsy Section", "{{< blocks/section color=\"light\" type=\"container\" >}}\n## Section title\n\nWrite your section content here.\n{{< /blocks/section >}}") }
 ];
 
@@ -1231,6 +1252,7 @@ function applyParsedFrontMatter(frontMatter) {
 function importMarkdownFile(file) {
   if (!file) return;
   file.text().then(text => {
+    const preferredView = state.view === "markdown" ? "markdown" : "editor";
     const match = String(text || "").match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
     if (match) {
       rememberRawFrontMatter(match[1]);
@@ -1247,7 +1269,10 @@ function importMarkdownFile(file) {
     normalizeEditorContent();
     updateEditorPlaceholder();
     fillPostInfoForm();
-    setView("editor");
+    state.markdownCache = String(text || "");
+    els.markdownEditor.value = state.markdownCache;
+    applyViewChrome(preferredView);
+    updateTableToolbarVisibility();
     saveProject();
     showToast(`Imported ${file.name}`);
   }).catch(error => {
@@ -1456,7 +1481,7 @@ function tableToMarkdown(table) {
   if (!rows.length) return "";
   const data = rows.map(row => Array.from(row.children).map(cell => {
     const clone = cell.cloneNode(true);
-    clone.querySelectorAll(".table-drag-handle").forEach(handle => handle.remove());
+    clone.querySelectorAll(".table-drag-handle, .table-insert-control").forEach(handle => handle.remove());
     return clone.textContent.trim().replace(/\|/g, "\\|");
   }));
   const maxCols = Math.max(...data.map(row => row.length));
@@ -1713,7 +1738,7 @@ function saveProject() {
     state.html = els.visualEditor.innerHTML;
     if (state.view === "markdown") state.markdownCache = els.markdownEditor.value;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    els.saveStatus.textContent = "Saved at " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    markProjectSaved();
   }, 120);
 }
 function loadProject() {
@@ -1993,10 +2018,15 @@ function addInlineBlockControls(scope = els.visualEditor) {
   });
 }
 
-function setView(view) {
+function applyViewChrome(view) {
   state.view = view;
   els.editorBtn.classList.toggle("active", view === "editor");
   els.codeBtn.classList.toggle("active", view === "markdown");
+  els.visualEditor.style.display = view === "editor" ? "block" : "none";
+  els.editorToolbar.style.display = view === "editor" ? "flex" : "none";
+  els.markdownEditor.style.display = view === "markdown" ? "block" : "none";
+}
+function setView(view) {
   if (view === "editor") {
     const markdownValue = els.markdownEditor.value.trim();
     if (markdownValue && els.markdownEditor.style.display === "block") {
@@ -2005,16 +2035,12 @@ function setView(view) {
       applyParsedFrontMatter(frontMatter);
       els.visualEditor.innerHTML = markdownToHtml(body);
     }
-    els.visualEditor.style.display = "block";
-    els.editorToolbar.style.display = "flex";
-    els.markdownEditor.style.display = "none";
+    applyViewChrome("editor");
     normalizeEditorContent();
   } else {
     state.markdownCache = buildMarkdown();
     els.markdownEditor.value = state.markdownCache;
-    els.visualEditor.style.display = "none";
-    els.editorToolbar.style.display = "none";
-    els.markdownEditor.style.display = "block";
+    applyViewChrome("markdown");
   }
   saveProject();
 }
@@ -2715,12 +2741,7 @@ function resetProject() {
   fillPostInfoForm();
   updateTableToolbarVisibility();
 
-  state.view = preferredView;
-  els.editorBtn.classList.toggle("active", preferredView === "editor");
-  els.codeBtn.classList.toggle("active", preferredView === "markdown");
-  els.visualEditor.style.display = preferredView === "editor" ? "block" : "none";
-  els.editorToolbar.style.display = preferredView === "editor" ? "flex" : "none";
-  els.markdownEditor.style.display = preferredView === "markdown" ? "block" : "none";
+  applyViewChrome(preferredView);
   if (preferredView === "markdown") {
     state.markdownCache = `${buildFrontMatter()}
 
@@ -2729,8 +2750,8 @@ function resetProject() {
   }
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  els.saveStatus.textContent = "Saved at " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  showToast("Project reset");
+  markProjectSaved();
+  showToast("Project deleted");
 }
 
 
@@ -3347,15 +3368,79 @@ function outdentCurrentListItem() {
 
 function stripTableDragHandlesFromCell(cell) {
   const clone = cell.cloneNode(true);
-  clone.querySelectorAll(".table-drag-handle").forEach(handle => handle.remove());
+  clone.querySelectorAll(".table-drag-handle, .table-insert-control").forEach(handle => handle.remove());
   return clone.innerHTML || "<br>";
+}
+function getTableColumnCount(table) {
+  return Math.max(1, ...Array.from(table?.querySelectorAll("tr") || []).map(row => row.children.length));
+}
+function createEditableTableCell(tagName = "td") {
+  const cell = document.createElement(tagName);
+  cell.contentEditable = "true";
+  cell.innerHTML = "<br>";
+  return cell;
+}
+function insertTableRowAfter(row) {
+  const table = row?.closest?.("table");
+  if (!table) return;
+  const newRow = document.createElement("tr");
+  const columnCount = getTableColumnCount(table);
+  for (let index = 0; index < columnCount; index += 1) newRow.appendChild(createEditableTableCell("td"));
+  row.after(newRow);
+  table.dataset.dragHandlesReady = "false";
+  ensureTableDragHandles(table);
+  saveProject();
+  newRow.children[0]?.focus?.();
+  showToast("Row added");
+}
+function insertTableColumnAfter(table, afterIndex) {
+  if (!table || afterIndex < 0) return;
+  table.querySelectorAll("tr").forEach(row => {
+    const cells = Array.from(row.children);
+    const reference = cells[Math.min(afterIndex, cells.length - 1)] || null;
+    const tagName = row.closest("thead") ? "th" : "td";
+    const cell = createEditableTableCell(tagName);
+    if (reference) reference.after(cell);
+    else row.appendChild(cell);
+  });
+  table.dataset.dragHandlesReady = "false";
+  ensureTableDragHandles(table);
+  saveProject();
+  const firstBodyRow = table.querySelector("tbody tr") || table.querySelector("tr");
+  firstBodyRow?.children[Math.min(afterIndex + 1, firstBodyRow.children.length - 1)]?.focus?.();
+  showToast("Column added");
+}
+function clearTableDropTargets(root = document) {
+  const target = root?.querySelectorAll ? root : document;
+  target.querySelectorAll(".table-row-drop-target").forEach(row => row.classList.remove("table-row-drop-target"));
+  target.querySelectorAll(".table-column-drop-target").forEach(cell => cell.classList.remove("table-column-drop-target"));
+}
+function markTableColumnDropTarget(table, columnIndex) {
+  table.querySelectorAll("tr").forEach(row => row.children[columnIndex]?.classList.add("table-column-drop-target"));
+}
+function handleTableInsertControlClick(event) {
+  const button = event.target.closest?.(".table-insert-control");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const table = button.closest("table");
+  if (button.classList.contains("table-row-insert-control")) {
+    insertTableRowAfter(button.closest("tr"));
+    return true;
+  }
+  if (button.classList.contains("table-column-insert-control")) {
+    const index = Number(button.dataset.columnIndex || 0);
+    insertTableColumnAfter(table, index);
+    return true;
+  }
+  return false;
 }
 function ensureTableDragHandles(table) {
   if (!table) return;
   table.classList.add("table-drag-enabled");
-  if (table.dataset.dragHandlesReady === "true" && table.querySelector(".table-column-drag-handle")) return;
+  if (table.dataset.dragHandlesReady === "true" && table.querySelector(".table-column-drag-handle") && table.querySelector(".table-column-insert-control")) return;
   table.dataset.dragHandlesReady = "true";
-  table.querySelectorAll(".table-drag-handle").forEach(handle => handle.remove());
+  table.querySelectorAll(".table-drag-handle, .table-insert-control").forEach(handle => handle.remove());
 
   const bodyRows = Array.from(table.querySelectorAll("tbody tr"));
   const rowsForDrag = bodyRows.length ? bodyRows : Array.from(table.querySelectorAll("tr")).slice(1);
@@ -3363,11 +3448,13 @@ function ensureTableDragHandles(table) {
     const firstCell = row.children[0];
     if (!firstCell) return;
     firstCell.insertAdjacentHTML("afterbegin", '<span class="table-drag-handle table-row-drag-handle" draggable="true" contenteditable="false" title="Drag row" aria-label="Drag row">↕</span>');
+    firstCell.insertAdjacentHTML("beforeend", '<button type="button" class="table-insert-control table-row-insert-control" contenteditable="false" title="Insert row below" aria-label="Insert row below">+</button>');
   });
 
   const headerRow = table.querySelector("thead tr") || table.querySelector("tr");
   Array.from(headerRow?.children || []).forEach((cell, index) => {
     cell.insertAdjacentHTML("afterbegin", `<span class="table-drag-handle table-column-drag-handle" draggable="true" contenteditable="false" data-column-index="${index}" title="Drag column" aria-label="Drag column">↔</span>`);
+    cell.insertAdjacentHTML("beforeend", `<button type="button" class="table-insert-control table-column-insert-control" contenteditable="false" data-column-index="${index}" title="Insert column right" aria-label="Insert column right">+</button>`);
   });
 }
 function moveTableColumn(table, fromIndex, toIndex) {
@@ -3411,6 +3498,17 @@ function handleTableDragOver(event) {
   if (!table) return;
   event.preventDefault();
   event.dataTransfer.dropEffect = "move";
+  clearTableDropTargets(table);
+  if (draggedTableRow) {
+    const targetRow = event.target.closest("tr");
+    if (targetRow && targetRow.parentElement === draggedTableRow.parentElement && targetRow !== draggedTableRow) {
+      targetRow.classList.add("table-row-drop-target");
+    }
+  } else if (draggedTableColumnIndex >= 0) {
+    const targetCell = event.target.closest("th,td");
+    const targetIndex = targetCell ? Array.from(targetCell.parentElement.children).indexOf(targetCell) : -1;
+    if (targetIndex >= 0) markTableColumnDropTarget(table, targetIndex);
+  }
 }
 function handleTableDrop(event) {
   const table = event.target.closest?.("table");
@@ -3436,6 +3534,7 @@ function handleTableDrop(event) {
 function handleTableDragEnd(event) {
   document.querySelectorAll(".table-dragging").forEach(el => el.classList.remove("table-dragging"));
   document.querySelectorAll(".table-dragging-column").forEach(el => el.classList.remove("table-dragging-column"));
+  clearTableDropTargets();
   draggedTableRow = null;
   draggedTableColumnIndex = -1;
 }
@@ -3859,6 +3958,7 @@ els.visualEditor.addEventListener("change", event => {
 });
 els.visualEditor.addEventListener("click", event => {
   if (handleBlockDropdownClick(event)) return;
+  if (handleTableInsertControlClick(event)) return;
   const removeButton = event.target.closest(".block-remove-button");
   if (removeButton) {
     event.preventDefault();
@@ -3947,7 +4047,7 @@ els.markdownEditor.addEventListener("input", () => {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    els.saveStatus.textContent = "Saved at " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    markProjectSaved();
   }, 120);
 });
 els.editorToolbar.querySelectorAll("button[data-format]").forEach(button => button.addEventListener("click", () => execFormat(button.dataset.format)));
