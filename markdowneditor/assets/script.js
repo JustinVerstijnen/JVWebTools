@@ -1,6 +1,7 @@
 const STORAGE_KEY = "markdown-editor-project-v20";
 const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v19", "markdown-editor-project-v18", "markdown-editor-project-v17", "markdown-editor-project-v16", "markdown-editor-project-v15", "markdown-editor-project-v14", "markdown-editor-project-v13", "markdown-editor-project-v12", "markdown-editor-project-v11", "markdown-editor-project-v10", "markdown-editor-project-v9", "markdown-editor-project-v8", "markdown-editor-project-v7", "markdown-editor-project-v6", "markdown-editor-project-v5", "markdown-editor-project-v4", "markdown-editor-project-v3", "markdown-editor-project-v2"];
 const BLOB_SETTINGS_KEY = "markdown-editor-azure-blob-settings-v1";
+const CODE_DARK_MODE_KEY = "markdown-editor-code-dark-mode-v1";
 const AZURE_BLOB_API_VERSION = "2023-11-03";
 const DEFAULT_BLOB_SETTINGS = {
   accountName: "",
@@ -8,8 +9,9 @@ const DEFAULT_BLOB_SETTINGS = {
   accessKey: "",
   container: "",
   folderPath: "",
-  postId: "7000"
+  postId: ""
 };
+const FRONT_MATTER_HIGHLIGHT_KEYS = new Set(["title", "slug", "tags", "date", "categories", "description", "hidden", "weight"]);
 const IMAGE_MIME_EXTENSIONS = {
   "image/png": ".png",
   "image/jpeg": ".jpg",
@@ -44,6 +46,7 @@ const DEFAULT_IFRAME_TITLE = "";
 const els = {
   editorBtn: document.getElementById("editorBtn"),
   codeBtn: document.getElementById("codeBtn"),
+  codeThemeToggleBtn: document.getElementById("codeThemeToggleBtn"),
   postInfoBtn: document.getElementById("postInfoBtn"),
   blobSettingsBtn: document.getElementById("blobSettingsBtn"),
   importBtn: document.getElementById("importBtn"),
@@ -55,6 +58,8 @@ const els = {
   blockGallery: document.getElementById("blockGallery"),
   headingToc: document.getElementById("headingToc"),
   visualEditor: document.getElementById("visualEditor"),
+  markdownCodeShell: document.getElementById("markdownCodeShell"),
+  markdownHighlight: document.getElementById("markdownHighlight"),
   markdownEditor: document.getElementById("markdownEditor"),
   editorToolbar: document.getElementById("editorToolbar"),
   headingSelect: document.getElementById("headingSelect"),
@@ -146,6 +151,7 @@ const state = {
 };
 
 let blobSettings = loadBlobSettings();
+let codeDarkMode = loadCodeDarkMode();
 
 let savedRange = null;
 let saveTimer = null;
@@ -283,6 +289,123 @@ function unescapeHtml(value) {
   node.innerHTML = value;
   return node.value;
 }
+function loadCodeDarkMode() {
+  try {
+    const saved = localStorage.getItem(CODE_DARK_MODE_KEY);
+    return saved === null ? true : saved === "true";
+  } catch (error) {
+    console.warn("Could not load code theme preference", error);
+    return true;
+  }
+}
+function saveCodeDarkMode() {
+  try {
+    localStorage.setItem(CODE_DARK_MODE_KEY, String(codeDarkMode));
+  } catch (error) {
+    console.warn("Could not save code theme preference", error);
+  }
+}
+function applyCodeTheme() {
+  els.markdownCodeShell?.classList.toggle("code-dark", codeDarkMode);
+  if (!els.codeThemeToggleBtn) return;
+  els.codeThemeToggleBtn.setAttribute("aria-pressed", String(codeDarkMode));
+  els.codeThemeToggleBtn.title = codeDarkMode ? "Switch Markdown code view to light mode" : "Switch Markdown code view to dark mode";
+  els.codeThemeToggleBtn.innerHTML = codeDarkMode
+    ? '<i class="fa-solid fa-moon"></i> Code dark'
+    : '<i class="fa-solid fa-sun"></i> Code light';
+}
+function toggleCodeTheme() {
+  codeDarkMode = !codeDarkMode;
+  saveCodeDarkMode();
+  applyCodeTheme();
+  showToast(codeDarkMode ? "Markdown dark mode on" : "Markdown dark mode off");
+}
+function highlightInlineTokens(value = "") {
+  const tokenPattern = /(https?:\/\/[^\s<>"')\]]+|`[^`\n]+`)/gi;
+  let cursor = 0;
+  let html = "";
+  String(value || "").replace(tokenPattern, (token, _whole, offset) => {
+    html += escapeHtml(value.slice(cursor, offset));
+    const className = token.startsWith("`") ? "hl-code" : "hl-url";
+    html += `<span class="${className}">${escapeHtml(token)}</span>`;
+    cursor = offset + token.length;
+    return token;
+  });
+  html += escapeHtml(value.slice(cursor));
+  return html;
+}
+function highlightShortcodeSegment(value = "") {
+  const tokenPattern = /(https?:\/\/[^\s<>"')\]]+|`[^`\n]+`)/gi;
+  let cursor = 0;
+  let html = "";
+  String(value || "").replace(tokenPattern, (token, _whole, offset) => {
+    if (offset > cursor) html += `<span class="hl-shortcode">${escapeHtml(value.slice(cursor, offset))}</span>`;
+    const className = token.startsWith("`") ? "hl-code" : "hl-url";
+    html += `<span class="${className}">${escapeHtml(token)}</span>`;
+    cursor = offset + token.length;
+    return token;
+  });
+  if (cursor < value.length) html += `<span class="hl-shortcode">${escapeHtml(value.slice(cursor))}</span>`;
+  return html;
+}
+function highlightShortcodesInLine(line = "") {
+  const shortcodePattern = /(\{\{(?:<|%)[\s\S]*?(?:>|%)\}\})/g;
+  let cursor = 0;
+  let html = "";
+  String(line || "").replace(shortcodePattern, (token, _whole, offset) => {
+    html += highlightInlineTokens(line.slice(cursor, offset));
+    html += highlightShortcodeSegment(token);
+    cursor = offset + token.length;
+    return token;
+  });
+  html += highlightInlineTokens(line.slice(cursor));
+  return html;
+}
+function highlightFrontMatterLine(line = "") {
+  const keyMatch = String(line || "").match(/^(\s*)([A-Za-z0-9_-]+)(\s*:\s*)(.*)$/);
+  if (keyMatch) {
+    const [, indent, key, separator, rawValue] = keyMatch;
+    if (FRONT_MATTER_HIGHLIGHT_KEYS.has(key.toLowerCase())) {
+      return `${escapeHtml(indent)}<span class="hl-fm-key">${escapeHtml(key)}</span><span class="hl-separator">${escapeHtml(separator)}</span><span class="hl-fm-value">${escapeHtml(rawValue)}</span>`;
+    }
+  }
+  if (/^\s*-\s+/.test(line)) return `<span class="hl-fm-value">${escapeHtml(line)}</span>`;
+  return highlightInlineTokens(line);
+}
+function highlightMarkdownBodyLine(line = "") {
+  if (/^\s{0,3}(#{1,6})\s+/.test(line)) return `<span class="hl-heading">${escapeHtml(line)}</span>`;
+  if (/^\s*(?:[-*+]|\d+\.)\s+/.test(line)) return `<span class="hl-list">${escapeHtml(line)}</span>`;
+  if (/^\s*(```|~~~)/.test(line)) return `<span class="hl-fence">${escapeHtml(line)}</span>`;
+  return highlightShortcodesInLine(line);
+}
+function highlightMarkdown(value = "") {
+  const text = String(value || "");
+  if (!text) return "";
+  const lines = text.split(/\r?\n/);
+  let inFrontMatter = false;
+  const html = lines.map((line, index) => {
+    if (index === 0 && line.trim() === "---") {
+      inFrontMatter = true;
+      return `<span class="hl-fence">${escapeHtml(line)}</span>`;
+    }
+    if (inFrontMatter && line.trim() === "---") {
+      inFrontMatter = false;
+      return `<span class="hl-fence">${escapeHtml(line)}</span>`;
+    }
+    return inFrontMatter ? highlightFrontMatterLine(line) : highlightMarkdownBodyLine(line);
+  }).join("\n");
+  return text.endsWith("\n") ? `${html} ` : html;
+}
+function syncMarkdownHighlightScroll() {
+  if (!els.markdownHighlight || !els.markdownEditor) return;
+  els.markdownHighlight.scrollTop = els.markdownEditor.scrollTop;
+  els.markdownHighlight.scrollLeft = els.markdownEditor.scrollLeft;
+}
+function updateMarkdownHighlight() {
+  if (!els.markdownHighlight || !els.markdownEditor) return;
+  els.markdownHighlight.innerHTML = highlightMarkdown(els.markdownEditor.value);
+  syncMarkdownHighlightScroll();
+}
 function escapeShortcodeAttribute(value) {
   return String(value || "")
     .replace(/\\/g, "\\\\")
@@ -386,7 +509,7 @@ function normalizeBlobSettings(value = {}) {
     accessKey: String(settings.accessKey || "").trim(),
     container: String(settings.container || "").trim(),
     folderPath: normalizeBlobFolderPath(settings.folderPath),
-    postId: String(settings.postId || "").trim() || DEFAULT_BLOB_SETTINGS.postId
+    postId: String(settings.postId ?? "").trim()
   };
 }
 function loadBlobSettings() {
@@ -472,6 +595,20 @@ function clearBlobSettings() {
   fillBlobSettingsForm();
   updateBlobSettingsButton();
   setBlobSettingsStatus("Blob settings cleared.", "success");
+}
+function clearBlobPostTargetSettings() {
+  blobSettings = normalizeBlobSettings({
+    ...blobSettings,
+    container: "",
+    folderPath: "",
+    postId: ""
+  });
+  localStorage.setItem(BLOB_SETTINGS_KEY, JSON.stringify(blobSettings));
+  setDatalistOptions(els.blobFolderOptions, []);
+  if (els.blobContainer) els.blobContainer.value = "";
+  if (els.blobFolderPath) els.blobFolderPath.value = "";
+  if (els.blobPostId) els.blobPostId.value = "";
+  updateBlobSettingsButton();
 }
 function getContentTypeFromExtension(extension = "") {
   switch (String(extension || "").toLowerCase()) {
@@ -1256,6 +1393,7 @@ function syncMarkdownEditorFrontMatter() {
   const safeStart = Math.min(start, els.markdownEditor.value.length);
   const safeEnd = Math.min(end, els.markdownEditor.value.length);
   els.markdownEditor.setSelectionRange(safeStart, safeEnd);
+  updateMarkdownHighlight();
 }
 function setMetadataTitleFromProjectName() {
   const previousTitle = state.metadata?.title || "";
@@ -1348,6 +1486,7 @@ function importMarkdownFile(file) {
     fillPostInfoForm();
     state.markdownCache = String(text || "");
     els.markdownEditor.value = state.markdownCache;
+    updateMarkdownHighlight();
     applyViewChrome(preferredView);
     updateTableToolbarVisibility();
     saveProject();
@@ -1867,6 +2006,7 @@ function render() {
   updateHeadingOutline();
   updateTableToolbarVisibility();
   updateBlobSettingsButton();
+  applyCodeTheme();
   setView("editor");
   saveProject();
 }
@@ -2099,11 +2239,14 @@ function addInlineBlockControls(scope = els.visualEditor) {
 
 function applyViewChrome(view) {
   state.view = view;
+  document.body.classList.toggle("is-markdown-view", view === "markdown");
   els.editorBtn.classList.toggle("active", view === "editor");
   els.codeBtn.classList.toggle("active", view === "markdown");
   els.visualEditor.style.display = view === "editor" ? "block" : "none";
   els.editorToolbar.style.display = view === "editor" ? "flex" : "none";
+  if (els.markdownCodeShell) els.markdownCodeShell.style.display = view === "markdown" ? "block" : "none";
   els.markdownEditor.style.display = view === "markdown" ? "block" : "none";
+  if (view === "markdown") updateMarkdownHighlight();
 }
 function setView(view) {
   if (view === "editor") {
@@ -2119,6 +2262,7 @@ function setView(view) {
   } else {
     state.markdownCache = buildMarkdown();
     els.markdownEditor.value = state.markdownCache;
+    updateMarkdownHighlight();
     applyViewChrome("markdown");
   }
   updateHeadingOutline();
@@ -2816,6 +2960,8 @@ function resetProject() {
   els.projectName.value = state.projectName;
   els.visualEditor.innerHTML = "";
   els.markdownEditor.value = "";
+  updateMarkdownHighlight();
+  clearBlobPostTargetSettings();
   normalizeEditorContent();
   updateEditorPlaceholder();
   fillPostInfoForm();
@@ -2827,12 +2973,13 @@ function resetProject() {
 
 `;
     els.markdownEditor.value = state.markdownCache;
+    updateMarkdownHighlight();
   }
   updateHeadingOutline();
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   markProjectSaved();
-  showToast("Project deleted");
+  showToast("Project deleted; blob post fields cleared");
 }
 
 
@@ -3961,6 +4108,7 @@ function updateAlertColorSelect(select) {
 
 els.editorBtn.addEventListener("click", () => setView("editor"));
 els.codeBtn.addEventListener("click", () => setView("markdown"));
+els.codeThemeToggleBtn?.addEventListener("click", toggleCodeTheme);
 els.postInfoBtn.addEventListener("click", () => { fillPostInfoForm(); els.metadataDrawer.classList.add("open"); });
 els.blobSettingsBtn?.addEventListener("click", openBlobSettingsPanel);
 els.closePostInfoBtn.addEventListener("click", () => els.metadataDrawer.classList.remove("open"));
@@ -4117,6 +4265,7 @@ els.visualEditor.addEventListener("dragstart", handleTableDragStart);
 els.visualEditor.addEventListener("dragover", handleTableDragOver);
 els.visualEditor.addEventListener("drop", handleTableDrop);
 els.visualEditor.addEventListener("dragend", handleTableDragEnd);
+els.markdownEditor.addEventListener("scroll", syncMarkdownHighlightScroll);
 els.markdownEditor.addEventListener("input", () => {
   const normalized = normalizeMarkdownListSpacing(els.markdownEditor.value);
   if (normalized !== els.markdownEditor.value) {
@@ -4126,6 +4275,7 @@ els.markdownEditor.addEventListener("input", () => {
     els.markdownEditor.setSelectionRange(Math.min(start, normalized.length), Math.min(end, normalized.length));
   }
   state.markdownCache = els.markdownEditor.value;
+  updateMarkdownHighlight();
   const { frontMatter } = splitMarkdownFrontMatter(els.markdownEditor.value);
   rememberRawFrontMatter(frontMatter);
   applyParsedFrontMatter(frontMatter);

@@ -33,6 +33,7 @@
       <div class="view-switch" aria-label="Editor view">
         <button class="pill active" id="editorBtn" type="button"><i class="fa-solid fa-pen-to-square"></i> Editor</button>
         <button class="pill" id="codeBtn" type="button"><i class="fa-solid fa-code"></i> Markdown</button>
+        <button class="pill code-theme-toggle" id="codeThemeToggleBtn" type="button" aria-pressed="true" title="Toggle Markdown code dark mode"><i class="fa-solid fa-moon"></i> Code dark</button>
       </div>
       <div class="top-actions">
         <button class="pill" id="postInfoBtn" type="button"><i class="fa-solid fa-circle-info"></i> Post Information</button>
@@ -79,7 +80,10 @@
 
         <div class="workspace-body">
           <article id="visualEditor" class="visual-editor" contenteditable="true" spellcheck="true" aria-label="Editable document"></article>
-          <textarea id="markdownEditor" class="code-textarea" spellcheck="false" aria-label="Markdown code editor"></textarea>
+          <div id="markdownCodeShell" class="code-editor-shell">
+            <pre id="markdownHighlight" class="markdown-highlight" aria-hidden="true"></pre>
+            <textarea id="markdownEditor" class="code-textarea" spellcheck="false" aria-label="Markdown code editor"></textarea>
+          </div>
         </div>
       </section>
 
