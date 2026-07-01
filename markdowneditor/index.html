@@ -132,7 +132,7 @@
       <div class="field"><label for="blobFolderPath">Folder / blob prefix</label><input id="blobFolderPath" type="text" list="blobFolderOptions" placeholder="tools-2375" autocomplete="off" /><datalist id="blobFolderOptions"></datalist></div>
       <div class="panel-actions panel-actions-left"><button class="pill" id="loadBlobFoldersBtn" type="button"><i class="fa-solid fa-folder-tree"></i> Load folders</button></div>
       <div class="field"><label for="blobPostId">Post ID</label><input id="blobPostId" type="text" inputmode="numeric" placeholder="7000" autocomplete="off" /></div>
-      <div class="field-help cors-help">Pasted image files use jv-media-{postId}-{sha256}.ext. These settings are stored in this browser. Set Azure CORS in the storage account to allow your endpoint/host with allowed headers authorization,content-type,x-ms-* and exposed headers to be x-ms-*</div>
+      <div class="field-help cors-help">Pasted image files use jv-media-{postId}-{sha256}.ext convention. Blob settings are stored in this browser until "Delete" button is used or cache is deleted. Configure Azure CORS in the storage account to allow your endpoint/host with allowed headers authorization, content-type, x-ms-* and exposed headers to be x-ms-*.</div>
       <div class="field-help blob-settings-status" id="blobSettingsStatus" aria-live="polite"></div>
       <div class="panel-actions"><button class="pill danger" id="clearBlobSettingsBtn" type="button">Clear</button><button class="pill" id="cancelBlobSettingsBtn" type="button">Cancel</button><button class="pill primary" id="saveBlobSettingsBtn" type="button">Save settings</button></div>
     </div>
