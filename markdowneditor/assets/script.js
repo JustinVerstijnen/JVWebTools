@@ -2457,7 +2457,9 @@ function handlePanelKeydown(event) {
     return;
   }
   if (event.key !== "Enter") return;
+  if (panel === els.metadataDrawer && event.target?.tagName === "TEXTAREA") return;
   event.preventDefault();
+  if (panel === els.metadataDrawer) savePostInfoForm();
   if (panel === els.imagePanel) insertImageFromPanel();
   if (panel === els.blobSettingsPanel) saveBlobSettingsFromForm();
   if (panel === els.buttonPanel) saveButtonFromPanel();
@@ -4113,6 +4115,8 @@ els.codeThemeToggleBtn?.addEventListener("click", toggleCodeTheme);
 els.postInfoBtn.addEventListener("click", () => { fillPostInfoForm(); els.metadataDrawer.classList.add("open"); });
 els.blobSettingsBtn?.addEventListener("click", openBlobSettingsPanel);
 els.closePostInfoBtn.addEventListener("click", () => els.metadataDrawer.classList.remove("open"));
+els.metadataDrawer.addEventListener("click", event => { if (event.target === els.metadataDrawer) els.metadataDrawer.classList.remove("open"); });
+els.metadataDrawer.addEventListener("keydown", handlePanelKeydown);
 els.savePostInfoBtn.addEventListener("click", savePostInfoForm);
 els.fmTitle.addEventListener("input", () => {
   const title = els.fmTitle.value.trim();

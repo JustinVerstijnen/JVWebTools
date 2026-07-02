@@ -391,53 +391,15 @@ body.is-markdown-view .code-theme-toggle {
   background: #004c5a;
 }
 .bulb-icon {
-  position: relative;
-  display: block;
-  width: 22px;
-  height: 22px;
+  width: 21px;
+  height: 21px;
   color: currentColor;
-}
-.bulb-icon::before {
-  content: "";
-  position: absolute;
-  left: 6px;
-  top: 6px;
-  width: 10px;
-  height: 10px;
-  border: 2px solid currentColor;
-  border-bottom: 0;
-  border-radius: 10px 10px 5px 5px;
-}
-.bulb-icon::after {
-  content: "";
-  position: absolute;
-  left: 8px;
-  top: 15px;
-  width: 6px;
-  height: 5px;
-  border-top: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-}
-.bulb-ray {
-  position: absolute;
-  width: 2px;
-  height: 5px;
-  border-radius: 999px;
-  background: currentColor;
-}
-.bulb-ray-top {
-  top: 0;
-  left: 10px;
-}
-.bulb-ray-left {
-  top: 5px;
-  left: 1px;
-  transform: rotate(-45deg);
-}
-.bulb-ray-right {
-  top: 5px;
-  right: 1px;
-  transform: rotate(45deg);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: block;
 }
 .editor-toolbar {
   display: flex;
@@ -729,6 +691,10 @@ textarea:focus,
   width: min(520px, 100%);
   padding: 18px;
   background: var(--panel-strong);
+}
+.post-info-card {
+  max-height: min(760px, calc(100vh - 36px));
+  overflow: auto;
 }
 .panel-animate { animation: modalIn 180ms ease; }
 @keyframes modalIn {
