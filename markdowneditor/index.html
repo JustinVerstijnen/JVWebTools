@@ -31,9 +31,8 @@
         <p>Write visually, drag blocks, export clean Markdown for Docsy and GitHub Pages. Optimized for desktop computers.</p>
       </div>
       <div class="view-switch" aria-label="Editor view">
-        <button class="pill active" id="editorBtn" type="button"><i class="fa-solid fa-pen-to-square"></i> Editor</button>
-        <button class="pill" id="codeBtn" type="button"><i class="fa-solid fa-code"></i> Markdown</button>
-        <button class="pill code-theme-toggle" id="codeThemeToggleBtn" type="button" aria-pressed="true" title="Toggle Markdown code dark mode"><i class="fa-solid fa-moon"></i> Code dark</button>
+        <button class="view-option active" id="editorBtn" type="button" aria-pressed="true"><i class="fa-solid fa-pen-to-square"></i> Editor</button>
+        <button class="view-option" id="codeBtn" type="button" aria-pressed="false"><i class="fa-solid fa-code"></i> Markdown</button>
       </div>
       <div class="top-actions">
         <button class="pill" id="postInfoBtn" type="button"><i class="fa-solid fa-circle-info"></i> Post Information</button>
@@ -55,7 +54,16 @@
       <section class="workspace">
         <div class="workspace-head">
           <input id="projectName" type="text" placeholder="Post title / file name" />
-          <span class="hint" id="saveStatus">Not saved yet</span>
+          <div class="workspace-status">
+            <span class="hint" id="saveStatus">Not saved yet</span>
+            <button class="code-theme-toggle" id="codeThemeToggleBtn" type="button" aria-pressed="true" title="Toggle Markdown code dark mode">
+              <span class="bulb-icon" aria-hidden="true">
+                <span class="bulb-ray bulb-ray-top"></span>
+                <span class="bulb-ray bulb-ray-left"></span>
+                <span class="bulb-ray bulb-ray-right"></span>
+              </span>
+            </button>
+          </div>
         </div>
 
         <div class="editor-toolbar" id="editorToolbar" aria-label="Formatting toolbar">

@@ -308,11 +308,10 @@ function saveCodeDarkMode() {
 function applyCodeTheme() {
   els.markdownCodeShell?.classList.toggle("code-dark", codeDarkMode);
   if (!els.codeThemeToggleBtn) return;
+  els.codeThemeToggleBtn.classList.toggle("is-dark-code", codeDarkMode);
   els.codeThemeToggleBtn.setAttribute("aria-pressed", String(codeDarkMode));
   els.codeThemeToggleBtn.title = codeDarkMode ? "Switch Markdown code view to light mode" : "Switch Markdown code view to dark mode";
-  els.codeThemeToggleBtn.innerHTML = codeDarkMode
-    ? '<i class="fa-solid fa-moon"></i> Code dark'
-    : '<i class="fa-solid fa-sun"></i> Code light';
+  els.codeThemeToggleBtn.setAttribute("aria-label", els.codeThemeToggleBtn.title);
 }
 function toggleCodeTheme() {
   codeDarkMode = !codeDarkMode;
@@ -2242,6 +2241,8 @@ function applyViewChrome(view) {
   document.body.classList.toggle("is-markdown-view", view === "markdown");
   els.editorBtn.classList.toggle("active", view === "editor");
   els.codeBtn.classList.toggle("active", view === "markdown");
+  els.editorBtn.setAttribute("aria-pressed", String(view === "editor"));
+  els.codeBtn.setAttribute("aria-pressed", String(view === "markdown"));
   els.visualEditor.style.display = view === "editor" ? "block" : "none";
   els.editorToolbar.style.display = view === "editor" ? "flex" : "none";
   if (els.markdownCodeShell) els.markdownCodeShell.style.display = view === "markdown" ? "block" : "none";
