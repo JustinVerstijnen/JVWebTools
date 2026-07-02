@@ -362,14 +362,13 @@ button:active { transform: translateY(0); }
 .code-theme-toggle {
   display: none;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   border: 1px solid rgba(18, 32, 51, 0.12);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.82);
-  color: #111827;
-  box-shadow: none;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px rgba(15, 30, 50, 0.08);
 }
 body.is-markdown-view .code-theme-toggle {
   display: grid;
@@ -381,26 +380,22 @@ body.is-markdown-view .code-theme-toggle {
   outline: none;
 }
 .code-theme-toggle.is-dark-code {
-  color: #ffffff;
-  background: #003b46;
-  border-color: rgba(76, 201, 240, 0.32);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: #050505;
+  border-color: rgba(255, 212, 0, 0.34);
+  box-shadow: 0 6px 16px rgba(5, 5, 5, 0.18);
 }
 .code-theme-toggle.is-dark-code:hover,
 .code-theme-toggle.is-dark-code:focus-visible {
-  background: #004c5a;
+  background: #111111;
 }
 .bulb-icon {
-  width: 21px;
-  height: 21px;
-  color: currentColor;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  width: 25px;
+  height: 25px;
   display: block;
 }
+.bulb-glass { fill: #ffd400; }
+.bulb-filament { fill: #050505; }
+.bulb-base { fill: #5d5963; }
 .editor-toolbar {
   display: flex;
   gap: 8px;
