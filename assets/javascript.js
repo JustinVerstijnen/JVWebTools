@@ -72,6 +72,14 @@ const tools = [
     image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-portchecker.png"
   },
   {
+    title: "Azure Deployment Templates",
+    description: "This tool is a gallery for various Azure Deployment Templates I regularly use for different researches and guides.",
+    toolUrl: "https://tools.justinverstijnen.nl/azuredeploymenttemplates",
+    shortcut: "https://azdeploy.jvapp.nl",
+    github: "https://github.com/JustinVerstijnen/AzureDeploymentTemplates",
+    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-portchecker.png"
+  },
+  {
     title: "Markdown Editor",
     description: "The Markdown Editor tool which can be used to write articles, documentation and other information into clear readable text.",
     toolUrl: "https://tools.justinverstijnen.nl/markdowneditor",
