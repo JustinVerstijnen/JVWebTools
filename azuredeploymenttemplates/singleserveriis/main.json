@@ -1,0 +1,294 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "projectName": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 8,
+      "metadata": {
+        "description": "The project name, which is used in Azure resource names and the Windows computer name."
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "Username for the Windows Server VM."
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for the Windows Server VM."
+      }
+    },
+    "sourceIpAddress": {
+      "type": "string",
+      "metadata": {
+        "description": "Public IPv4 address that is allowed to connect with RDP. Enter only the IP address, without prefixes like /32."
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2as_v7",
+      "metadata": {
+        "description": "Enter an Azure VM size, for example Standard_D2as_v5 or Standard_D2as_v7."
+      }
+    },
+    "webSourceAddressPrefix": {
+      "type": "string",
+      "defaultValue": "Internet",
+      "metadata": {
+        "description": "Source address prefix that is allowed to access the IIS website on HTTP port 80 and HTTPS port 443. Default is Internet."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Add Azure resource tags as a JSON object. Leave blank if no tags are needed."
+      }
+    }
+  },
+  "variables": {
+    "location": "[resourceGroup().location]",
+    "vnetAddressPrefix": "10.69.0.0/16",
+    "subnetPrefix": "10.69.0.0/24",
+    "vmPrivateIpAddress": "10.69.0.4",
+    "lowerProjectName": "[toLower(parameters('projectName'))]",
+    "namePrefix": "[format('jv-{0}', variables('lowerProjectName'))]",
+    "vnetName": "[format('vnet-{0}', variables('namePrefix'))]",
+    "subnetName": "[format('snet-{0}', variables('namePrefix'))]",
+    "nsgName": "[format('nsg-{0}', variables('namePrefix'))]",
+    "publicIpName": "[format('pip-{0}', variables('namePrefix'))]",
+    "nicName": "[format('nic-{0}', variables('namePrefix'))]",
+    "vmName": "[format('vm-{0}', variables('namePrefix'))]",
+    "osDiskName": "[format('osdisk-{0}', variables('namePrefix'))]",
+    "rdpRuleName": "Allow-RDP-Inbound",
+    "httpHttpsRuleName": "Allow-HTTP-HTTPS-Inbound",
+    "installIisScriptLines": [
+      "$ErrorActionPreference = 'Stop'",
+      "Install-WindowsFeature -Name Web-Server -IncludeManagementTools",
+      "Install-WindowsFeature -Name Web-Mgmt-Tools",
+      "[format('$html = ''<html><head><title>{0}</title></head><body><h1>IIS is running</h1><p>Server: {0}</p><p>Deployed with Bicep and ARM.</p></body></html>''', variables('vmName'))]",
+      "Set-Content -Path 'C:/inetpub/wwwroot/index.html' -Value $html -Encoding UTF8",
+      "exit 0"
+    ],
+    "installIisCommand": "[format('powershell.exe -ExecutionPolicy Unrestricted -NoProfile -Command \"{0}\"', join(variables('installIisScriptLines'), '; '))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2023-11-01",
+      "name": "[variables('nsgName')]",
+      "location": "[variables('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "[variables('httpHttpsRuleName')]",
+            "properties": {
+              "priority": 1000,
+              "direction": "Inbound",
+              "access": "Allow",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRanges": [
+                "80",
+                "443"
+              ],
+              "sourceAddressPrefix": "[parameters('webSourceAddressPrefix')]",
+              "destinationAddressPrefix": "*",
+              "description": "Allow HTTP and HTTPS traffic to the IIS website."
+            }
+          },
+          {
+            "name": "[variables('rdpRuleName')]",
+            "properties": {
+              "priority": 2000,
+              "direction": "Inbound",
+              "access": "Allow",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "[format('{0}/32', parameters('sourceIpAddress'))]",
+              "destinationAddressPrefix": "*",
+              "description": "Allow RDP only from the configured administrator IP address."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-11-01",
+      "name": "[variables('vnetName')]",
+      "location": "[variables('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('vnetAddressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('subnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+              }
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2023-11-01",
+      "name": "[variables('publicIpName')]",
+      "location": "[variables('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static"
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2023-11-01",
+      "name": "[variables('nicName')]",
+      "location": "[variables('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[variables('vmPrivateIpAddress')]",
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnetName'))]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
+              }
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2023-09-01",
+      "name": "[variables('vmName')]",
+      "location": "[variables('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "windowsConfiguration": {
+            "provisionVMAgent": true,
+            "enableAutomaticUpdates": true
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2022-datacenter-azure-edition",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "[variables('osDiskName')]",
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "Premium_LRS"
+            }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]",
+              "properties": {
+                "primary": true
+              }
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "apiVersion": "2023-09-01",
+      "name": "[format('{0}/{1}', variables('vmName'), 'install-iis')]",
+      "location": "[variables('location')]",
+      "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.10",
+        "autoUpgradeMinorVersion": true,
+        "protectedSettings": {
+          "commandToExecute": "[variables('installIisCommand')]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "resourceGroupName": {
+      "type": "string",
+      "value": "[resourceGroup().name]"
+    },
+    "virtualMachineName": {
+      "type": "string",
+      "value": "[variables('vmName')]"
+    },
+    "privateIPAddress": {
+      "type": "string",
+      "value": "[variables('vmPrivateIpAddress')]"
+    },
+    "publicIPAddress": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName')), '2023-11-01').ipAddress]"
+    },
+    "rdpCommand": {
+      "type": "string",
+      "value": "[format('mstsc /v:{0}', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName')), '2023-11-01').ipAddress)]"
+    },
+    "websiteUrl": {
+      "type": "string",
+      "value": "[format('http://{0}', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName')), '2023-11-01').ipAddress)]"
+    },
+    "postDeploymentNote": {
+      "type": "string",
+      "value": "IIS is installed with a default test page. Open the websiteUrl output after the VM extension has completed."
+    }
+  }
+}
