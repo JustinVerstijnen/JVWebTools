@@ -131,3 +131,9 @@ The Azure Portal wizard parameters now include default values for:
 The AVD host pool is now deployed as a normal top-level ARM resource again. The earlier nested host pool deployment has been removed because repeated deployments could fail with `Microsoft.DesktopVirtualization/hostPools/... was not found` when later resources tried to resolve the host pool.
 
 This means `registrationTokenExpirationTime` is visible in the Azure Portal wizard again, because ARM only allows `utcNow()` in parameter default values. Leave the default unchanged; it is generated as 27 days from deployment time.
+
+## Intune enrollment default
+
+`enrollSessionHostsInIntune` now defaults to `false`.
+
+This avoids a common deployment failure where Intune/Defender/WDAC/ASR policies apply before the Azure Virtual Desktop agent is installed by the DSC extension. If you want Intune enrollment during deployment, set this parameter to `true` only after confirming your enrollment restrictions and endpoint security policies allow MSI/process execution from the Azure VM extension/DSC plugin path.
