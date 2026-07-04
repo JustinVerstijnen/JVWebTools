@@ -15,13 +15,13 @@ param adminUsername string
 param adminPassword string
 
 @description('Object ID. Required. Entra ID group that receives AVD desktop access, Virtual Machine User Login, and Storage File Data SMB Share Contributor permissions.')
-param avdDesktopAccessGroupObjectId string
+param avdDesktopAccessGroupObjectId string = 'fa65fdc8-3c24-48a2-bd56-eb2939f965f8'
 
 @description('Object ID. Required. Entra ID group that receives Virtual Machine Administrator Login and Storage File Data Privileged Contributor permissions.')
-param avdAdminsGroupObjectId string
+param avdAdminsGroupObjectId string = 'd3216b41-c48e-478c-acc4-50d35dff57ab'
 
 @description('Object ID. Optional. Azure Virtual Desktop enterprise application/service principal object ID. Fill this for Start VM on Connect RBAC. App/client ID is 9cdead84-a844-4324-93f2-b2e6bb768d07, but the object ID is tenant-specific. Leave empty to skip this role assignment.')
-param avdServicePrincipalObjectId string = ''
+param avdServicePrincipalObjectId string = '7ea13f1d-177a-4c0e-98a3-8ef6814a7190'
 
 @description('Object ID. Optional. Existing Entra ID computer/device group for AVD session hosts. This template only returns the value for policy targeting; it does not create or populate the group.')
 param avdComputerGroupObjectId string = ''
@@ -426,7 +426,7 @@ resource avdRegistrationExtension 'Microsoft.Compute/virtualMachines/extensions@
     }
     protectedSettings: {
       properties: {
-        registrationInfoToken: hostPool.outputs.registrationInfoToken
+        registrationInfoToken: first(listRegistrationTokens(extensionResourceId(resourceGroup().id, 'Microsoft.DesktopVirtualization/hostPools', hostPoolName), '2023-09-05').value).token
       }
     }
   }

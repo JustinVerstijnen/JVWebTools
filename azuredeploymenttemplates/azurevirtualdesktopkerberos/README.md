@@ -112,3 +112,17 @@ https://raw.githubusercontent.com/JustinVerstijnen/JV-Azure-Deployment-Templates
 - The AVD registration token is retrieved with `listRegistrationTokens()` instead of `reference(...).registrationInfo.token`.
 - This is required because `registrationInfo` is not returned on GET/reference for newer Azure Virtual Desktop host pool API versions.
 - If `AADLoginForWindows` fails with hostname `0x801c0083`, remove the old Entra/Intune device object or deploy with a new `sessionHostNamePrefix`.
+
+## Secure output fix
+
+The AVD registration token is no longer passed as a nested deployment `secureString` output.
+ARM does not expose the `.value` of secure outputs to another template. The DSC extension now retrieves the registration token directly with `listRegistrationTokens()` inside `protectedSettings`, after the nested host pool deployment has completed.
+
+## Default Object IDs
+
+The Azure Portal wizard parameters now include default values for:
+
+- `avdDesktopAccessGroupObjectId`: `fa65fdc8-3c24-48a2-bd56-eb2939f965f8`
+- `avdAdminsGroupObjectId`: `d3216b41-c48e-478c-acc4-50d35dff57ab`
+- `avdServicePrincipalObjectId`: `7ea13f1d-177a-4c0e-98a3-8ef6814a7190`
+- `avdComputerGroupObjectId`: empty optional default

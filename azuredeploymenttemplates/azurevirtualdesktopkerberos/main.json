@@ -3,7 +3,9 @@
   "contentVersion": "1.0.0.0",
   "metadata": {
     "source": "Converted from JV-TF-AzureVirtualDesktopKerberos Terraform project to ARM JSON; Bicep source is main.bicep.",
-    "tokenFix": "registrationInfoToken is retrieved with listRegistrationTokens() because registrationInfo.token is not returned by GET/reference for newer AVD hostPool APIs."
+    "tokenFix": "registrationInfoToken is retrieved with listRegistrationTokens() because registrationInfo.token is not returned by GET/reference for newer AVD hostPool APIs.",
+    "secureOutputFix": "The DSC extension retrieves the AVD registration token directly with listRegistrationTokens() inside protectedSettings. The token is not passed through a nested secureString output.",
+    "defaultObjectIds": "Default Object IDs added for AVD desktop access group, AVD admins group, AVD service principal, and optional AVD computer group."
   },
   "parameters": {
     "projectName": {
@@ -52,7 +54,7 @@
       "metadata": {
         "description": "Optional existing Entra ID computer/device group Object ID for AVD session hosts. This template only returns the value for policy targeting; it does not create or populate the group."
       },
-      "defaultValue": "07530aa4-48d1-474c-8f0c-bbae4f41808b"
+      "defaultValue": ""
     },
     "workspaceFriendlyName": {
       "type": "string",
@@ -438,10 +440,6 @@
             "hostPoolRdpProperties": {
               "type": "string",
               "value": "[parameters('entraSsoRdpProperties')]"
-            },
-            "registrationInfoToken": {
-              "type": "secureString",
-              "value": "[first(listRegistrationTokens(extensionResourceId(resourceGroup().id, 'Microsoft.DesktopVirtualization/hostPools', parameters('hostPoolName')), '2023-09-05').value).token]"
             }
           }
         }
@@ -608,7 +606,7 @@
         },
         "protectedSettings": {
           "properties": {
-            "registrationInfoToken": "[reference(resourceId('Microsoft.Resources/deployments', variables('hostPoolDeploymentName')), '2022-09-01').outputs.registrationInfoToken.value]"
+            "registrationInfoToken": "[first(listRegistrationTokens(extensionResourceId(resourceGroup().id, 'Microsoft.DesktopVirtualization/hostPools', variables('hostPoolName')), '2023-09-05').value).token]"
           }
         }
       },
