@@ -5,7 +5,6 @@ This folder contains the Bicep and ARM version of the old Terraform Azure Virtua
 ## Files
 
 - `main.bicep` - readable Bicep source.
-- `hostpool.bicep` - nested host pool module used to keep the registration token expiration hidden from the main Azure Portal wizard while preserving the dynamic deployment-time default.
 - `main.json` - ARM template for Azure Portal deployment.
 - `deploy.html` - Deploy to Azure button using the same structure as the existing Deployment Templates repo.
 
@@ -126,3 +125,9 @@ The Azure Portal wizard parameters now include default values for:
 - `avdAdminsGroupObjectId`: `d3216b41-c48e-478c-acc4-50d35dff57ab`
 - `avdServicePrincipalObjectId`: `7ea13f1d-177a-4c0e-98a3-8ef6814a7190`
 - `avdComputerGroupObjectId`: empty optional default
+
+## Stable flat host pool fix
+
+The AVD host pool is now deployed as a normal top-level ARM resource again. The earlier nested host pool deployment has been removed because repeated deployments could fail with `Microsoft.DesktopVirtualization/hostPools/... was not found` when later resources tried to resolve the host pool.
+
+This means `registrationTokenExpirationTime` is visible in the Azure Portal wizard again, because ARM only allows `utcNow()` in parameter default values. Leave the default unchanged; it is generated as 27 days from deployment time.

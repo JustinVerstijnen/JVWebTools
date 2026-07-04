@@ -7,6 +7,9 @@ param projectName string
 
 var location = resourceGroup().location
 
+@description('AVD registration token expiration time. Default is 27 days from deployment time. Normally do not change this.')
+param registrationTokenExpirationTime string = dateTimeAdd(utcNow(), 'P27D')
+
 @description('Username. Required. Local administrator username for the AVD session host VMs.')
 param adminUsername string
 
@@ -259,20 +262,32 @@ resource fslogixShare 'Microsoft.Storage/storageAccounts/fileServices/shares@202
 
 // The host pool is created in a nested module so the registration-token expiration can stay hidden from the Azure Portal wizard.
 // Downstream resources use module outputs to avoid host pool ResourceNotFound timing/reference issues.
-module hostPool 'hostpool.bicep' = {
-  name: 'deploy-${projectClean}-hostpool'
-  params: {
-    hostPoolName: hostPoolName
-    location: location
-    tags: tags
-    hostPoolLoadBalancerType: hostPoolLoadBalancerType
-    hostPoolMaximumSessionsAllowed: hostPoolMaximumSessionsAllowed
-    hostPoolDescription: hostPoolDescription
-    entraSsoRdpProperties: entraSsoRdpProperties
+
+
+resource hostPool 'Microsoft.DesktopVirtualization/hostPools@2024-04-03' = {
+  name: hostPoolName
+  location: location
+  tags: tags
+  properties: {
+    hostPoolType: 'Pooled'
+    loadBalancerType: hostPoolLoadBalancerType
+    maxSessionLimit: hostPoolMaximumSessionsAllowed
+    startVMOnConnect: true
+    validationEnvironment: false
+    preferredAppGroupType: 'Desktop'
+    publicNetworkAccess: 'Enabled'
+    managementType: 'Standard'
+    friendlyName: hostPoolName
+    description: hostPoolDescription
+    customRdpProperty: entraSsoRdpProperties
+    registrationInfo: {
+      expirationTime: registrationTokenExpirationTime
+      registrationTokenOperation: 'Update'
+    }
   }
 }
 
-resource applicationGroup 'Microsoft.DesktopVirtualization/applicationGroups@2024-04-08-preview' = {
+resource applicationGroup 'Microsoft.DesktopVirtualization/applicationGroups@2024-04-03' = {
   name: applicationGroupName
   location: location
   tags: tags
@@ -285,7 +300,7 @@ resource applicationGroup 'Microsoft.DesktopVirtualization/applicationGroups@202
   }
 }
 
-resource workspace 'Microsoft.DesktopVirtualization/workspaces@2024-04-08-preview' = {
+resource workspace 'Microsoft.DesktopVirtualization/workspaces@2024-04-03' = {
   name: workspaceName
   location: location
   tags: tags
@@ -426,7 +441,7 @@ resource avdRegistrationExtension 'Microsoft.Compute/virtualMachines/extensions@
     }
     protectedSettings: {
       properties: {
-        registrationInfoToken: first(listRegistrationTokens(extensionResourceId(resourceGroup().id, 'Microsoft.DesktopVirtualization/hostPools', hostPoolName), '2023-09-05').value).token
+        registrationInfoToken: first(hostPool.listRegistrationTokens().value).token
       }
     }
   }

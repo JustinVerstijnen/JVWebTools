@@ -5,7 +5,8 @@
     "source": "Converted from JV-TF-AzureVirtualDesktopKerberos Terraform project to ARM JSON; Bicep source is main.bicep.",
     "tokenFix": "registrationInfoToken is retrieved with listRegistrationTokens() because registrationInfo.token is not returned by GET/reference for newer AVD hostPool APIs.",
     "secureOutputFix": "The DSC extension retrieves the AVD registration token directly with listRegistrationTokens() inside protectedSettings. The token is not passed through a nested secureString output.",
-    "defaultObjectIds": "Default Object IDs added for AVD desktop access group, AVD admins group, AVD service principal, and optional AVD computer group."
+    "defaultObjectIds": "Default Object IDs added for AVD desktop access group, AVD admins group, AVD service principal, and optional AVD computer group.",
+    "stableFlatHostPoolFix": "Host pool is deployed as a normal top-level ARM resource. Nested host pool deployment removed to avoid ResourceNotFound/race issues when application group or DSC extension references the host pool."
   },
   "parameters": {
     "projectName": {
@@ -155,6 +156,13 @@
         "description": "Add Azure resource tags as a JSON object. Leave empty if no tags are needed."
       },
       "defaultValue": {}
+    },
+    "registrationTokenExpirationTime": {
+      "type": "string",
+      "metadata": {
+        "description": "AVD registration token expiration time. Default is 27 days from deployment time. Normally do not change this."
+      },
+      "defaultValue": "[dateTimeAdd(utcNow(), 'P27D')]"
     }
   },
   "variables": {
@@ -180,7 +188,6 @@
     "imageOffer": "windows-11",
     "imageSku": "win11-25h2-avd",
     "imageVersion": "latest",
-    "hostPoolDeploymentName": "[format('deploy-{0}-hostpool', variables('projectClean'))]",
     "vnetName": "[format('vnet-jv-{0}', variables('projectClean'))]",
     "subnetName": "[format('snet-jv-{0}', variables('projectClean'))]",
     "nsgName": "[format('nsg-jv-avd-{0}', variables('projectClean'))]",
@@ -338,133 +345,49 @@
       ]
     },
     {
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
-      "name": "[variables('hostPoolDeploymentName')]",
+      "type": "Microsoft.DesktopVirtualization/hostPools",
+      "apiVersion": "2024-04-03",
+      "name": "[variables('hostPoolName')]",
+      "location": "[variables('location')]",
+      "tags": "[parameters('tags')]",
       "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "hostPoolName": {
-            "value": "[variables('hostPoolName')]"
-          },
-          "location": {
-            "value": "[variables('location')]"
-          },
-          "tags": {
-            "value": "[parameters('tags')]"
-          },
-          "hostPoolLoadBalancerType": {
-            "value": "[parameters('hostPoolLoadBalancerType')]"
-          },
-          "hostPoolMaximumSessionsAllowed": {
-            "value": "[parameters('hostPoolMaximumSessionsAllowed')]"
-          },
-          "hostPoolDescription": {
-            "value": "[parameters('hostPoolDescription')]"
-          },
-          "entraSsoRdpProperties": {
-            "value": "[variables('entraSsoRdpProperties')]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "parameters": {
-            "hostPoolName": {
-              "type": "string"
-            },
-            "location": {
-              "type": "string"
-            },
-            "tags": {
-              "type": "object"
-            },
-            "hostPoolLoadBalancerType": {
-              "type": "string"
-            },
-            "hostPoolMaximumSessionsAllowed": {
-              "type": "int"
-            },
-            "hostPoolDescription": {
-              "type": "string"
-            },
-            "entraSsoRdpProperties": {
-              "type": "string"
-            },
-            "registrationTokenExpirationTime": {
-              "type": "string",
-              "metadata": {
-                "description": "Hidden inner parameter. Default is 27 days from deployment time."
-              },
-              "defaultValue": "[dateTimeAdd(utcNow(), 'P27D')]"
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.DesktopVirtualization/hostPools",
-              "apiVersion": "2024-04-08-preview",
-              "name": "[parameters('hostPoolName')]",
-              "location": "[parameters('location')]",
-              "tags": "[parameters('tags')]",
-              "properties": {
-                "hostPoolType": "Pooled",
-                "loadBalancerType": "[parameters('hostPoolLoadBalancerType')]",
-                "maxSessionLimit": "[parameters('hostPoolMaximumSessionsAllowed')]",
-                "startVMOnConnect": true,
-                "validationEnvironment": false,
-                "preferredAppGroupType": "Desktop",
-                "publicNetworkAccess": "Enabled",
-                "managementType": "Standard",
-                "friendlyName": "[parameters('hostPoolName')]",
-                "description": "[parameters('hostPoolDescription')]",
-                "customRdpProperty": "[parameters('entraSsoRdpProperties')]",
-                "registrationInfo": {
-                  "expirationTime": "[parameters('registrationTokenExpirationTime')]",
-                  "registrationTokenOperation": "Update"
-                }
-              }
-            }
-          ],
-          "outputs": {
-            "hostPoolName": {
-              "type": "string",
-              "value": "[parameters('hostPoolName')]"
-            },
-            "hostPoolId": {
-              "type": "string",
-              "value": "[extensionResourceId(resourceGroup().id, 'Microsoft.DesktopVirtualization/hostPools', parameters('hostPoolName'))]"
-            },
-            "hostPoolRdpProperties": {
-              "type": "string",
-              "value": "[parameters('entraSsoRdpProperties')]"
-            }
-          }
+        "hostPoolType": "Pooled",
+        "loadBalancerType": "[parameters('hostPoolLoadBalancerType')]",
+        "maxSessionLimit": "[parameters('hostPoolMaximumSessionsAllowed')]",
+        "startVMOnConnect": true,
+        "validationEnvironment": false,
+        "preferredAppGroupType": "Desktop",
+        "publicNetworkAccess": "Enabled",
+        "managementType": "Standard",
+        "friendlyName": "[variables('hostPoolName')]",
+        "description": "[parameters('hostPoolDescription')]",
+        "customRdpProperty": "[variables('entraSsoRdpProperties')]",
+        "registrationInfo": {
+          "expirationTime": "[parameters('registrationTokenExpirationTime')]",
+          "registrationTokenOperation": "Update"
         }
       }
     },
     {
       "type": "Microsoft.DesktopVirtualization/applicationGroups",
-      "apiVersion": "2024-04-08-preview",
+      "apiVersion": "2024-04-03",
       "name": "[variables('applicationGroupName')]",
       "location": "[variables('location')]",
       "tags": "[parameters('tags')]",
       "properties": {
         "applicationGroupType": "Desktop",
-        "hostPoolArmPath": "[reference(resourceId('Microsoft.Resources/deployments', variables('hostPoolDeploymentName')), '2022-09-01').outputs.hostPoolId.value]",
+        "hostPoolArmPath": "[resourceId('Microsoft.DesktopVirtualization/hostPools', variables('hostPoolName'))]",
         "friendlyName": "[variables('applicationGroupName')]",
         "description": "[parameters('applicationGroupDescription')]",
         "defaultDesktopDisplayName": "[parameters('defaultDesktopDisplayName')]"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', variables('hostPoolDeploymentName'))]"
+        "[resourceId('Microsoft.DesktopVirtualization/hostPools', variables('hostPoolName'))]"
       ]
     },
     {
       "type": "Microsoft.DesktopVirtualization/workspaces",
-      "apiVersion": "2024-04-08-preview",
+      "apiVersion": "2024-04-03",
       "name": "[variables('workspaceName')]",
       "location": "[variables('location')]",
       "tags": "[parameters('tags')]",
@@ -597,7 +520,7 @@
           "modulesUrl": "[parameters('avdDscConfigurationZipUrl')]",
           "configurationFunction": "Configuration.ps1\\AddSessionHost",
           "properties": {
-            "hostPoolName": "[reference(resourceId('Microsoft.Resources/deployments', variables('hostPoolDeploymentName')), '2022-09-01').outputs.hostPoolName.value]",
+            "hostPoolName": "[variables('hostPoolName')]",
             "aadJoin": true,
             "mdmId": "[if(parameters('enrollSessionHostsInIntune'), variables('intuneMdmApplicationId'), '')]",
             "UseAgentDownloadEndpoint": true,
@@ -606,13 +529,13 @@
         },
         "protectedSettings": {
           "properties": {
-            "registrationInfoToken": "[first(listRegistrationTokens(extensionResourceId(resourceGroup().id, 'Microsoft.DesktopVirtualization/hostPools', variables('hostPoolName')), '2023-09-05').value).token]"
+            "registrationInfoToken": "[first(listRegistrationTokens(resourceId('Microsoft.DesktopVirtualization/hostPools', variables('hostPoolName')), '2024-04-03').value).token]"
           }
         }
       },
       "dependsOn": [
         "[resourceId('Microsoft.Compute/virtualMachines/extensions', variables('sessionHostNames')[copyIndex()], 'AADLoginForWindows')]",
-        "[resourceId('Microsoft.Resources/deployments', variables('hostPoolDeploymentName'))]"
+        "[resourceId('Microsoft.DesktopVirtualization/hostPools', variables('hostPoolName'))]"
       ]
     },
     {
@@ -759,7 +682,7 @@
     },
     "hostPoolResourceName": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Resources/deployments', variables('hostPoolDeploymentName')), '2022-09-01').outputs.hostPoolName.value]"
+      "value": "[variables('hostPoolName')]"
     },
     "applicationGroupResourceName": {
       "type": "string",
