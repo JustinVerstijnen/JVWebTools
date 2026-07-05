@@ -1,9 +1,9 @@
 targetScope = 'resourceGroup'
 
-@description('Project name. Required. Use 2 to 8 characters. This value is used in Azure resource names and the Windows computer name.')
+@description('Abbreviation. Used in Azure resource names. Default is jv, which creates names like vm-jv-iis01.')
 @minLength(2)
-@maxLength(8)
-param projectName string
+@maxLength(6)
+param abbreviation string = 'jv'
 
 var location = resourceGroup().location
 
@@ -30,15 +30,14 @@ var vnetAddressPrefix = '10.69.0.0/16'
 var subnetPrefix = '10.69.0.0/24'
 var vmPrivateIpAddress = '10.69.0.4'
 
-var lowerProjectName = toLower(projectName)
-var namePrefix = 'jv-${lowerProjectName}'
-var vnetName = 'vnet-${namePrefix}'
-var subnetName = 'snet-${namePrefix}'
-var nsgName = 'nsg-${namePrefix}'
-var publicIpName = 'pip-${namePrefix}'
-var nicName = 'nic-${namePrefix}'
-var vmName = 'vm-${namePrefix}'
-var osDiskName = 'osdisk-${namePrefix}'
+var abbreviationLower = toLower(abbreviation)
+var vnetName = 'vnet-${abbreviationLower}-vnet01'
+var subnetName = 'snet-${abbreviationLower}-snet01'
+var nsgName = 'nsg-${abbreviationLower}-nsg01'
+var publicIpName = 'pip-${abbreviationLower}-iis01'
+var nicName = 'nic-${abbreviationLower}-iis01'
+var vmName = 'vm-${abbreviationLower}-iis01'
+var osDiskName = 'osdisk-${abbreviationLower}-iis01'
 var rdpRuleName = 'Allow-RDP-Inbound'
 var httpHttpsRuleName = 'Allow-HTTP-HTTPS-Inbound'
 

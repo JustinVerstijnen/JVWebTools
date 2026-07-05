@@ -1,9 +1,9 @@
 targetScope = 'resourceGroup'
 
-@description('Project name. Required. Use 2 to 20 characters. Use only letters, numbers and hyphens. This value is used in Azure resource names. The storage account becomes sajv<project without hyphens>.')
+@description('Abbreviation. Used in Azure resource names. Default is jv.')
 @minLength(2)
-@maxLength(20)
-param projectName string
+@maxLength(6)
+param abbreviation string = 'jv'
 
 var location = resourceGroup().location
 
@@ -60,11 +60,6 @@ param hostPoolMaximumSessionsAllowed int = 8
 @maxValue(10)
 param sessionHostCount int = 1
 
-@description('Prefix for AVD session host names. A numeric suffix is added: -0, -1, -2. Keep max 11 characters.')
-@minLength(1)
-@maxLength(11)
-param sessionHostNamePrefix string = 'vm-jv-avd'
-
 @description('Azure VM size for the AVD session host VMs.')
 param sessionHostVmSize string = 'Standard_E4as_v7'
 
@@ -77,21 +72,22 @@ param avdDscConfigurationZipUrl string = 'https://raw.githubusercontent.com/Azur
 @description('Tags. Optional. Add Azure resource tags as a JSON object. Leave empty if no tags are needed.')
 param tags object = {}
 
-var projectClean = toLower(projectName)
-var projectStorage = toLower(replace(projectName, '-', ''))
+var abbreviationLower = toLower(abbreviation)
+var abbreviationStorage = replace(abbreviationLower, '-', '')
 
-var vnetName = 'vnet-jv-${projectClean}'
-var subnetName = 'snet-jv-${projectClean}'
-var nsgName = 'nsg-jv-avd-${projectClean}'
+var vnetName = 'vnet-${abbreviationLower}-vnet01'
+var subnetName = 'snet-${abbreviationLower}-snet01'
+var nsgName = 'nsg-${abbreviationLower}-nsg01'
 
-var storageAccountName = 'sajv${projectStorage}'
+// Storage account names must be globally unique and cannot contain hyphens.
+var storageAccountName = 'sa${abbreviationStorage}${uniqueString(resourceGroup().id)}'
 var fslogixShareName = 'fslogix-profiles'
 
-var hostPoolName = 'vdhp-jv-${projectClean}'
-var applicationGroupName = 'vdag-jv-${projectClean}'
-var workspaceName = 'vdws-jv-${projectClean}'
+var hostPoolName = 'vdhp-${abbreviationLower}-avd01'
+var applicationGroupName = 'vdag-${abbreviationLower}-avd01'
+var workspaceName = 'vdws-${abbreviationLower}-avd01'
 
-var sessionHostNames = [for index in range(0, sessionHostCount): '${sessionHostNamePrefix}-${index}']
+var sessionHostNames = [for index in range(0, sessionHostCount): 'vm-${abbreviationLower}-avd${index + 1}']
 var entraSsoRdpProperties = join([
   'targetisaadjoined:i:1'
   'enablerdsaadauth:i:1'
@@ -521,7 +517,6 @@ resource avdAdminsStoragePrivilegedContributorRoleAssignment 'Microsoft.Authoriz
 }
 
 output resourceGroupName string = resourceGroup().name
-output expectedTerraformResourceGroupName string = 'rg-jv-${projectClean}'
 output vnetResourceName string = vnet.name
 output subnetResourceName string = subnetName
 output storageAccountResourceName string = storageAccount.name
@@ -534,4 +529,4 @@ output sessionHostNameList array = sessionHostNames
 output hostPoolRdpProperties string = hostPool.outputs.hostPoolRdpProperties
 output avdComputerGroupObjectIdValue string = avdComputerGroupObjectId
 output avdServicePrincipalClientIdValue string = avdServicePrincipalClientId
-output postDeploymentNote string = 'Deploy this template into the resource group you want to use. To match the original Terraform naming exactly, create/select resource group rg-jv-${projectClean} before deploying.'
+output postDeploymentNote string = 'Deploy this template into the resource group you want to use. Resource names are based on the abbreviation parameter. The storage account includes a deterministic unique suffix because Azure Storage account names must be globally unique.'

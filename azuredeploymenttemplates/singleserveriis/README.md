@@ -2,13 +2,21 @@
 
 This template deploys one Windows Server VM with IIS installed.
 
-## Deployed resources
+## Parameters
 
-- Virtual network and subnet
-- Network security group
-- Static public IP address
-- Network interface
-- Windows Server 2022 Azure Edition VM
+- `abbreviation`: defaults to `jv` and is used in resource names.
+- `vmSize`: defaults to `Standard_D2as_v7`.
+- `webSourceAddressPrefix`: defaults to `Internet`.
+
+## Deployed resources with default abbreviation `jv`
+
+- Virtual network: `vnet-jv-vnet01`
+- Subnet: `snet-jv-snet01`
+- Network security group: `nsg-jv-nsg01`
+- Static public IP address: `pip-jv-iis01`
+- Network interface: `nic-jv-iis01`
+- Windows Server 2022 Azure Edition VM: `vm-jv-iis01`
+- OS disk: `osdisk-jv-iis01`
 - Custom Script Extension to install IIS
 
 ## Network access

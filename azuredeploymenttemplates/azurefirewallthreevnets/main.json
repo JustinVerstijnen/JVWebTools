@@ -2,12 +2,13 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "projectName": {
+    "abbreviation": {
       "type": "string",
+      "defaultValue": "jv",
       "minLength": 2,
-      "maxLength": 20,
+      "maxLength": 6,
       "metadata": {
-        "description": "Project name. This value is used for Azure Firewall and Azure Firewall Policy names."
+        "description": "Abbreviation used in Azure resource names. Default is jv."
       }
     },
     "firewallSkuTier": {
@@ -32,24 +33,24 @@
   },
   "variables": {
     "location": "[resourceGroup().location]",
-    "projectClean": "[toLower(parameters('projectName'))]",
-    "vnet01Name": "vnet-jv-vnet01",
-    "vnet02Name": "vnet-jv-vnet02",
-    "vnet03Name": "vnet-jv-vnet03",
+    "abbreviationLower": "[toLower(parameters('abbreviation'))]",
+    "vnet01Name": "[format('vnet-{0}-vnet01', variables('abbreviationLower'))]",
+    "vnet02Name": "[format('vnet-{0}-vnet02', variables('abbreviationLower'))]",
+    "vnet03Name": "[format('vnet-{0}-vnet03', variables('abbreviationLower'))]",
     "vnet01AddressSpace": "10.69.0.0/16",
     "vnet02AddressSpace": "10.70.0.0/16",
     "vnet03AddressSpace": "10.71.0.0/16",
     "azureFirewallSubnetName": "AzureFirewallSubnet",
     "azureFirewallSubnetPrefix": "10.69.0.0/26",
-    "vnet01SubnetName": "snet-jv-vnet01",
+    "vnet01SubnetName": "[format('snet-{0}-vnet01', variables('abbreviationLower'))]",
     "vnet01SubnetPrefix": "10.69.1.0/24",
-    "vnet02SubnetName": "snet-jv-vnet02",
+    "vnet02SubnetName": "[format('snet-{0}-vnet02', variables('abbreviationLower'))]",
     "vnet02SubnetPrefix": "10.70.0.0/24",
-    "vnet03SubnetName": "snet-jv-vnet03",
+    "vnet03SubnetName": "[format('snet-{0}-vnet03', variables('abbreviationLower'))]",
     "vnet03SubnetPrefix": "10.71.0.0/24",
-    "firewallName": "[format('afw-jv-{0}', variables('projectClean'))]",
-    "firewallPolicyName": "[format('afwp-jv-{0}', variables('projectClean'))]",
-    "firewallPublicIpName": "[format('pip-jv-afw-{0}', variables('projectClean'))]",
+    "firewallName": "[format('afw-{0}-afw01', variables('abbreviationLower'))]",
+    "firewallPolicyName": "[format('afwp-{0}-afwp01', variables('abbreviationLower'))]",
+    "firewallPublicIpName": "[format('pip-{0}-afw01', variables('abbreviationLower'))]",
     "firewallIpConfigName": "ipconfig1"
   },
   "resources": [

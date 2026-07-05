@@ -1,24 +1,28 @@
 targetScope = 'resourceGroup'
 
-@description('Project name. Required. Use 2 to 8 characters. This value is used in Azure resource names and the Windows computer name.')
+@description('Abbreviation. Used in Azure resource names. Default is jv, which creates names like vm-jv-dc01.')
 @minLength(2)
-@maxLength(8)
-param projectName string
+@maxLength(6)
+param abbreviation string = 'jv'
 
 var location = resourceGroup().location
 
 @description('Username. Required. Local administrator username for the Windows Server VM.')
 param adminUsername string
 
-@description('Password. Required. Local administrator password for the Windows Server VM and the Active Directory DSRM password. Use a strong password.')
+@description('Password. Required. Local administrator password for the Windows Server VM. Use a strong password.')
 @secure()
 param adminPassword string
+
+@description('DSRM password. Required. Separate Directory Services Restore Mode password for Active Directory recovery.')
+@secure()
+param dsrmPassword string
 
 @description('Public IP address. Required. Public IPv4 address that is allowed to connect with RDP. Enter only the IP address, without /32.')
 param sourceIpAddress string
 
 @description('Server size. Required. Enter an Azure VM size, for example Standard_D2as_v5 or Standard_D2as_v7.')
-param vmSize string
+param vmSize string = 'Standard_E2as_v7'
 
 var vnetAddressPrefix = '10.69.0.0/16'
 
@@ -26,40 +30,39 @@ var subnetPrefix = '10.69.0.0/24'
 
 var vmPrivateIpAddress = '10.69.0.4'
 
-@description('Active Directory domain name. Required. Example: contoso.local or ad.contoso.com.')
-param domainName string
+@description('Active Directory domain name.')
+param domainName string = 'internal.justinverstijnen.nl'
 
-@description('NETBIOS name. Required. Active Directory NetBIOS name. Use 1 to 15 characters.')
+@description('NETBIOS name. Active Directory NetBIOS name. Use 1 to 15 characters.')
 @minLength(1)
 @maxLength(15)
-param domainNetbiosName string
+param domainNetbiosName string = 'JV'
 
 @description('Tags. Optional. Add Azure resource tags as a JSON object. Leave empty if no tags are needed.')
 param tags object = {}
 
-var lowerProjectName = toLower(projectName)
-var namePrefix = 'jv-${lowerProjectName}'
-var vnetName = 'vnet-${namePrefix}'
-var subnetName = 'snet-${namePrefix}'
-var nsgName = 'nsg-${namePrefix}'
-var publicIpName = 'pip-${namePrefix}'
-var nicName = 'nic-${namePrefix}'
-var vmName = 'vm-${namePrefix}'
-var osDiskName = 'osdisk-${namePrefix}'
+var abbreviationLower = toLower(abbreviation)
+var vnetName = 'vnet-${abbreviationLower}-vnet01'
+var subnetName = 'snet-${abbreviationLower}-snet01'
+var nsgName = 'nsg-${abbreviationLower}-nsg01'
+var publicIpName = 'pip-${abbreviationLower}-dc01'
+var nicName = 'nic-${abbreviationLower}-dc01'
+var vmName = 'vm-${abbreviationLower}-dc01'
+var osDiskName = 'osdisk-${abbreviationLower}-dc01'
 var rdpRuleName = 'allow-rdp-from-admin-ip'
 
 // This command installs the AD DS role, creates a new forest, installs DNS, and schedules a restart.
 // The password is base64 encoded only to avoid quoting issues in the PowerShell command.
 // The command itself is passed through protectedSettings, so it is not stored as normal deployment output.
-var encodedAdminPassword = base64(adminPassword)
+var encodedDsrmPassword = base64(dsrmPassword)
 
 var installAdScriptLines = [
   '$ErrorActionPreference = \'Stop\''
   'Install-WindowsFeature AD-Domain-Services -IncludeManagementTools'
-  '$adminPasswordPlain = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\'${encodedAdminPassword}\'))'
-  '$securePassword = ConvertTo-SecureString $adminPasswordPlain -AsPlainText -Force'
-  'Install-ADDSForest -DomainName \'${domainName}\' -DomainNetbiosName \'${domainNetbiosName}\' -SafeModeAdministratorPassword $securePassword -InstallDNS -Force -NoRebootOnCompletion:$true'
-  '$adminPasswordPlain = $null'
+  '$dsrmPasswordPlain = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\'${encodedDsrmPassword}\'))'
+  '$secureDsrmPassword = ConvertTo-SecureString $dsrmPasswordPlain -AsPlainText -Force'
+  'Install-ADDSForest -DomainName \'${domainName}\' -DomainNetbiosName \'${domainNetbiosName}\' -SafeModeAdministratorPassword $secureDsrmPassword -InstallDNS -Force -NoRebootOnCompletion:$true'
+  '$dsrmPasswordPlain = $null'
   'shutdown.exe /r /t 60 /c \'Restart after Active Directory Domain Services installation\''
   'exit 0'
 ]

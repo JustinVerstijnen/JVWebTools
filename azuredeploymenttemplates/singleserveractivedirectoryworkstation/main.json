@@ -2,12 +2,13 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "projectName": {
+    "abbreviation": {
       "type": "string",
+      "defaultValue": "jv",
       "minLength": 2,
-      "maxLength": 8,
+      "maxLength": 6,
       "metadata": {
-        "description": "Project name. Use 2 to 8 characters. This value is used in Azure resource names and the Windows Server computer name."
+        "description": "Abbreviation used in Azure resource names. Default is jv."
       }
     },
     "adminUsername": {
@@ -19,7 +20,13 @@
     "adminPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "Local administrator password for both VMs and the Active Directory DSRM password."
+        "description": "Password. Required. Local administrator password for both VMs. This account is also used for the domain join attempt. Use a strong password."
+      }
+    },
+    "dsrmPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "DSRM password. Required. Separate Directory Services Restore Mode password for Active Directory recovery."
       }
     },
     "sourceIpAddress": {
@@ -30,7 +37,7 @@
     },
     "serverVmSize": {
       "type": "string",
-      "defaultValue": "Standard_D2as_v7",
+      "defaultValue": "Standard_E2as_v7",
       "metadata": {
         "description": "Azure VM size for the Windows Server / Active Directory VM."
       }
@@ -45,16 +52,18 @@
     "domainName": {
       "type": "string",
       "metadata": {
-        "description": "Active Directory domain name. Example: contoso.local or ad.contoso.com."
-      }
+        "description": "Active Directory domain name."
+      },
+      "defaultValue": "internal.justinverstijnen.nl"
     },
     "domainNetbiosName": {
       "type": "string",
       "minLength": 1,
       "maxLength": 15,
       "metadata": {
-        "description": "Active Directory NetBIOS name. Use 1 to 15 characters."
-      }
+        "description": "NETBIOS name. Active Directory NetBIOS name. Use 1 to 15 characters."
+      },
+      "defaultValue": "JV"
     },
     "joinWorkstationToDomain": {
       "type": "bool",
@@ -77,28 +86,28 @@
     "subnetPrefix": "10.69.0.0/24",
     "serverPrivateIpAddress": "10.69.0.4",
     "workstationPrivateIpAddress": "10.69.0.5",
-    "lowerProjectName": "[toLower(parameters('projectName'))]",
-    "namePrefix": "[format('jv-{0}', variables('lowerProjectName'))]",
-    "vnetName": "[format('vnet-{0}', variables('namePrefix'))]",
-    "subnetName": "[format('snet-{0}', variables('namePrefix'))]",
-    "nsgName": "[format('nsg-{0}', variables('namePrefix'))]",
-    "serverPublicIpName": "[format('pip-{0}', variables('namePrefix'))]",
-    "serverNicName": "[format('nic-{0}', variables('namePrefix'))]",
-    "serverVmName": "[format('vm-{0}', variables('namePrefix'))]",
-    "serverOsDiskName": "[format('osdisk-{0}', variables('namePrefix'))]",
-    "workstationPublicIpName": "pip-jv-ws01",
-    "workstationNicName": "nic-jv-ws01",
-    "workstationVmName": "vm-jv-ws01",
-    "workstationOsDiskName": "osdisk-jv-ws01",
+    "abbreviationLower": "[toLower(parameters('abbreviation'))]",
+    "vnetName": "[format('vnet-{0}-vnet01', variables('abbreviationLower'))]",
+    "subnetName": "[format('snet-{0}-snet01', variables('abbreviationLower'))]",
+    "nsgName": "[format('nsg-{0}-nsg01', variables('abbreviationLower'))]",
+    "serverPublicIpName": "[format('pip-{0}-dc01', variables('abbreviationLower'))]",
+    "serverNicName": "[format('nic-{0}-dc01', variables('abbreviationLower'))]",
+    "serverVmName": "[format('vm-{0}-dc01', variables('abbreviationLower'))]",
+    "serverOsDiskName": "[format('osdisk-{0}-dc01', variables('abbreviationLower'))]",
+    "workstationPublicIpName": "[format('pip-{0}-ws01', variables('abbreviationLower'))]",
+    "workstationNicName": "[format('nic-{0}-ws01', variables('abbreviationLower'))]",
+    "workstationVmName": "[format('vm-{0}-ws01', variables('abbreviationLower'))]",
+    "workstationOsDiskName": "[format('osdisk-{0}-ws01', variables('abbreviationLower'))]",
     "rdpRuleName": "Allow-RDP-Inbound",
     "encodedAdminPassword": "[base64(parameters('adminPassword'))]",
+    "encodedDsrmPassword": "[base64(parameters('dsrmPassword'))]",
     "installAdScriptLines": [
       "$ErrorActionPreference = 'Stop'",
       "Install-WindowsFeature AD-Domain-Services -IncludeManagementTools",
-      "[format('$adminPasswordPlain = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(''{0}''))', variables('encodedAdminPassword'))]",
-      "$securePassword = ConvertTo-SecureString $adminPasswordPlain -AsPlainText -Force",
-      "[format('Install-ADDSForest -DomainName ''{0}'' -DomainNetbiosName ''{1}'' -SafeModeAdministratorPassword $securePassword -InstallDNS -Force -NoRebootOnCompletion:$true', parameters('domainName'), parameters('domainNetbiosName'))]",
-      "$adminPasswordPlain = $null",
+      "[format('$dsrmPasswordPlain = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(''{0}''))', variables('encodedDsrmPassword'))]",
+      "$secureDsrmPassword = ConvertTo-SecureString $dsrmPasswordPlain -AsPlainText -Force",
+      "[format('Install-ADDSForest -DomainName ''{0}'' -DomainNetbiosName ''{1}'' -SafeModeAdministratorPassword $secureDsrmPassword -InstallDNS -Force -NoRebootOnCompletion:$true', parameters('domainName'), parameters('domainNetbiosName'))]",
+      "$dsrmPasswordPlain = $null",
       "shutdown.exe /r /t 60 /c 'Restart after Active Directory Domain Services installation'",
       "exit 0"
     ],

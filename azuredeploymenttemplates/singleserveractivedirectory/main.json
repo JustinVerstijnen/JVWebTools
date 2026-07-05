@@ -9,12 +9,13 @@
     }
   },
   "parameters": {
-    "projectName": {
+    "abbreviation": {
       "type": "string",
+      "defaultValue": "jv",
       "minLength": 2,
-      "maxLength": 8,
+      "maxLength": 6,
       "metadata": {
-        "description": "The project name, which is used in Azure resource names and the Windows computer name."
+        "description": "Abbreviation used in Azure resource names. Default is jv."
       }
     },
     "adminUsername": {
@@ -26,7 +27,13 @@
     "adminPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "Password for the Windows Server VM and the Active Directory DSRM password."
+        "description": "Password. Required. Local administrator password for the Windows Server VM. Use a strong password."
+      }
+    },
+    "dsrmPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "DSRM password. Required. Separate Directory Services Restore Mode password for Active Directory recovery."
       }
     },
     "sourceIpAddress": {
@@ -40,21 +47,23 @@
       "metadata": {
         "description": "Enter an Azure VM size, for example Standard_D2as_v5 or Standard_D2as_v7."
       },
-      "defaultValue": "Standard_D2as_v7"
+      "defaultValue": "Standard_E2as_v7"
     },
     "domainName": {
       "type": "string",
       "metadata": {
-        "description": "Active Directory domain name. Example: contoso.local or ad.contoso.com."
-      }
+        "description": "Active Directory domain name."
+      },
+      "defaultValue": "internal.justinverstijnen.nl"
     },
     "domainNetbiosName": {
       "type": "string",
       "minLength": 1,
       "maxLength": 15,
       "metadata": {
-        "description": "Active Directory NetBIOS name. Use 1 to 15 characters."
-      }
+        "description": "NETBIOS name. Active Directory NetBIOS name. Use 1 to 15 characters."
+      },
+      "defaultValue": "JV"
     },
     "tags": {
       "type": "object",
@@ -65,24 +74,23 @@
     }
   },
   "variables": {
-    "lowerProjectName": "[toLower(parameters('projectName'))]",
-    "namePrefix": "[format('jv-{0}', variables('lowerProjectName'))]",
-    "vnetName": "[format('vnet-{0}', variables('namePrefix'))]",
-    "subnetName": "[format('snet-{0}', variables('namePrefix'))]",
-    "nsgName": "[format('nsg-{0}', variables('namePrefix'))]",
-    "publicIpName": "[format('pip-{0}', variables('namePrefix'))]",
-    "nicName": "[format('nic-{0}', variables('namePrefix'))]",
-    "vmName": "[format('vm-{0}', variables('namePrefix'))]",
-    "osDiskName": "[format('osdisk-{0}', variables('namePrefix'))]",
+    "abbreviationLower": "[toLower(parameters('abbreviation'))]",
+    "vnetName": "[format('vnet-{0}-vnet01', variables('abbreviationLower'))]",
+    "subnetName": "[format('snet-{0}-snet01', variables('abbreviationLower'))]",
+    "nsgName": "[format('nsg-{0}-nsg01', variables('abbreviationLower'))]",
+    "publicIpName": "[format('pip-{0}-dc01', variables('abbreviationLower'))]",
+    "nicName": "[format('nic-{0}-dc01', variables('abbreviationLower'))]",
+    "vmName": "[format('vm-{0}-dc01', variables('abbreviationLower'))]",
+    "osDiskName": "[format('osdisk-{0}-dc01', variables('abbreviationLower'))]",
     "rdpRuleName": "allow-rdp-from-admin-ip",
-    "encodedAdminPassword": "[base64(parameters('adminPassword'))]",
+    "encodedDsrmPassword": "[base64(parameters('dsrmPassword'))]",
     "installAdScriptLines": [
       "$ErrorActionPreference = 'Stop'",
       "Install-WindowsFeature AD-Domain-Services -IncludeManagementTools",
-      "[format('$adminPasswordPlain = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(''{0}''))', variables('encodedAdminPassword'))]",
-      "$securePassword = ConvertTo-SecureString $adminPasswordPlain -AsPlainText -Force",
-      "[format('Install-ADDSForest -DomainName ''{0}'' -DomainNetbiosName ''{1}'' -SafeModeAdministratorPassword $securePassword -InstallDNS -Force -NoRebootOnCompletion:$true', parameters('domainName'), parameters('domainNetbiosName'))]",
-      "$adminPasswordPlain = $null",
+      "[format('$dsrmPasswordPlain = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(''{0}''))', variables('encodedDsrmPassword'))]",
+      "$secureDsrmPassword = ConvertTo-SecureString $dsrmPasswordPlain -AsPlainText -Force",
+      "[format('Install-ADDSForest -DomainName ''{0}'' -DomainNetbiosName ''{1}'' -SafeModeAdministratorPassword $secureDsrmPassword -InstallDNS -Force -NoRebootOnCompletion:$true', parameters('domainName'), parameters('domainNetbiosName'))]",
+      "$dsrmPasswordPlain = $null",
       "shutdown.exe /r /t 60 /c 'Restart after Active Directory Domain Services installation'",
       "exit 0"
     ],

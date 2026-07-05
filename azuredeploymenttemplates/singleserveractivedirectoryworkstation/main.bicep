@@ -1,35 +1,39 @@
 targetScope = 'resourceGroup'
 
-@description('Project name. Required. Use 2 to 8 characters. This value is used in Azure resource names and the Windows Server computer name.')
+@description('Abbreviation. Used in Azure resource names. Default is jv, which creates names like vm-jv-dc01 and vm-jv-ws01.')
 @minLength(2)
-@maxLength(8)
-param projectName string
+@maxLength(6)
+param abbreviation string = 'jv'
 
 var location = resourceGroup().location
 
 @description('Username. Required. Local administrator username for both VMs. This account is also used for the domain join attempt.')
 param adminUsername string
 
-@description('Password. Required. Local administrator password for both VMs and the Active Directory DSRM password. Use a strong password.')
+@description('Password. Required. Local administrator password for both VMs. This account is also used for the domain join attempt. Use a strong password.')
 @secure()
 param adminPassword string
+
+@description('DSRM password. Required. Separate Directory Services Restore Mode password for Active Directory recovery.')
+@secure()
+param dsrmPassword string
 
 @description('Public IP address. Required. Public IPv4 address that is allowed to connect with RDP. Enter only the IP address, without /32.')
 param sourceIpAddress string
 
 @description('Server size. Required. Enter an Azure VM size for the Windows Server / Active Directory VM.')
-param serverVmSize string = 'Standard_D2as_v7'
+param serverVmSize string = 'Standard_E2as_v7'
 
 @description('Workstation size. Required. Enter an Azure VM size for the Windows 11 workstation VM.')
 param workstationVmSize string = 'Standard_D2as_v7'
 
-@description('Active Directory domain name. Required. Example: contoso.local or ad.contoso.com.')
-param domainName string
+@description('Active Directory domain name.')
+param domainName string = 'internal.justinverstijnen.nl'
 
-@description('NETBIOS name. Required. Active Directory NetBIOS name. Use 1 to 15 characters.')
+@description('NETBIOS name. Active Directory NetBIOS name. Use 1 to 15 characters.')
 @minLength(1)
 @maxLength(15)
-param domainNetbiosName string
+param domainNetbiosName string = 'JV'
 
 @description('Join the Windows 11 workstation to the new Active Directory domain after the domain controller has been promoted.')
 param joinWorkstationToDomain bool = true
@@ -42,21 +46,20 @@ var subnetPrefix = '10.69.0.0/24'
 var serverPrivateIpAddress = '10.69.0.4'
 var workstationPrivateIpAddress = '10.69.0.5'
 
-var lowerProjectName = toLower(projectName)
-var namePrefix = 'jv-${lowerProjectName}'
-var vnetName = 'vnet-${namePrefix}'
-var subnetName = 'snet-${namePrefix}'
-var nsgName = 'nsg-${namePrefix}'
+var abbreviationLower = toLower(abbreviation)
+var vnetName = 'vnet-${abbreviationLower}-vnet01'
+var subnetName = 'snet-${abbreviationLower}-snet01'
+var nsgName = 'nsg-${abbreviationLower}-nsg01'
 
-var serverPublicIpName = 'pip-${namePrefix}'
-var serverNicName = 'nic-${namePrefix}'
-var serverVmName = 'vm-${namePrefix}'
-var serverOsDiskName = 'osdisk-${namePrefix}'
+var serverPublicIpName = 'pip-${abbreviationLower}-dc01'
+var serverNicName = 'nic-${abbreviationLower}-dc01'
+var serverVmName = 'vm-${abbreviationLower}-dc01'
+var serverOsDiskName = 'osdisk-${abbreviationLower}-dc01'
 
-var workstationPublicIpName = 'pip-jv-ws01'
-var workstationNicName = 'nic-jv-ws01'
-var workstationVmName = 'vm-jv-ws01'
-var workstationOsDiskName = 'osdisk-jv-ws01'
+var workstationPublicIpName = 'pip-${abbreviationLower}-ws01'
+var workstationNicName = 'nic-${abbreviationLower}-ws01'
+var workstationVmName = 'vm-${abbreviationLower}-ws01'
+var workstationOsDiskName = 'osdisk-${abbreviationLower}-ws01'
 
 var rdpRuleName = 'Allow-RDP-Inbound'
 
@@ -64,14 +67,15 @@ var rdpRuleName = 'Allow-RDP-Inbound'
 // The password is base64 encoded only to avoid quoting issues in the PowerShell command.
 // The command itself is passed through protectedSettings, so it is not stored as normal deployment output.
 var encodedAdminPassword = base64(adminPassword)
+var encodedDsrmPassword = base64(dsrmPassword)
 
 var installAdScriptLines = [
   '$ErrorActionPreference = \'Stop\''
   'Install-WindowsFeature AD-Domain-Services -IncludeManagementTools'
-  '$adminPasswordPlain = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\'${encodedAdminPassword}\'))'
-  '$securePassword = ConvertTo-SecureString $adminPasswordPlain -AsPlainText -Force'
-  'Install-ADDSForest -DomainName \'${domainName}\' -DomainNetbiosName \'${domainNetbiosName}\' -SafeModeAdministratorPassword $securePassword -InstallDNS -Force -NoRebootOnCompletion:$true'
-  '$adminPasswordPlain = $null'
+  '$dsrmPasswordPlain = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\'${encodedDsrmPassword}\'))'
+  '$secureDsrmPassword = ConvertTo-SecureString $dsrmPasswordPlain -AsPlainText -Force'
+  'Install-ADDSForest -DomainName \'${domainName}\' -DomainNetbiosName \'${domainNetbiosName}\' -SafeModeAdministratorPassword $secureDsrmPassword -InstallDNS -Force -NoRebootOnCompletion:$true'
+  '$dsrmPasswordPlain = $null'
   'shutdown.exe /r /t 60 /c \'Restart after Active Directory Domain Services installation\''
   'exit 0'
 ]

@@ -2,14 +2,20 @@
 
 This template deploys Azure Firewall with a firewall policy and three virtual networks.
 
-## Deployed resources
+## Parameters
+
+- `abbreviation`: defaults to `jv` and is used in resource names.
+- `firewallSkuTier`: defaults to `Standard`.
+- `tags`: optional tags object.
+
+## Deployed resources with default abbreviation `jv`
 
 - `vnet-jv-vnet01` with `AzureFirewallSubnet` and `snet-jv-vnet01`
 - `vnet-jv-vnet02` with `snet-jv-vnet02`
 - `vnet-jv-vnet03` with `snet-jv-vnet03`
-- Azure Firewall named `afw-jv-<projectName>`
-- Azure Firewall Policy named `afwp-jv-<projectName>`
-- Static public IP address for Azure Firewall
+- Azure Firewall named `afw-jv-afw01`
+- Azure Firewall Policy named `afwp-jv-afwp01`
+- Static public IP address named `pip-jv-afw01`
 - Full bidirectional VNet peering between all three VNets
 
 ## VNet peering names

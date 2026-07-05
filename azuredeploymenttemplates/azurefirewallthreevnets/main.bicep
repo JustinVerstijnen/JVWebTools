@@ -1,12 +1,12 @@
 targetScope = 'resourceGroup'
 
-@description('Project name. Required. Use 2 to 20 characters. This value is used for Azure Firewall and Azure Firewall Policy names.')
+@description('Abbreviation. Used in Azure resource names. Default is jv.')
 @minLength(2)
-@maxLength(20)
-param projectName string
+@maxLength(6)
+param abbreviation string = 'jv'
 
 var location = resourceGroup().location
-var projectClean = toLower(projectName)
+var abbreviationLower = toLower(abbreviation)
 
 @description('Azure Firewall SKU tier.')
 @allowed([
@@ -19,9 +19,9 @@ param firewallSkuTier string = 'Standard'
 @description('Tags. Optional. Add Azure resource tags as a JSON object. Leave empty if no tags are needed.')
 param tags object = {}
 
-var vnet01Name = 'vnet-jv-vnet01'
-var vnet02Name = 'vnet-jv-vnet02'
-var vnet03Name = 'vnet-jv-vnet03'
+var vnet01Name = 'vnet-${abbreviationLower}-vnet01'
+var vnet02Name = 'vnet-${abbreviationLower}-vnet02'
+var vnet03Name = 'vnet-${abbreviationLower}-vnet03'
 
 var vnet01AddressSpace = '10.69.0.0/16'
 var vnet02AddressSpace = '10.70.0.0/16'
@@ -29,16 +29,16 @@ var vnet03AddressSpace = '10.71.0.0/16'
 
 var azureFirewallSubnetName = 'AzureFirewallSubnet'
 var azureFirewallSubnetPrefix = '10.69.0.0/26'
-var vnet01SubnetName = 'snet-jv-vnet01'
+var vnet01SubnetName = 'snet-${abbreviationLower}-vnet01'
 var vnet01SubnetPrefix = '10.69.1.0/24'
-var vnet02SubnetName = 'snet-jv-vnet02'
+var vnet02SubnetName = 'snet-${abbreviationLower}-vnet02'
 var vnet02SubnetPrefix = '10.70.0.0/24'
-var vnet03SubnetName = 'snet-jv-vnet03'
+var vnet03SubnetName = 'snet-${abbreviationLower}-vnet03'
 var vnet03SubnetPrefix = '10.71.0.0/24'
 
-var firewallName = 'afw-jv-${projectClean}'
-var firewallPolicyName = 'afwp-jv-${projectClean}'
-var firewallPublicIpName = 'pip-jv-afw-${projectClean}'
+var firewallName = 'afw-${abbreviationLower}-afw01'
+var firewallPolicyName = 'afwp-${abbreviationLower}-afwp01'
+var firewallPublicIpName = 'pip-${abbreviationLower}-afw01'
 var firewallIpConfigName = 'ipconfig1'
 
 resource vnet01 'Microsoft.Network/virtualNetworks@2024-01-01' = {

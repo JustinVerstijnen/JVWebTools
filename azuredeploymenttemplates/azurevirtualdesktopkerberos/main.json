@@ -11,13 +11,14 @@
     "intuneExpressionFix": "enrollSessionHostsInIntune default restored to true for cloud-only deployments. DSC settings.properties is restored to a normal JSON object to avoid ARM parser issues with boolean literals in createObject()."
   },
   "parameters": {
-    "projectName": {
+    "abbreviation": {
       "type": "string",
-      "metadata": {
-        "description": "Project name. Required. Use 2 to 20 characters. Use only letters, numbers and hyphens. This value is used in Azure resource names. The storage account becomes sajv<project without hyphens>."
-      },
+      "defaultValue": "jv",
       "minLength": 2,
-      "maxLength": 20
+      "maxLength": 6,
+      "metadata": {
+        "description": "Abbreviation used in Azure resource names. Default is jv."
+      }
     },
     "adminUsername": {
       "type": "string",
@@ -122,15 +123,6 @@
       "minValue": 1,
       "maxValue": 10
     },
-    "sessionHostNamePrefix": {
-      "type": "string",
-      "metadata": {
-        "description": "Prefix for AVD session host names. A numeric suffix is added: -0, -1, -2. Keep max 11 characters."
-      },
-      "defaultValue": "vm-jv-avd",
-      "minLength": 1,
-      "maxLength": 11
-    },
     "sessionHostVmSize": {
       "type": "string",
       "metadata": {
@@ -169,8 +161,8 @@
   },
   "variables": {
     "location": "[resourceGroup().location]",
-    "projectClean": "[toLower(parameters('projectName'))]",
-    "projectStorage": "[toLower(replace(parameters('projectName'), '-', ''))]",
+    "abbreviationLower": "[toLower(parameters('abbreviation'))]",
+    "abbreviationStorage": "[replace(variables('abbreviationLower'), '-', '')]",
     "vnetAddressSpace": [
       "10.69.0.0/16"
     ],
@@ -190,14 +182,14 @@
     "imageOffer": "windows-11",
     "imageSku": "win11-25h2-avd",
     "imageVersion": "latest",
-    "vnetName": "[format('vnet-jv-{0}', variables('projectClean'))]",
-    "subnetName": "[format('snet-jv-{0}', variables('projectClean'))]",
-    "nsgName": "[format('nsg-jv-avd-{0}', variables('projectClean'))]",
-    "storageAccountName": "[format('sajv{0}', variables('projectStorage'))]",
+    "vnetName": "[format('vnet-{0}-vnet01', variables('abbreviationLower'))]",
+    "subnetName": "[format('snet-{0}-snet01', variables('abbreviationLower'))]",
+    "nsgName": "[format('nsg-{0}-nsg01', variables('abbreviationLower'))]",
+    "storageAccountName": "[format('sa{0}{1}', variables('abbreviationStorage'), uniqueString(resourceGroup().id))]",
     "fslogixShareName": "fslogix-profiles",
-    "hostPoolName": "[format('vdhp-jv-{0}', variables('projectClean'))]",
-    "applicationGroupName": "[format('vdag-jv-{0}', variables('projectClean'))]",
-    "workspaceName": "[format('vdws-jv-{0}', variables('projectClean'))]",
+    "hostPoolName": "[format('vdhp-{0}-avd01', variables('abbreviationLower'))]",
+    "applicationGroupName": "[format('vdag-{0}-avd01', variables('abbreviationLower'))]",
+    "workspaceName": "[format('vdws-{0}-avd01', variables('abbreviationLower'))]",
     "entraSsoRdpProperties": "[join(createArray('targetisaadjoined:i:1','enablerdsaadauth:i:1','redirectwebauthn:i:1','audiocapturemode:i:1','audiomode:i:0','camerastoredirect:s:*','devicestoredirect:s:*','drivestoredirect:s:*','redirectclipboard:i:1','redirectcomports:i:1','redirectprinters:i:1','redirectsmartcards:i:1','screen mode id:i:2'), ';')]",
     "intuneMdmApplicationId": "0000000a-0000-0000-c000-000000000000",
     "avdServicePrincipalClientId": "9cdead84-a844-4324-93f2-b2e6bb768d07",
@@ -211,7 +203,7 @@
       {
         "name": "sessionHostNames",
         "count": "[parameters('sessionHostCount')]",
-        "input": "[format('{0}-{1}', parameters('sessionHostNamePrefix'), copyIndex('sessionHostNames'))]"
+        "input": "[format('vm-{0}-avd{1}', variables('abbreviationLower'), add(copyIndex('sessionHostNames'), 1))]"
       }
     ],
     "storageIpRuleObjects": []
@@ -658,10 +650,6 @@
       "type": "string",
       "value": "[resourceGroup().name]"
     },
-    "expectedTerraformResourceGroupName": {
-      "type": "string",
-      "value": "[format('rg-jv-{0}', variables('projectClean'))]"
-    },
     "vnetResourceName": {
       "type": "string",
       "value": "[variables('vnetName')]"
@@ -712,7 +700,7 @@
     },
     "postDeploymentNote": {
       "type": "string",
-      "value": "[format('Deploy this template into the resource group you want to use. To match the original Terraform naming exactly, create/select resource group rg-jv-{0} before deploying.', variables('projectClean'))]"
+      "value": "Deploy this template into the resource group you want to use. Resource names are based on the abbreviation parameter. The storage account includes a deterministic unique suffix because Azure Storage account names must be globally unique."
     }
   }
 }
