@@ -78,7 +78,9 @@ var installAdScriptLines = [
 
 var installAdCommand = 'powershell.exe -ExecutionPolicy Unrestricted -NoProfile -Command "${join(installAdScriptLines, '; ')}"'
 
-// The workstation waits until the domain is reachable through the DC DNS IP before running Add-Computer.
+// The workstation waits until the domain controller is fully reachable before running Add-Computer.
+// This is intentionally more strict than a basic DNS lookup because the AD DS extension on the server exits
+// before the post-promotion reboot and Netlogon/DC locator records are fully ready.
 var joinDomainScriptLines = [
   '$ErrorActionPreference = \'Stop\''
   '$adminPasswordPlain = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\'${encodedAdminPassword}\'))'
@@ -86,11 +88,16 @@ var joinDomainScriptLines = [
   '$credential = New-Object System.Management.Automation.PSCredential(\'${domainNetbiosName}\\${adminUsername}\', $securePassword)'
   '$domainName = \'${domainName}\''
   '$dcIp = \'${serverPrivateIpAddress}\''
-  '$timeout = (Get-Date).AddMinutes(45)'
+  '$adapter = Get-NetAdapter | Where-Object { $_.Status -eq \'Up\' -and $_.HardwareInterface } | Sort-Object -Property ifIndex | Select-Object -First 1'
+  'if (-not $adapter) { throw \'No active network adapter found.\' }'
+  'Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ServerAddresses $dcIp'
+  'ipconfig.exe /flushdns | Out-Null'
+  '$srvRecord = \'_ldap._tcp.dc._msdcs.\' + $domainName'
+  '$timeout = (Get-Date).AddMinutes(90)'
   '$domainReady = $false'
-  'do { try { Resolve-DnsName -Name $domainName -Server $dcIp -ErrorAction Stop | Out-Null; $domainReady = $true } catch { Start-Sleep -Seconds 30 } } until ($domainReady -or ((Get-Date) -gt $timeout))'
-  'if (-not $domainReady) { throw \'Domain DNS was not reachable before timeout.\' }'
-  'Add-Computer -DomainName $domainName -Credential $credential -Restart -Force'
+  'do { try { Resolve-DnsName -Name $domainName -Server $dcIp -ErrorAction Stop | Out-Null; Resolve-DnsName -Name $srvRecord -Type SRV -Server $dcIp -ErrorAction Stop | Out-Null; foreach ($port in 53,88,135,389,445) { $tcpReady = Test-NetConnection -ComputerName $dcIp -Port $port -InformationLevel Quiet -WarningAction SilentlyContinue; if (-not $tcpReady) { throw (\'TCP port \' + $port + \' on domain controller is not reachable.\') } }; nltest.exe /dsgetdc:$domainName /force | Out-Null; if ($LASTEXITCODE -ne 0) { throw \'Domain controller discovery failed.\' }; $domainReady = $true } catch { Write-Host (\'Domain not ready yet: \' + $_.Exception.Message); Start-Sleep -Seconds 30; ipconfig.exe /flushdns | Out-Null } } until ($domainReady -or ((Get-Date) -gt $timeout))'
+  'if (-not $domainReady) { throw \'Domain controller was not reachable before timeout.\' }'
+  'Add-Computer -DomainName $domainName -Credential $credential -Restart -Force -ErrorAction Stop'
   '$adminPasswordPlain = $null'
   'exit 0'
 ]
@@ -179,6 +186,11 @@ resource serverNic 'Microsoft.Network/networkInterfaces@2023-11-01' = {
   location: location
   tags: tags
   properties: {
+    dnsSettings: {
+      dnsServers: [
+        serverPrivateIpAddress
+      ]
+    }
     ipConfigurations: [
       {
         name: 'ipconfig1'
@@ -205,6 +217,11 @@ resource workstationNic 'Microsoft.Network/networkInterfaces@2023-11-01' = {
   location: location
   tags: tags
   properties: {
+    dnsSettings: {
+      dnsServers: [
+        serverPrivateIpAddress
+      ]
+    }
     ipConfigurations: [
       {
         name: 'ipconfig1'

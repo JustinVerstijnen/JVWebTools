@@ -24,7 +24,7 @@ This template deploys a Windows Server Active Directory domain controller and on
 ## Network access
 
 - `Allow-RDP-Inbound` allows RDP TCP/3389 only from the configured `sourceIpAddress`.
-- VNet DNS is configured to use the domain controller private IP `10.69.0.4`.
+- VNet DNS and both VM NIC DNS settings are configured to use the domain controller private IP `10.69.0.4`.
 
 ## Outputs
 
@@ -33,3 +33,7 @@ This template deploys a Windows Server Active Directory domain controller and on
 - `serverPublicIPAddress`
 - `workstationPublicIPAddress`
 - `activeDirectoryDomain`
+
+## Domain join timing
+
+The workstation domain-join extension now sets the workstation DNS client to the domain controller IP and waits for AD DNS, LDAP SRV records, DC locator, and core domain ports before running `Add-Computer`. This prevents the join from starting while the new domain controller is still rebooting after promotion.
