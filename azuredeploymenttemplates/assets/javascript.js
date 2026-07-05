@@ -16,17 +16,24 @@ function getDeployToAzureUrl(templatePath) {
 const tools = [
   {
     title: "Single Server with Active Directory",
-    description: "Deploy a single server with Active Directory for simple on-premises scenarios.",
+    description: "Deploy a single Windows Server VM with Active Directory Domain Services and DNS.",
     templatePath: "singleserveractivedirectory/main.json",
     shortcut: "",
-    image: ""
+    image: `${rawTemplateBaseUrl}/singleserveractivedirectory/singleserveractivedirectory.png`
   },
   {
     title: "Single Server with IIS",
-    description: "Deploy a single server with IIS for simple on-premises scenarios.",
+    description: "Deploy a single Windows Server VM with IIS and a default test website.",
     templatePath: "singleserveriis/main.json",
     shortcut: "",
-    image: ""
+    image: `${rawTemplateBaseUrl}/singleserveriis/singleserveriis.png`
+  },
+  {
+    title: "Single Server with Active Directory and Workstation",
+    description: "Deploy a Windows Server Active Directory domain controller and a Windows 11 workstation named vm-jv-ws01.",
+    templatePath: "singleserveractivedirectoryworkstation/main.json",
+    shortcut: "",
+    image: `${rawTemplateBaseUrl}/singleserveractivedirectoryworkstation/singleserveractivedirectoryworkstation.png`
   },
   {
     title: "Azure Virtual Desktop Kerberos",
@@ -34,13 +41,19 @@ const tools = [
     templatePath: "azurevirtualdesktopkerberos/main.json",
     shortcut: "",
     image: `${rawTemplateBaseUrl}/azurevirtualdesktopkerberos/azurevirtualdesktopkerberos.png`
+  },
+  {
+    title: "Azure Firewall with Three VNets",
+    description: "Deploy Azure Firewall with a firewall policy, three VNets and full bidirectional VNet peering.",
+    templatePath: "azurefirewallthreevnets/main.json",
+    shortcut: "",
+    image: `${rawTemplateBaseUrl}/azurefirewallthreevnets/azurefirewallthreevnets.png`
   }
 ];
 
 const grid = document.getElementById("toolsGrid");
 const searchInput = document.getElementById("searchInput");
 const emptyState = document.getElementById("emptyState");
-
 
 function createToolImage(tool, deployToAzureUrl) {
   if (!tool.image) {

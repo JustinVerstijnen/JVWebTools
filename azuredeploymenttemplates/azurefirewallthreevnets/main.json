@@ -1,0 +1,339 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "projectName": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 20,
+      "metadata": {
+        "description": "Project name. This value is used for Azure Firewall and Azure Firewall Policy names."
+      }
+    },
+    "firewallSkuTier": {
+      "type": "string",
+      "defaultValue": "Standard",
+      "allowedValues": [
+        "Basic",
+        "Standard",
+        "Premium"
+      ],
+      "metadata": {
+        "description": "Azure Firewall SKU tier."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Add Azure resource tags as a JSON object. Leave empty if no tags are needed."
+      }
+    }
+  },
+  "variables": {
+    "location": "[resourceGroup().location]",
+    "projectClean": "[toLower(parameters('projectName'))]",
+    "vnet01Name": "vnet-jv-vnet01",
+    "vnet02Name": "vnet-jv-vnet02",
+    "vnet03Name": "vnet-jv-vnet03",
+    "vnet01AddressSpace": "10.69.0.0/16",
+    "vnet02AddressSpace": "10.70.0.0/16",
+    "vnet03AddressSpace": "10.71.0.0/16",
+    "azureFirewallSubnetName": "AzureFirewallSubnet",
+    "azureFirewallSubnetPrefix": "10.69.0.0/26",
+    "vnet01SubnetName": "snet-jv-vnet01",
+    "vnet01SubnetPrefix": "10.69.1.0/24",
+    "vnet02SubnetName": "snet-jv-vnet02",
+    "vnet02SubnetPrefix": "10.70.0.0/24",
+    "vnet03SubnetName": "snet-jv-vnet03",
+    "vnet03SubnetPrefix": "10.71.0.0/24",
+    "firewallName": "[format('afw-jv-{0}', variables('projectClean'))]",
+    "firewallPolicyName": "[format('afwp-jv-{0}', variables('projectClean'))]",
+    "firewallPublicIpName": "[format('pip-jv-afw-{0}', variables('projectClean'))]",
+    "firewallIpConfigName": "ipconfig1"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2024-01-01",
+      "name": "[variables('vnet01Name')]",
+      "location": "[variables('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('vnet01AddressSpace')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('azureFirewallSubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('azureFirewallSubnetPrefix')]"
+            }
+          },
+          {
+            "name": "[variables('vnet01SubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('vnet01SubnetPrefix')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2024-01-01",
+      "name": "[variables('vnet02Name')]",
+      "location": "[variables('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('vnet02AddressSpace')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('vnet02SubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('vnet02SubnetPrefix')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2024-01-01",
+      "name": "[variables('vnet03Name')]",
+      "location": "[variables('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('vnet03AddressSpace')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('vnet03SubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('vnet03SubnetPrefix')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "apiVersion": "2024-01-01",
+      "name": "[format('{0}/VNET01-to-VNET02', variables('vnet01Name'))]",
+      "properties": {
+        "allowVirtualNetworkAccess": true,
+        "allowForwardedTraffic": true,
+        "allowGatewayTransit": false,
+        "useRemoteGateways": false,
+        "remoteVirtualNetwork": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet02Name'))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet01Name'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet02Name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "apiVersion": "2024-01-01",
+      "name": "[format('{0}/VNET02-to-VNET01', variables('vnet02Name'))]",
+      "properties": {
+        "allowVirtualNetworkAccess": true,
+        "allowForwardedTraffic": true,
+        "allowGatewayTransit": false,
+        "useRemoteGateways": false,
+        "remoteVirtualNetwork": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet01Name'))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet02Name'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet01Name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "apiVersion": "2024-01-01",
+      "name": "[format('{0}/VNET01-to-VNET03', variables('vnet01Name'))]",
+      "properties": {
+        "allowVirtualNetworkAccess": true,
+        "allowForwardedTraffic": true,
+        "allowGatewayTransit": false,
+        "useRemoteGateways": false,
+        "remoteVirtualNetwork": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet03Name'))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet01Name'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet03Name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "apiVersion": "2024-01-01",
+      "name": "[format('{0}/VNET03-to-VNET01', variables('vnet03Name'))]",
+      "properties": {
+        "allowVirtualNetworkAccess": true,
+        "allowForwardedTraffic": true,
+        "allowGatewayTransit": false,
+        "useRemoteGateways": false,
+        "remoteVirtualNetwork": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet01Name'))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet03Name'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet01Name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "apiVersion": "2024-01-01",
+      "name": "[format('{0}/VNET02-to-VNET03', variables('vnet02Name'))]",
+      "properties": {
+        "allowVirtualNetworkAccess": true,
+        "allowForwardedTraffic": true,
+        "allowGatewayTransit": false,
+        "useRemoteGateways": false,
+        "remoteVirtualNetwork": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet03Name'))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet02Name'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet03Name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "apiVersion": "2024-01-01",
+      "name": "[format('{0}/VNET03-to-VNET02', variables('vnet03Name'))]",
+      "properties": {
+        "allowVirtualNetworkAccess": true,
+        "allowForwardedTraffic": true,
+        "allowGatewayTransit": false,
+        "useRemoteGateways": false,
+        "remoteVirtualNetwork": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet02Name'))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet03Name'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet02Name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2024-01-01",
+      "name": "[variables('firewallPublicIpName')]",
+      "location": "[variables('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "Standard",
+        "tier": "Regional"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static"
+      }
+    },
+    {
+      "type": "Microsoft.Network/firewallPolicies",
+      "apiVersion": "2024-01-01",
+      "name": "[variables('firewallPolicyName')]",
+      "location": "[variables('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "threatIntelMode": "Alert"
+      },
+      "sku": {
+        "tier": "[parameters('firewallSkuTier')]"
+      }
+    },
+    {
+      "type": "Microsoft.Network/azureFirewalls",
+      "apiVersion": "2024-01-01",
+      "name": "[variables('firewallName')]",
+      "location": "[variables('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "sku": {
+          "name": "AZFW_VNet",
+          "tier": "[parameters('firewallSkuTier')]"
+        },
+        "firewallPolicy": {
+          "id": "[resourceId('Microsoft.Network/firewallPolicies', variables('firewallPolicyName'))]"
+        },
+        "ipConfigurations": [
+          {
+            "name": "[variables('firewallIpConfigName')]",
+            "properties": {
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnet01Name'), variables('azureFirewallSubnetName'))]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('firewallPublicIpName'))]"
+              }
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet01Name'))]",
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('firewallPublicIpName'))]",
+        "[resourceId('Microsoft.Network/firewallPolicies', variables('firewallPolicyName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "resourceGroupName": {
+      "type": "string",
+      "value": "[resourceGroup().name]"
+    },
+    "azureFirewallName": {
+      "type": "string",
+      "value": "[variables('firewallName')]"
+    },
+    "azureFirewallPolicyName": {
+      "type": "string",
+      "value": "[variables('firewallPolicyName')]"
+    },
+    "azureFirewallPublicIpName": {
+      "type": "string",
+      "value": "[variables('firewallPublicIpName')]"
+    },
+    "azureFirewallPublicIpAddress": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('firewallPublicIpName')), '2024-01-01').ipAddress]"
+    },
+    "vnetNames": {
+      "type": "array",
+      "value": [
+        "[variables('vnet01Name')]",
+        "[variables('vnet02Name')]",
+        "[variables('vnet03Name')]"
+      ]
+    },
+    "peeringNames": {
+      "type": "array",
+      "value": [
+        "VNET01-to-VNET02",
+        "VNET02-to-VNET01",
+        "VNET01-to-VNET03",
+        "VNET03-to-VNET01",
+        "VNET02-to-VNET03",
+        "VNET03-to-VNET02"
+      ]
+    }
+  }
+}

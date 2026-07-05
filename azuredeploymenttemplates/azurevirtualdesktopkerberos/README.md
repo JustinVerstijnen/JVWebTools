@@ -100,10 +100,10 @@ The identity deploying this template needs permissions to create Azure resources
 
 ## Deploy button
 
-After committing this folder to `main` in `JustinVerstijnen/JV-Azure-Deployment-Templates`, open `deploy.html` or use this raw ARM template path:
+After committing this folder to `main` in `JustinVerstijnen/AzureDeploymentTemplates`, open `deploy.html` or use this raw ARM template path:
 
 ```text
-https://raw.githubusercontent.com/JustinVerstijnen/JV-Azure-Deployment-Templates/refs/heads/main/azurevirtualdesktopkerberos/main.json
+https://raw.githubusercontent.com/JustinVerstijnen/AzureDeploymentTemplates/refs/heads/main/azurevirtualdesktopkerberos/main.json
 ```
 
 ## Fix notes

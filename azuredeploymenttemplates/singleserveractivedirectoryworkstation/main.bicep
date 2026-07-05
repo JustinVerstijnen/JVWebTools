@@ -1,0 +1,372 @@
+targetScope = 'resourceGroup'
+
+@description('Project name. Required. Use 2 to 8 characters. This value is used in Azure resource names and the Windows Server computer name.')
+@minLength(2)
+@maxLength(8)
+param projectName string
+
+var location = resourceGroup().location
+
+@description('Username. Required. Local administrator username for both VMs. This account is also used for the domain join attempt.')
+param adminUsername string
+
+@description('Password. Required. Local administrator password for both VMs and the Active Directory DSRM password. Use a strong password.')
+@secure()
+param adminPassword string
+
+@description('Public IP address. Required. Public IPv4 address that is allowed to connect with RDP. Enter only the IP address, without /32.')
+param sourceIpAddress string
+
+@description('Server size. Required. Enter an Azure VM size for the Windows Server / Active Directory VM.')
+param serverVmSize string = 'Standard_D2as_v7'
+
+@description('Workstation size. Required. Enter an Azure VM size for the Windows 11 workstation VM.')
+param workstationVmSize string = 'Standard_D2as_v7'
+
+@description('Active Directory domain name. Required. Example: contoso.local or ad.contoso.com.')
+param domainName string
+
+@description('NETBIOS name. Required. Active Directory NetBIOS name. Use 1 to 15 characters.')
+@minLength(1)
+@maxLength(15)
+param domainNetbiosName string
+
+@description('Join the Windows 11 workstation to the new Active Directory domain after the domain controller has been promoted.')
+param joinWorkstationToDomain bool = true
+
+@description('Tags. Optional. Add Azure resource tags as a JSON object. Leave empty if no tags are needed.')
+param tags object = {}
+
+var vnetAddressPrefix = '10.69.0.0/16'
+var subnetPrefix = '10.69.0.0/24'
+var serverPrivateIpAddress = '10.69.0.4'
+var workstationPrivateIpAddress = '10.69.0.5'
+
+var lowerProjectName = toLower(projectName)
+var namePrefix = 'jv-${lowerProjectName}'
+var vnetName = 'vnet-${namePrefix}'
+var subnetName = 'snet-${namePrefix}'
+var nsgName = 'nsg-${namePrefix}'
+
+var serverPublicIpName = 'pip-${namePrefix}'
+var serverNicName = 'nic-${namePrefix}'
+var serverVmName = 'vm-${namePrefix}'
+var serverOsDiskName = 'osdisk-${namePrefix}'
+
+var workstationPublicIpName = 'pip-jv-ws01'
+var workstationNicName = 'nic-jv-ws01'
+var workstationVmName = 'vm-jv-ws01'
+var workstationOsDiskName = 'osdisk-jv-ws01'
+
+var rdpRuleName = 'Allow-RDP-Inbound'
+
+// This command installs the AD DS role, creates a new forest, installs DNS, and schedules a restart.
+// The password is base64 encoded only to avoid quoting issues in the PowerShell command.
+// The command itself is passed through protectedSettings, so it is not stored as normal deployment output.
+var encodedAdminPassword = base64(adminPassword)
+
+var installAdScriptLines = [
+  '$ErrorActionPreference = \'Stop\''
+  'Install-WindowsFeature AD-Domain-Services -IncludeManagementTools'
+  '$adminPasswordPlain = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\'${encodedAdminPassword}\'))'
+  '$securePassword = ConvertTo-SecureString $adminPasswordPlain -AsPlainText -Force'
+  'Install-ADDSForest -DomainName \'${domainName}\' -DomainNetbiosName \'${domainNetbiosName}\' -SafeModeAdministratorPassword $securePassword -InstallDNS -Force -NoRebootOnCompletion:$true'
+  '$adminPasswordPlain = $null'
+  'shutdown.exe /r /t 60 /c \'Restart after Active Directory Domain Services installation\''
+  'exit 0'
+]
+
+var installAdCommand = 'powershell.exe -ExecutionPolicy Unrestricted -NoProfile -Command "${join(installAdScriptLines, '; ')}"'
+
+// The workstation waits until the domain is reachable through the DC DNS IP before running Add-Computer.
+var joinDomainScriptLines = [
+  '$ErrorActionPreference = \'Stop\''
+  '$adminPasswordPlain = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\'${encodedAdminPassword}\'))'
+  '$securePassword = ConvertTo-SecureString $adminPasswordPlain -AsPlainText -Force'
+  '$credential = New-Object System.Management.Automation.PSCredential(\'${domainNetbiosName}\\${adminUsername}\', $securePassword)'
+  '$domainName = \'${domainName}\''
+  '$dcIp = \'${serverPrivateIpAddress}\''
+  '$timeout = (Get-Date).AddMinutes(45)'
+  '$domainReady = $false'
+  'do { try { Resolve-DnsName -Name $domainName -Server $dcIp -ErrorAction Stop | Out-Null; $domainReady = $true } catch { Start-Sleep -Seconds 30 } } until ($domainReady -or ((Get-Date) -gt $timeout))'
+  'if (-not $domainReady) { throw \'Domain DNS was not reachable before timeout.\' }'
+  'Add-Computer -DomainName $domainName -Credential $credential -Restart -Force'
+  '$adminPasswordPlain = $null'
+  'exit 0'
+]
+
+var joinDomainCommand = 'powershell.exe -ExecutionPolicy Unrestricted -NoProfile -Command "${join(joinDomainScriptLines, '; ')}"'
+
+resource nsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
+  name: nsgName
+  location: location
+  tags: tags
+  properties: {
+    securityRules: [
+      {
+        name: rdpRuleName
+        properties: {
+          priority: 1000
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRange: '3389'
+          sourceAddressPrefix: '${sourceIpAddress}/32'
+          destinationAddressPrefix: '*'
+          description: 'Allow RDP only from the configured administrator IP address.'
+        }
+      }
+    ]
+  }
+}
+
+resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
+  name: vnetName
+  location: location
+  tags: tags
+  properties: {
+    addressSpace: {
+      addressPrefixes: [
+        vnetAddressPrefix
+      ]
+    }
+    dhcpOptions: {
+      dnsServers: [
+        serverPrivateIpAddress
+      ]
+    }
+    subnets: [
+      {
+        name: subnetName
+        properties: {
+          addressPrefix: subnetPrefix
+          networkSecurityGroup: {
+            id: nsg.id
+          }
+        }
+      }
+    ]
+  }
+}
+
+resource serverPublicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
+  name: serverPublicIpName
+  location: location
+  tags: tags
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+  }
+}
+
+resource workstationPublicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
+  name: workstationPublicIpName
+  location: location
+  tags: tags
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+  }
+}
+
+resource serverNic 'Microsoft.Network/networkInterfaces@2023-11-01' = {
+  name: serverNicName
+  location: location
+  tags: tags
+  properties: {
+    ipConfigurations: [
+      {
+        name: 'ipconfig1'
+        properties: {
+          privateIPAllocationMethod: 'Static'
+          privateIPAddress: serverPrivateIpAddress
+          subnet: {
+            id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, subnetName)
+          }
+          publicIPAddress: {
+            id: serverPublicIp.id
+          }
+        }
+      }
+    ]
+  }
+  dependsOn: [
+    vnet
+  ]
+}
+
+resource workstationNic 'Microsoft.Network/networkInterfaces@2023-11-01' = {
+  name: workstationNicName
+  location: location
+  tags: tags
+  properties: {
+    ipConfigurations: [
+      {
+        name: 'ipconfig1'
+        properties: {
+          privateIPAllocationMethod: 'Static'
+          privateIPAddress: workstationPrivateIpAddress
+          subnet: {
+            id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, subnetName)
+          }
+          publicIPAddress: {
+            id: workstationPublicIp.id
+          }
+        }
+      }
+    ]
+  }
+  dependsOn: [
+    vnet
+  ]
+}
+
+resource serverVm 'Microsoft.Compute/virtualMachines@2023-09-01' = {
+  name: serverVmName
+  location: location
+  tags: tags
+  properties: {
+    hardwareProfile: {
+      vmSize: serverVmSize
+    }
+    osProfile: {
+      computerName: serverVmName
+      adminUsername: adminUsername
+      adminPassword: adminPassword
+      windowsConfiguration: {
+        provisionVMAgent: true
+        enableAutomaticUpdates: true
+      }
+    }
+    storageProfile: {
+      imageReference: {
+        publisher: 'MicrosoftWindowsServer'
+        offer: 'WindowsServer'
+        sku: '2022-datacenter-azure-edition'
+        version: 'latest'
+      }
+      osDisk: {
+        name: serverOsDiskName
+        createOption: 'FromImage'
+        managedDisk: {
+          storageAccountType: 'Premium_LRS'
+        }
+      }
+    }
+    networkProfile: {
+      networkInterfaces: [
+        {
+          id: serverNic.id
+          properties: {
+            primary: true
+          }
+        }
+      ]
+    }
+    diagnosticsProfile: {
+      bootDiagnostics: {
+        enabled: true
+      }
+    }
+  }
+}
+
+resource workstationVm 'Microsoft.Compute/virtualMachines@2023-09-01' = {
+  name: workstationVmName
+  location: location
+  tags: tags
+  properties: {
+    hardwareProfile: {
+      vmSize: workstationVmSize
+    }
+    osProfile: {
+      computerName: workstationVmName
+      adminUsername: adminUsername
+      adminPassword: adminPassword
+      windowsConfiguration: {
+        provisionVMAgent: true
+        enableAutomaticUpdates: true
+      }
+    }
+    storageProfile: {
+      imageReference: {
+        publisher: 'MicrosoftWindowsDesktop'
+        offer: 'windows-11'
+        sku: 'win11-25h2-pro'
+        version: 'latest'
+      }
+      osDisk: {
+        name: workstationOsDiskName
+        createOption: 'FromImage'
+        managedDisk: {
+          storageAccountType: 'Premium_LRS'
+        }
+      }
+    }
+    networkProfile: {
+      networkInterfaces: [
+        {
+          id: workstationNic.id
+          properties: {
+            primary: true
+          }
+        }
+      ]
+    }
+    diagnosticsProfile: {
+      bootDiagnostics: {
+        enabled: true
+      }
+    }
+  }
+}
+
+resource installAdDsExtension 'Microsoft.Compute/virtualMachines/extensions@2023-09-01' = {
+  parent: serverVm
+  name: 'install-ad-ds'
+  location: location
+  properties: {
+    publisher: 'Microsoft.Compute'
+    type: 'CustomScriptExtension'
+    typeHandlerVersion: '1.10'
+    autoUpgradeMinorVersion: true
+    protectedSettings: {
+      commandToExecute: installAdCommand
+    }
+  }
+}
+
+resource joinDomainExtension 'Microsoft.Compute/virtualMachines/extensions@2023-09-01' = if (joinWorkstationToDomain) {
+  parent: workstationVm
+  name: 'join-domain'
+  location: location
+  properties: {
+    publisher: 'Microsoft.Compute'
+    type: 'CustomScriptExtension'
+    typeHandlerVersion: '1.10'
+    autoUpgradeMinorVersion: true
+    protectedSettings: {
+      commandToExecute: joinDomainCommand
+    }
+  }
+  dependsOn: [
+    installAdDsExtension
+  ]
+}
+
+output resourceGroupName string = resourceGroup().name
+output serverVirtualMachineName string = serverVm.name
+output workstationVirtualMachineName string = workstationVm.name
+output serverPrivateIPAddress string = serverPrivateIpAddress
+output workstationPrivateIPAddress string = workstationPrivateIpAddress
+output serverPublicIPAddress string = serverPublicIp.properties.ipAddress
+output workstationPublicIPAddress string = workstationPublicIp.properties.ipAddress
+output serverRdpCommand string = 'mstsc /v:${serverPublicIp.properties.ipAddress}'
+output workstationRdpCommand string = 'mstsc /v:${workstationPublicIp.properties.ipAddress}'
+output activeDirectoryDomain string = domainName
+output postDeploymentNote string = 'The server restarts after AD DS installation. If joinWorkstationToDomain is true, the workstation waits for domain DNS and then restarts after domain join.'
