@@ -77,7 +77,7 @@ const tools = [
     toolUrl: "https://tools.justinverstijnen.nl/azuredeploymenttemplates",
     shortcut: "https://azdeploy.jvapp.nl",
     github: "https://github.com/JustinVerstijnen/AzureDeploymentTemplates",
-    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-portchecker.png"
+    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-azuredeploymenttemplates.jpg"
   },
   {
     title: "Markdown Editor",
