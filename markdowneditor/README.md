@@ -29,7 +29,34 @@ This tool is currently hosted on GitHub Pages. Configuration changes are pushed 
 
 New features to this tool are added when needed or if the tool is broken.
 
-Feature request can be done by submitting issues into GitHub.
+Feature requests can be done by submitting issues into GitHub.
+
+---
+
+## Setup Azure Blob Storage
+
+We can also paste clipboard images to Azure Blob Storage for easy blog writing. The authentication works with 2 mechanisms:
+
+1. Storage Account Key (Easy but unsecure)
+2. Microsoft Entra ID (Harder but more secure)
+
+### 1. CORS
+
+In the Storage Account, we must set CORS to this values:
+
+| Allowed origins | Allowed Methods | Allowed headers | Exposed headers | Max age |
+| --- | --- | --- | --- | --- |
+| https://tools.justinverstijnen.nl | GETOPTIONSPUT | authorization,content-type,x-ms-* | x-ms-* | 3600 |
+
+### 2. RBAC Roles
+
+- Assign the **Storage Blob Data Contributor** role at storage account level to the users which need to write to the containers
+
+### 3. App registration
+
+Create an App Registration for the editor and add the API permission Azure Storage -> User_impersonation. Then set the redirect URL.
+
+---
 
 ## Issues
 
