@@ -163,14 +163,41 @@ p {
     object-fit: contain;
 }
 
-.tab-letter-icon {
-    background: linear-gradient(135deg, #75b6e7, #8EAFDA);
+.product-icon {
     color: #fff;
     font-size: 1.45rem;
     font-weight: 800;
+    position: relative;
+    isolation: isolate;
 }
 
-.tab-letter-icon.azure-icon {
+.product-icon::before,
+.product-icon::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    border-radius: 7px;
+}
+
+.product-icon::before {
+    inset: 8px 19px 8px 9px;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.product-icon::after {
+    inset: 12px 9px 12px 24px;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.intune-icon {
+    background: linear-gradient(135deg, #5ad0f2, #3478cf);
+}
+
+.entra-icon {
+    background: linear-gradient(135deg, #7bbcff, #8EAFDA);
+}
+
+.azure-icon {
     background: linear-gradient(135deg, #51a9f6, #315c91);
 }
 
@@ -650,20 +677,6 @@ thead {
     color: var(--muted);
 }
 
-.history-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.history-copy-btn {
-    min-height: 34px;
-    height: 34px;
-    padding: 0 12px;
-    font-size: 14px;
-    background: var(--brand);
-}
-
 .site-footer {
     text-align: center;
     font-size: 9px;
@@ -738,8 +751,7 @@ thead {
         max-width: none;
     }
 
-    .actions-row button,
-    .history-actions button {
+    .actions-row button {
         width: 100%;
     }
 }

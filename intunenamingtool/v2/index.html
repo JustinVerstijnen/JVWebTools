@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Generate Microsoft Intune, Entra and Azure names using my Microsoft naming framework.">
     <title>Microsoft Naming Tool - justinverstijnen.nl</title>
-    <link rel="stylesheet" href="style.css?v=20260611-polish-1">
+    <link rel="stylesheet" href="style.css?v=20260706-microsoft-2">
     <link rel="icon" type="image/svg+xml" href="https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/logo.svg">
     <script defer src="https://cloud.umami.is/script.js" data-website-id="3ce7d7a4-539b-4d3c-981e-e96189fa5ac8"></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4082816808518335" crossorigin="anonymous"></script>
@@ -23,16 +23,16 @@
 
         <nav class="object-tabs" aria-label="Select naming object type">
             <button class="object-tab active" id="intuneTab" type="button" data-platform="intune" aria-selected="true">
-                <span class="tab-icon tab-logo-icon" aria-hidden="true">
-                    <img src="assets/img/microsoft-intune.webp" alt="" width="50" height="50">
+                <span class="tab-icon product-icon intune-icon" aria-hidden="true">
+                    I
                 </span>
                 <span class="tab-text">
                     <strong>Intune</strong>
-                    <small>Resources and groups for Intune naming</small>
+                    <small>Resources for Intune naming</small>
                 </span>
             </button>
             <button class="object-tab" id="entraTab" type="button" data-platform="entra" aria-selected="false">
-                <span class="tab-icon tab-letter-icon" aria-hidden="true">
+                <span class="tab-icon product-icon entra-icon" aria-hidden="true">
                     E
                 </span>
                 <span class="tab-text">
@@ -41,7 +41,7 @@
                 </span>
             </button>
             <button class="object-tab" id="azureTab" type="button" data-platform="azure" aria-selected="false">
-                <span class="tab-icon tab-letter-icon azure-icon" aria-hidden="true">
+                <span class="tab-icon product-icon azure-icon" aria-hidden="true">
                     A
                 </span>
                 <span class="tab-text">
@@ -76,7 +76,7 @@
                     <div class="field">
                         <label class="checkbox-label" for="typeFirstToggle">
                             <input type="checkbox" id="typeFirstToggle">
-                            <span>Put type / action before prefix</span>
+                            <span>Reverse "Prefix/Action"</span>
                         </label>
                         <small id="typeFirstHelp">Switch between Prefix-Type and Type-Prefix.</small>
                     </div>
@@ -113,6 +113,12 @@
                         <small>Select the OS you want to target</small>
                     </div>
 
+                    <div class="field hidden" id="environmentField">
+                        <label for="environmentSelect">Environment</label>
+                        <select id="environmentSelect"></select>
+                        <small>Optional Azure environment between prefix and name / goal.</small>
+                    </div>
+
                     <div class="field">
                         <label for="goalInput">Name / goal</label>
                         <input type="text" id="goalInput" value="" placeholder="Such as OneDrive, FSLogix, BitLocker, All Devices" autocomplete="off" spellcheck="false">
@@ -121,7 +127,6 @@
                 </div>
 
                 <div class="actions-row">
-                    <button id="generateBtn" class="primary-btn icon-btn" type="button"><svg class="btn-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg>Generate</button>
                     <button id="copyBtn" class="copy-btn icon-btn" type="button"><svg class="btn-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2V7Zm2 0v11h8V7h-8ZM4 3a2 2 0 0 1 2-2h9v2H6v12H4V3Z"/></svg>Copy</button>
                     <button id="resetBtn" class="secondary-btn icon-btn" type="button"><svg class="btn-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5a7 7 0 1 1-6.32 4H3l4-4 4 4H8.05A5 5 0 1 0 12 7V5Z"/></svg>Reset</button>
                 </div>
@@ -146,6 +151,7 @@
                             <tr><th id="partTypeLabel">Type</th><td id="partType">CP</td></tr>
                             <tr id="partTargetRow"><th>Target</th><td id="partTarget">D</td></tr>
                             <tr id="partOsRow"><th>OS</th><td id="partOs">WIN</td></tr>
+                            <tr id="partEnvironmentRow"><th>Environment</th><td id="partEnvironment">-</td></tr>
                             <tr><th>Name / Goal</th><td id="partGoal">OneDrive</td></tr>
                         </tbody>
                     </table>
@@ -185,7 +191,7 @@
 
         <div id="toast" class="toast" role="status" aria-live="polite">Copied generated name to clipboard!</div>
     </main>
-    <script src="app.js?v=20260706-microsoft-1"></script>
+    <script src="app.js?v=20260706-microsoft-2"></script>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4082816808518335"
      crossorigin="anonymous"></script>
 <ins class="adsbygoogle"

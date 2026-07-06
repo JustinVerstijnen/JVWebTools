@@ -87,6 +87,7 @@ const azureResourceCategories = [
         category: "Identity & Monitoring",
         items: [
             { code: "rg", label: "Resource Group" },
+            { code: "sub", label: "Subscription" },
             { code: "appi", label: "Application Insights" },
             { code: "law", label: "Log Analytics Workspace" },
             { code: "mid", label: "Managed Identity" },
@@ -272,8 +273,7 @@ const platformConfig = {
         goalDefault: "OneDrive",
         typeFirstDefault: false,
         objectOptions: [
-            { value: "intuneResource", label: "Intune Resource" },
-            { value: "group", label: "Group" }
+            { value: "intuneResource", label: "Intune Resource" }
         ]
     },
     entra: {
@@ -291,7 +291,7 @@ const platformConfig = {
         label: "Azure",
         pill: "Azure",
         prefixDefault: "jv",
-        goalDefault: "prod",
+        goalDefault: "core",
         typeFirstDefault: true,
         objectOptions: [
             { value: "azureResource", label: "Azure Resource" }
@@ -328,6 +328,13 @@ const osOptions = [
     { code: "", label: "None" }
 ];
 
+const environmentOptions = [
+    { code: "", label: "None" },
+    { code: "prod", label: "prod" },
+    { code: "test", label: "test" },
+    { code: "dev", label: "dev" }
+];
+
 const state = {
     platform: "intune",
     objectType: "intuneResource"
@@ -356,6 +363,8 @@ function bindElements() {
     elements.actionSelect = document.getElementById("actionSelect");
     elements.targetField = document.getElementById("targetField");
     elements.targetSelect = document.getElementById("targetSelect");
+    elements.environmentField = document.getElementById("environmentField");
+    elements.environmentSelect = document.getElementById("environmentSelect");
     elements.osField = document.getElementById("osField");
     elements.osSelect = document.getElementById("osSelect");
     elements.resourceTypeSearchInput = document.getElementById("resourceTypeSearchInput");
@@ -368,7 +377,6 @@ function bindElements() {
     elements.resourceTypeDescription = document.getElementById("resourceTypeDescription");
     elements.groupTypeDescription = document.getElementById("groupTypeDescription");
     elements.goalInput = document.getElementById("goalInput");
-    elements.generateBtn = document.getElementById("generateBtn");
     elements.copyBtn = document.getElementById("copyBtn");
     elements.resetBtn = document.getElementById("resetBtn");
     elements.generatedName = document.getElementById("generatedName");
@@ -381,6 +389,8 @@ function bindElements() {
     elements.partTarget = document.getElementById("partTarget");
     elements.partOsRow = document.getElementById("partOsRow");
     elements.partOs = document.getElementById("partOs");
+    elements.partEnvironmentRow = document.getElementById("partEnvironmentRow");
+    elements.partEnvironment = document.getElementById("partEnvironment");
     elements.partGoal = document.getElementById("partGoal");
     elements.conventionText = document.getElementById("conventionText");
     elements.typeSearchInput = document.getElementById("typeSearchInput");
@@ -393,6 +403,7 @@ function populateStaticSelects() {
     populateSimpleSelect(elements.actionSelect, conditionalAccessActionOptions);
     populateSimpleSelect(elements.targetSelect, targetOptions);
     populateSimpleSelect(elements.osSelect, osOptions);
+    populateSimpleSelect(elements.environmentSelect, environmentOptions);
 }
 
 function bindEvents() {
@@ -405,6 +416,7 @@ function bindEvents() {
         elements.typeFirstToggle,
         elements.actionSelect,
         elements.targetSelect,
+        elements.environmentSelect,
         elements.osSelect,
         elements.resourceTypeSelect,
         elements.groupTypeSelect,
@@ -429,11 +441,6 @@ function bindEvents() {
     elements.groupTypeSearchInput.addEventListener("input", () => {
         filterTypeSelect();
         updatePreview();
-    });
-
-    elements.generateBtn.addEventListener("click", () => {
-        const result = updatePreview();
-        showToast(result.isValid ? "Name generated." : "Complete the required fields first.");
     });
 
     elements.copyBtn.addEventListener("click", async () => {
@@ -503,6 +510,7 @@ function setDefaultSelections() {
     populateTypeSelect(elements.groupTypeSelect, groupCategories);
     elements.actionSelect.value = "Allow";
     elements.targetSelect.value = "D";
+    elements.environmentSelect.value = "";
     elements.osSelect.value = state.objectType === "group" ? "" : "WIN";
 }
 
@@ -517,6 +525,7 @@ function applyObjectTypeUi() {
     elements.actionField.classList.toggle("hidden", !isConditionalAccess);
     elements.targetField.classList.toggle("hidden", isAzure);
     elements.osField.classList.toggle("hidden", isAzure || isConditionalAccess);
+    elements.environmentField.classList.toggle("hidden", !isAzure);
     elements.resourceTypeLabel.textContent = isAzure ? "Azure resource type" : "Resource type";
     elements.typeFirstHelp.textContent = getOrderHelpText();
 
@@ -539,14 +548,14 @@ function applyObjectTypeUi() {
 
 function getOrderHelpText() {
     if (state.objectType === "conditionalAccess") {
-        return "Switch between Prefix-Action and Action-Prefix.";
+        return "Switch the Prefix and Action order.";
     }
 
     if (state.objectType === "azureResource") {
-        return "Azure defaults to ResourceType-Prefix-Name. Turn this off for Prefix-ResourceType-Name.";
+        return "Switch the Prefix and ResourceType order.";
     }
 
-    return "Switch between Prefix-Type and Type-Prefix.";
+    return "Switch the Prefix and Type order.";
 }
 
 function getResourceCategories() {
@@ -640,6 +649,8 @@ function updatePreview() {
     elements.partTarget.textContent = parts.target || "-";
     elements.partOsRow.classList.toggle("hidden", parts.os === null);
     elements.partOs.textContent = parts.os || "-";
+    elements.partEnvironmentRow.classList.toggle("hidden", parts.environment === null);
+    elements.partEnvironment.textContent = parts.environment || "-";
     elements.partGoal.textContent = parts.goal || "-";
     elements.conventionText.textContent = parts.convention;
 
@@ -686,6 +697,7 @@ function getTypeBasedParts() {
         typeLabel: selectedType.label,
         target,
         os,
+        environment: null,
         goal,
         convention: `${firstTwo}-Target-OS-Name/Goal`,
         requiresOs: false
@@ -710,6 +722,7 @@ function getConditionalAccessParts() {
         typeLabel: "Conditional Access",
         target,
         os: null,
+        environment: null,
         goal,
         convention: `${firstTwo}-Target-Name/Goal`,
         requiresOs: false
@@ -722,11 +735,12 @@ function getAzureResourceParts() {
     const type = selectedType.code.toLowerCase();
     const separator = selectedType.separator;
     const allowsHyphen = separator === "-";
+    const environment = elements.environmentSelect.value;
     const goal = sanitizeGoal(elements.goalInput.value, true);
     const leadParts = elements.typeFirstToggle.checked ? [type, prefix] : [prefix, type];
     const name = allowsHyphen
-        ? [...leadParts, goal].filter(Boolean).join("-")
-        : [...leadParts, goal].filter(Boolean).join(separator);
+        ? [...leadParts, environment, goal].filter(Boolean).join("-")
+        : [...leadParts, environment, goal].filter(Boolean).join(separator);
     const firstTwo = elements.typeFirstToggle.checked ? "ResourceType-Prefix" : "Prefix-ResourceType";
 
     return {
@@ -738,8 +752,9 @@ function getAzureResourceParts() {
         typeLabel: selectedType.label,
         target: "",
         os: null,
+        environment,
         goal,
-        convention: `${firstTwo}${allowsHyphen ? "-Name" : "-Name (no hyphens for this type)"}`,
+        convention: `${firstTwo}-Environment-Name${allowsHyphen ? "" : " (no hyphens for this type)"}`,
         requiresOs: false
     };
 }
@@ -778,6 +793,10 @@ function validateName(parts) {
 
     if (parts.target === "" && state.objectType !== "azureResource") {
         return { level: "error", message: "Target is required." };
+    }
+
+    if (state.objectType === "azureResource" && parts.type === "vm" && parts.name.length > 15) {
+        return { level: "warning", message: "Virtual machine names should stay within 15 characters." };
     }
 
     if (parts.name.length > 80) {
