@@ -12,6 +12,7 @@ The main features of this tool are:
 - Fast application of blocks using "Enter" button
 - Importing/Exporting Markdown files
 - Reviewing/editing the Markdown files live
+- Automatic images upload to Azure Blob Storage with Access Key and Entra ID authentication
 
 ## Hosting
 
