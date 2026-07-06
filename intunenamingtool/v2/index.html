@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Generate Microsoft Intune, Entra and Azure names using my Microsoft naming framework.">
     <title>Microsoft Naming Tool - justinverstijnen.nl</title>
-    <link rel="stylesheet" href="style.css?v=20260706-microsoft-2">
+    <link rel="stylesheet" href="style.css?v=20260706-microsoft-3">
     <link rel="icon" type="image/svg+xml" href="https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/logo.svg">
     <script defer src="https://cloud.umami.is/script.js" data-website-id="3ce7d7a4-539b-4d3c-981e-e96189fa5ac8"></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4082816808518335" crossorigin="anonymous"></script>
@@ -62,24 +62,23 @@
 
                 <div class="form-grid">
                     <div class="field">
-                        <label for="objectTypeSelect">Naming type</label>
-                        <select id="objectTypeSelect"></select>
-                        <small>Select what kind of name you want to generate.</small>
-                    </div>
-
-                    <div class="field">
                         <label for="prefixInput">Prefix</label>
                         <input type="text" id="prefixInput" value="" maxlength="12" autocomplete="off" spellcheck="false">
                         <small>A shortened department, project, customer or other prefix.</small>
                     </div>
 
-                    <div class="field">
-                        <label class="checkbox-label" for="typeFirstToggle">
-                            <input type="checkbox" id="typeFirstToggle">
-                            <span>Reverse "Prefix/Action"</span>
-                        </label>
-                        <small id="typeFirstHelp">Switch between Prefix-Type and Type-Prefix.</small>
+                    <div class="field" id="objectTypeField">
+                        <label for="objectTypeSelect">Naming type</label>
+                        <select id="objectTypeSelect"></select>
+                        <small>Select what kind of name you want to generate.</small>
                     </div>
+
+                    <div class="field hidden" id="environmentField">
+                        <label for="environmentSelect">Environment</label>
+                        <select id="environmentSelect"></select>
+                        <small>Optional Azure environment between prefix and name / goal.</small>
+                    </div>
+
 
                     <div class="field hidden" id="actionField">
                         <label for="actionSelect">Action</label>
@@ -113,12 +112,6 @@
                         <small>Select the OS you want to target</small>
                     </div>
 
-                    <div class="field hidden" id="environmentField">
-                        <label for="environmentSelect">Environment</label>
-                        <select id="environmentSelect"></select>
-                        <small>Optional Azure environment between prefix and name / goal.</small>
-                    </div>
-
                     <div class="field">
                         <label for="goalInput">Name / goal</label>
                         <input type="text" id="goalInput" value="" placeholder="Such as OneDrive, FSLogix, BitLocker, All Devices" autocomplete="off" spellcheck="false">
@@ -133,10 +126,20 @@
             </article>
 
             <aside class="card preview-card">
-                <div class="section-heading compact">
+                <div class="section-heading compact preview-heading">
                     <div>
                         <h2>Generated name</h2>
                         <p>Click the name to copy to clipboard.</p>
+                    </div>
+                    <div class="preview-controls">
+                        <label class="switch-label" for="typeFirstToggle">
+                            <span>Reverse "Prefix/Action"</span>
+                            <span class="switch-control">
+                                <input type="checkbox" id="typeFirstToggle">
+                                <span class="switch-slider" aria-hidden="true"></span>
+                            </span>
+                        </label>
+                        <small id="typeFirstHelp">Switch the Prefix and Type order.</small>
                     </div>
                 </div>
 
@@ -191,7 +194,7 @@
 
         <div id="toast" class="toast" role="status" aria-live="polite">Copied generated name to clipboard!</div>
     </main>
-    <script src="app.js?v=20260706-microsoft-2"></script>
+    <script src="app.js?v=20260706-microsoft-3"></script>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4082816808518335"
      crossorigin="anonymous"></script>
 <ins class="adsbygoogle"

@@ -355,6 +355,7 @@ function init() {
 function bindElements() {
     elements.tabs = Array.from(document.querySelectorAll(".object-tab"));
     elements.activeModePill = document.getElementById("activeModePill");
+    elements.objectTypeField = document.getElementById("objectTypeField");
     elements.objectTypeSelect = document.getElementById("objectTypeSelect");
     elements.prefixInput = document.getElementById("prefixInput");
     elements.typeFirstToggle = document.getElementById("typeFirstToggle");
@@ -519,7 +520,9 @@ function applyObjectTypeUi() {
     const isConditionalAccess = state.objectType === "conditionalAccess";
     const isAzure = state.objectType === "azureResource";
     const needsResourceType = state.objectType === "intuneResource" || isAzure;
+    const hasMultipleObjectTypes = platformConfig[state.platform].objectOptions.length > 1;
 
+    elements.objectTypeField.classList.toggle("hidden", !hasMultipleObjectTypes);
     elements.resourceTypeField.classList.toggle("hidden", !needsResourceType);
     elements.groupTypeField.classList.toggle("hidden", !isGroup);
     elements.actionField.classList.toggle("hidden", !isConditionalAccess);
