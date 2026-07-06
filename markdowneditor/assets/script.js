@@ -3,6 +3,7 @@ const PREVIOUS_STORAGE_KEYS = ["markdown-editor-project-v19", "markdown-editor-p
 const BLOB_SETTINGS_KEY = "markdown-editor-azure-blob-settings-v1";
 const CODE_DARK_MODE_KEY = "markdown-editor-code-dark-mode-v1";
 const AZURE_BLOB_API_VERSION = "2023-11-03";
+const AZURE_STORAGE_SCOPE = "https://storage.azure.com/user_impersonation";
 const DEFAULT_BLOB_SETTINGS = {
   accountName: "",
   endpointSuffix: "core.windows.net",
@@ -776,7 +777,7 @@ async function signInBlobStorage(settingsValue = readBlobSettingsForm()) {
   try {
     const app = getBlobMsalApp(settings);
     const result = await app.loginPopup({
-      scopes: ["https://storage.azure.com/.default"],
+      scopes: [AZURE_STORAGE_SCOPE],
       prompt: "select_account"
     });
     app.setActiveAccount(result.account);
@@ -818,7 +819,7 @@ async function getBlobBearerToken(settings = blobSettings) {
   try {
     const result = await app.acquireTokenSilent({
       account,
-      scopes: ["https://storage.azure.com/.default"]
+      scopes: [AZURE_STORAGE_SCOPE]
     });
     return result.accessToken;
   } catch (error) {
@@ -826,7 +827,7 @@ async function getBlobBearerToken(settings = blobSettings) {
     if (!msalBrowser || !(error instanceof msalBrowser.InteractionRequiredAuthError)) throw error;
     const result = await app.acquireTokenPopup({
       account,
-      scopes: ["https://storage.azure.com/.default"]
+      scopes: [AZURE_STORAGE_SCOPE]
     });
     app.setActiveAccount(result.account);
     updateBlobSignedInAccount();
