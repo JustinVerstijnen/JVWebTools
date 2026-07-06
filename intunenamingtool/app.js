@@ -1,4 +1,4 @@
-const resourceCategories = [
+const intuneResourceCategories = [
     {
         category: "Device Configuration",
         items: [
@@ -82,25 +82,262 @@ const groupCategories = [
     }
 ];
 
+const azureResourceCategories = [
+    {
+        category: "Identity & Monitoring",
+        items: [
+            { code: "rg", label: "Resource Group" },
+            { code: "sub", label: "Subscription" },
+            { code: "appi", label: "Application Insights" },
+            { code: "law", label: "Log Analytics Workspace" },
+            { code: "mid", label: "Managed Identity" },
+            { code: "wbk", label: "Workbook" },
+            { code: "dcr", label: "Data Collection Rule" },
+            { code: "mar", label: "Monitor Alert Rule" },
+            { code: "mag", label: "Monitor Action Group" },
+            { code: "mg", label: "Management Group" },
+            { code: "dashb", label: "Shared Dashboard" },
+            { code: "pol", label: "Policy Definition" },
+            { code: "kv", label: "Key Vault" },
+            { code: "hsm", label: "Managed HSM" },
+            { code: "domain", label: "Entra Domain Services", separator: "." },
+            { code: "pview", label: "Purview Instance" },
+            { code: "sshk", label: "SSH Key" },
+            { code: "apim", label: "API Management Service Instance", separator: "" }
+        ]
+    },
+    {
+        category: "Networking",
+        items: [
+            { code: "vnet", label: "Virtual Network" },
+            { code: "snet", label: "Virtual Network Subnet" },
+            { code: "peer", label: "Virtual Network Peering" },
+            { code: "bas", label: "Bastion Instance" },
+            { code: "pip", label: "Public IP Address" },
+            { code: "nsg", label: "Network Security Group" },
+            { code: "rule", label: "NSG Rule" },
+            { code: "nic", label: "Network Interface" },
+            { code: "dnsz", label: "Azure DNS Zone" },
+            { code: "pdnsz", label: "Private DNS Zone" },
+            { code: "asg", label: "Application Security Group" },
+            { code: "natg", label: "NAT Gateway" },
+            { code: "con", label: "VPN Connection" },
+            { code: "vgw", label: "Virtual Network Gateway" },
+            { code: "lgw", label: "Local Network Gateway" },
+            { code: "nw", label: "Network Watcher Instance" },
+            { code: "udr", label: "User Defined Route" },
+            { code: "rt", label: "Route Table" },
+            { code: "pl", label: "Private Link" },
+            { code: "se", label: "Service Endpoint" },
+            { code: "vwan", label: "Virtual WAN Hub" },
+            { code: "vpng", label: "VPN Gateway" },
+            { code: "vpnc", label: "VPN Connection" },
+            { code: "vpns", label: "VPN Site" },
+            { code: "ippre", label: "Public IP Address Prefix" },
+            { code: "agw", label: "Application Gateway" },
+            { code: "erc", label: "ExpressRoute Circuit" },
+            { code: "tmp", label: "Traffic Manager Profile" },
+            { code: "afw", label: "Azure Firewall" },
+            { code: "afwp", label: "Azure Firewall Policy" },
+            { code: "waf", label: "Web Application Firewall" },
+            { code: "wafrg", label: "WAF Rule Group" },
+            { code: "cdnp", label: "CDN Profile" },
+            { code: "cdne", label: "CDN Endpoint" },
+            { code: "fdfp", label: "Front Door Firewall Policy" },
+            { code: "fd", label: "Front Door Instance" },
+            { code: "rt", label: "Route Filter" },
+            { code: "lbi", label: "Internal Load Balancer" },
+            { code: "lbe", label: "External Load Balancer" },
+            { code: "lbr", label: "Load Balancer Rule" }
+        ]
+    },
+    {
+        category: "Compute & Virtual Desktop",
+        items: [
+            { code: "vm", label: "Virtual Machine" },
+            { code: "acm", label: "Arc Connected Machine" },
+            { code: "img", label: "Virtual Machine Image" },
+            { code: "vdsp", label: "Virtual Desktop Scaling Plan" },
+            { code: "vdag", label: "Virtual Desktop Application Group" },
+            { code: "vdws", label: "Virtual Desktop Workspace" },
+            { code: "vdhp", label: "Virtual Desktop Hostpool" },
+            { code: "asp", label: "App Service Plan" },
+            { code: "avs", label: "Availability Set" },
+            { code: "ase", label: "App Service Environment" },
+            { code: "swa", label: "Static Web App" },
+            { code: "gal", label: "Gallery" },
+            { code: "cld", label: "Arc Connected Kubernetes Cluster" },
+            { code: "app", label: "Web Application" },
+            { code: "vmss", label: "Virtual Machine Scale Set" },
+            { code: "des", label: "Disk Encryption Set" },
+            { code: "ntfn", label: "Notification Hub Namespace" },
+            { code: "snap", label: "Snapshot" },
+            { code: "ntf", label: "Notification Hubs" },
+            { code: "cg", label: "Compute Gallery", separator: "" }
+        ]
+    },
+    {
+        category: "Storage",
+        items: [
+            { code: "sql", label: "Azure SQL Database Server" },
+            { code: "sqldb", label: "Azure SQL Database" },
+            { code: "osdisk", label: "Managed Disk (OS)" },
+            { code: "dadisk", label: "Managed Disk (Data)" },
+            { code: "sa", label: "Storage Account", separator: "" },
+            { code: "sqlmi", label: "SQL Managed Instance" },
+            { code: "sqlsdb", label: "SQL Server Stretch Database" },
+            { code: "ssimp", label: "StorSimple", separator: "" },
+            { code: "cdb", label: "Cosmos Database" },
+            { code: "mysql", label: "MySQL Database" },
+            { code: "redis", label: "Cache for Redis Instance" },
+            { code: "psql", label: "Postgres SQL Database" },
+            { code: "syn", label: "Synapse Analytics", separator: "" },
+            { code: "syndp", label: "Synapse Analytics Dedicated SQL Pool", separator: "" },
+            { code: "synw", label: "Synapse Analytics Workspace", separator: "" },
+            { code: "synsp", label: "Synapse Analytics Spark Pool", separator: "" }
+        ]
+    },
+    {
+        category: "Backup & Recovery",
+        items: [
+            { code: "rsv", label: "Recovery Services Vault" },
+            { code: "bckpol", label: "Backup Policy" },
+            { code: "bkv", label: "Backup Vault" },
+            { code: "brg", label: "Resource Guard" }
+        ]
+    },
+    {
+        category: "Migration & Automation",
+        items: [
+            { code: "fa", label: "Function App" },
+            { code: "mc", label: "Maintenance Configuration" },
+            { code: "la", label: "Logic App" },
+            { code: "mipr", label: "Migrate Project" },
+            { code: "sb", label: "Service Bus" },
+            { code: "dms", label: "Database Migration Service" },
+            { code: "sbq", label: "Service Bus Queue" },
+            { code: "aa", label: "Automation Account" },
+            { code: "sbt", label: "Service Bus Topic" },
+            { code: "bp", label: "Blueprint" },
+            { code: "bpa", label: "Blueprint Assignment" },
+            { code: "ia", label: "Integration Account" }
+        ]
+    },
+    {
+        category: "Analytics & IoT",
+        items: [
+            { code: "as", label: "Analysis Services Server", separator: "" },
+            { code: "evgd", label: "Event Grid Domain" },
+            { code: "provs", label: "Provisioning Services" },
+            { code: "dbw", label: "Databricks Workspace" },
+            { code: "evgs", label: "Event Grid Subscription" },
+            { code: "pcert", label: "Provisioning Services Certificate" },
+            { code: "asa", label: "Stream Analytics" },
+            { code: "evgt", label: "Event Grid Topic" },
+            { code: "pbi", label: "Power BI Embedded" },
+            { code: "dec", label: "Data Explorer Cluster" },
+            { code: "hadp", label: "HDInsight Hadoop Cluster" },
+            { code: "tsi", label: "Time Series Insights" },
+            { code: "dedb", label: "Data Explorer Database" },
+            { code: "hbase", label: "HDInsight HBase Cluster" },
+            { code: "kafka", label: "HDInsight Kafka Cluster" },
+            { code: "adf", label: "Data Factory" },
+            { code: "dls", label: "Data Lake Store Account", separator: "" },
+            { code: "spark", label: "HDInsight Spark Cluster" },
+            { code: "dla", label: "Data Lake Analytics Account", separator: "" },
+            { code: "storm", label: "HDInsight Storm Cluster" },
+            { code: "evhns", label: "Event Hub Namespace" },
+            { code: "mls", label: "HDInsight Machine Learning Cluster" },
+            { code: "iot", label: "IoT Hub" },
+            { code: "evh", label: "Data Lake Analytics Account" }
+        ]
+    },
+    {
+        category: "Dev Tools & Containers",
+        items: [
+            { code: "appcs", label: "App Configuration Store" },
+            { code: "sigr", label: "SignalR" },
+            { code: "aks", label: "Azure Kubernetes Cluster" },
+            { code: "cr", label: "Container Registry", separator: "" },
+            { code: "ci", label: "Container Instance" },
+            { code: "sfc", label: "Service Fabric Cluster" }
+        ]
+    }
+];
+
+const platformConfig = {
+    intune: {
+        label: "Intune",
+        pill: "Intune",
+        prefixDefault: "JV",
+        goalDefault: "OneDrive",
+        typeFirstDefault: false,
+        objectOptions: [
+            { value: "intuneResource", label: "Intune Resource" }
+        ]
+    },
+    entra: {
+        label: "Entra",
+        pill: "Entra",
+        prefixDefault: "CA",
+        goalDefault: "RequireMFA",
+        typeFirstDefault: false,
+        objectOptions: [
+            { value: "conditionalAccess", label: "Conditional Access Policy" },
+            { value: "group", label: "Group" }
+        ]
+    },
+    azure: {
+        label: "Azure",
+        pill: "Azure",
+        prefixDefault: "jv",
+        goalDefault: "core",
+        typeFirstDefault: true,
+        objectOptions: [
+            { value: "azureResource", label: "Azure Resource" }
+        ]
+    }
+};
+
 const targetOptions = [
     { code: "D", label: "Device" },
     { code: "U", label: "User" }
 ];
 
+const conditionalAccessActionOptions = [
+    { code: "Allow", label: "Allow" },
+    { code: "Block", label: "Block" }
+];
+
+const conditionalAccessTargetOptions = [
+    { code: "U", label: "Users" },
+    { code: "D", label: "Devices" },
+    { code: "A", label: "Applications" },
+    { code: "R", label: "Roles" }
+];
+
 const osOptions = [
-    { code: "Win", label: "Windows" },
+    { code: "WIN", label: "Windows" },
     { code: "AVD", label: "Azure Virtual Desktop" },
     { code: "W365", label: "Windows 365" },
-    { code: "And", label: "Android" },
-    { code: "Lin", label: "Linux" },
-    { code: "macOS", label: "macOS" },
-    { code: "iOS", label: "iOS / iPadOS" },
-    { code: "All", label: "All OS" }
+    { code: "AND", label: "Android" },
+    { code: "LIN", label: "Linux" },
+    { code: "MACOS", label: "macOS" },
+    { code: "IOS", label: "iOS / iPadOS" },
+    { code: "ALL", label: "All OS" },
+    { code: "", label: "None" }
+];
+
+const environmentOptions = [
+    { code: "", label: "None" },
+    { code: "prod", label: "prod" },
+    { code: "test", label: "test" },
+    { code: "dev", label: "dev" }
 ];
 
 const state = {
-    mode: "resource",
-    history: []
+    platform: "intune",
+    objectType: "intuneResource"
 };
 
 const elements = {};
@@ -109,17 +346,27 @@ window.addEventListener("DOMContentLoaded", init);
 
 function init() {
     bindElements();
-    populateSelects();
+    populateStaticSelects();
     bindEvents();
-    setMode("resource");
-    updatePreview();
+    setPlatform("intune");
+    resetForm(false);
 }
 
 function bindElements() {
     elements.tabs = Array.from(document.querySelectorAll(".object-tab"));
     elements.activeModePill = document.getElementById("activeModePill");
+    elements.objectTypeField = document.getElementById("objectTypeField");
+    elements.objectTypeSelect = document.getElementById("objectTypeSelect");
     elements.prefixInput = document.getElementById("prefixInput");
+    elements.typeFirstToggle = document.getElementById("typeFirstToggle");
+    elements.typeFirstHelp = document.getElementById("typeFirstHelp");
+    elements.actionField = document.getElementById("actionField");
+    elements.actionSelect = document.getElementById("actionSelect");
+    elements.targetField = document.getElementById("targetField");
     elements.targetSelect = document.getElementById("targetSelect");
+    elements.environmentField = document.getElementById("environmentField");
+    elements.environmentSelect = document.getElementById("environmentSelect");
+    elements.osField = document.getElementById("osField");
     elements.osSelect = document.getElementById("osSelect");
     elements.resourceTypeSearchInput = document.getElementById("resourceTypeSearchInput");
     elements.groupTypeSearchInput = document.getElementById("groupTypeSearchInput");
@@ -127,86 +374,50 @@ function bindElements() {
     elements.groupTypeSelect = document.getElementById("groupTypeSelect");
     elements.resourceTypeField = document.getElementById("resourceTypeField");
     elements.groupTypeField = document.getElementById("groupTypeField");
+    elements.resourceTypeLabel = document.getElementById("resourceTypeLabel");
     elements.resourceTypeDescription = document.getElementById("resourceTypeDescription");
     elements.groupTypeDescription = document.getElementById("groupTypeDescription");
     elements.goalInput = document.getElementById("goalInput");
-    elements.generateBtn = document.getElementById("generateBtn");
     elements.copyBtn = document.getElementById("copyBtn");
     elements.resetBtn = document.getElementById("resetBtn");
     elements.generatedName = document.getElementById("generatedName");
     elements.validationMessage = document.getElementById("validationMessage");
+    elements.partPrefixLabel = document.getElementById("partPrefixLabel");
     elements.partPrefix = document.getElementById("partPrefix");
+    elements.partTypeLabel = document.getElementById("partTypeLabel");
     elements.partType = document.getElementById("partType");
+    elements.partTargetRow = document.getElementById("partTargetRow");
     elements.partTarget = document.getElementById("partTarget");
+    elements.partOsRow = document.getElementById("partOsRow");
     elements.partOs = document.getElementById("partOs");
+    elements.partEnvironmentRow = document.getElementById("partEnvironmentRow");
+    elements.partEnvironment = document.getElementById("partEnvironment");
     elements.partGoal = document.getElementById("partGoal");
+    elements.conventionText = document.getElementById("conventionText");
     elements.typeSearchInput = document.getElementById("typeSearchInput");
     elements.typeOverview = document.getElementById("typeOverview");
-    elements.historyTableBody = document.querySelector("#historyTable tbody");
-    elements.clearHistoryBtn = document.getElementById("clearHistoryBtn");
-    elements.exportCsvBtn = document.getElementById("exportCsvBtn");
     elements.toast = document.getElementById("toast");
     elements.collapseButtons = Array.from(document.querySelectorAll("[data-collapse-button]"));
 }
 
-function populateSelects() {
-    populateTypeSelect(elements.resourceTypeSelect, resourceCategories);
-    populateTypeSelect(elements.groupTypeSelect, groupCategories);
+function populateStaticSelects() {
+    populateSimpleSelect(elements.actionSelect, conditionalAccessActionOptions);
     populateSimpleSelect(elements.targetSelect, targetOptions);
     populateSimpleSelect(elements.osSelect, osOptions);
-}
-
-function populateTypeSelect(selectElement, categories, filter = "", preferredValue = "") {
-    const normalizedFilter = filter.trim().toLowerCase();
-    const previousValue = preferredValue || selectElement.value;
-    selectElement.innerHTML = "";
-
-    categories.forEach((category) => {
-        const matchingItems = category.items.filter((item) => matchesTypeFilter(item, category.category, normalizedFilter));
-
-        if (matchingItems.length === 0) {
-            return;
-        }
-
-        const optgroup = document.createElement("optgroup");
-        optgroup.label = category.category;
-
-        matchingItems.forEach((item) => {
-            const option = document.createElement("option");
-            option.value = item.code;
-            option.textContent = `${item.code} - ${item.label}`;
-            option.dataset.label = item.label;
-            option.dataset.category = category.category;
-            optgroup.appendChild(option);
-        });
-
-        selectElement.appendChild(optgroup);
-    });
-
-    if (selectElement.querySelector(`option[value="${cssEscape(previousValue)}"]`)) {
-        selectElement.value = previousValue;
-    }
-}
-
-function populateSimpleSelect(selectElement, options) {
-    selectElement.innerHTML = "";
-
-    options.forEach((item) => {
-        const option = document.createElement("option");
-        option.value = item.code;
-        option.textContent = `${item.code} - ${item.label}`;
-        selectElement.appendChild(option);
-    });
+    populateSimpleSelect(elements.environmentSelect, environmentOptions);
 }
 
 function bindEvents() {
     elements.tabs.forEach((tab) => {
-        tab.addEventListener("click", () => setMode(tab.dataset.mode));
+        tab.addEventListener("click", () => setPlatform(tab.dataset.platform));
     });
 
     [
         elements.prefixInput,
+        elements.typeFirstToggle,
+        elements.actionSelect,
         elements.targetSelect,
+        elements.environmentSelect,
         elements.osSelect,
         elements.resourceTypeSelect,
         elements.groupTypeSelect,
@@ -216,25 +427,21 @@ function bindEvents() {
         input.addEventListener("change", updatePreview);
     });
 
+    elements.objectTypeSelect.addEventListener("change", () => {
+        state.objectType = elements.objectTypeSelect.value;
+        applyObjectTypeUi();
+        renderTypeOverview(elements.typeSearchInput.value);
+        updatePreview();
+    });
+
     elements.resourceTypeSearchInput.addEventListener("input", () => {
-        filterTypeSelect("resource");
+        filterTypeSelect();
         updatePreview();
     });
 
     elements.groupTypeSearchInput.addEventListener("input", () => {
-        filterTypeSelect("group");
+        filterTypeSelect();
         updatePreview();
-    });
-
-    elements.generateBtn.addEventListener("click", () => {
-        const result = updatePreview();
-        if (!result.isValid) {
-            showToast("Complete the required fields first.");
-            return;
-        }
-
-        addToHistory(result);
-        showToast("Name generated and added to history.");
     });
 
     elements.copyBtn.addEventListener("click", async () => {
@@ -254,51 +461,167 @@ function bindEvents() {
         }
     });
 
-    elements.resetBtn.addEventListener("click", resetForm);
+    elements.resetBtn.addEventListener("click", () => resetForm(true));
 
     elements.typeSearchInput.addEventListener("input", () => {
         renderTypeOverview(elements.typeSearchInput.value);
     });
-
-    elements.clearHistoryBtn.addEventListener("click", () => {
-        state.history = [];
-        renderHistory();
-        showToast("History cleared.");
-    });
-
-    elements.exportCsvBtn.addEventListener("click", exportHistoryCsv);
 
     elements.collapseButtons.forEach((button) => {
         button.addEventListener("click", () => togglePanel(button));
     });
 }
 
-function filterTypeSelect(mode) {
-    if (mode === "group") {
-        populateTypeSelect(elements.groupTypeSelect, groupCategories, elements.groupTypeSearchInput.value, elements.groupTypeSelect.value);
-        return;
-    }
-
-    populateTypeSelect(elements.resourceTypeSelect, resourceCategories, elements.resourceTypeSearchInput.value, elements.resourceTypeSelect.value);
-}
-
-function setMode(mode) {
-    state.mode = mode === "group" ? "group" : "resource";
+function setPlatform(platform) {
+    state.platform = platformConfig[platform] ? platform : "intune";
+    const config = platformConfig[state.platform];
 
     elements.tabs.forEach((tab) => {
-        const isActive = tab.dataset.mode === state.mode;
+        const isActive = tab.dataset.platform === state.platform;
         tab.classList.toggle("active", isActive);
         tab.setAttribute("aria-selected", String(isActive));
     });
 
-    const isGroup = state.mode === "group";
-    elements.resourceTypeField.classList.toggle("hidden", isGroup);
-    elements.groupTypeField.classList.toggle("hidden", !isGroup);
-    elements.activeModePill.textContent = isGroup ? "Group" : "Intune Resource";
-
-    updateTypeDescription();
+    elements.activeModePill.textContent = config.pill;
+    populateObjectTypeSelect();
+    state.objectType = config.objectOptions[0].value;
+    elements.objectTypeSelect.value = state.objectType;
+    elements.prefixInput.value = config.prefixDefault;
+    elements.goalInput.value = config.goalDefault;
+    elements.typeFirstToggle.checked = config.typeFirstDefault;
+    setDefaultSelections();
+    applyObjectTypeUi();
     renderTypeOverview(elements.typeSearchInput.value);
     updatePreview();
+}
+
+function populateObjectTypeSelect() {
+    elements.objectTypeSelect.innerHTML = "";
+
+    platformConfig[state.platform].objectOptions.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = item.value;
+        option.textContent = item.label;
+        elements.objectTypeSelect.appendChild(option);
+    });
+}
+
+function setDefaultSelections() {
+    populateTypeSelect(elements.resourceTypeSelect, getResourceCategories());
+    populateTypeSelect(elements.groupTypeSelect, groupCategories);
+    elements.actionSelect.value = "Allow";
+    elements.targetSelect.value = "D";
+    elements.environmentSelect.value = "";
+    elements.osSelect.value = state.objectType === "group" ? "" : "WIN";
+}
+
+function applyObjectTypeUi() {
+    const isGroup = state.objectType === "group";
+    const isConditionalAccess = state.objectType === "conditionalAccess";
+    const isAzure = state.objectType === "azureResource";
+    const needsResourceType = state.objectType === "intuneResource" || isAzure;
+    const hasMultipleObjectTypes = platformConfig[state.platform].objectOptions.length > 1;
+
+    elements.objectTypeField.classList.toggle("hidden", !hasMultipleObjectTypes);
+    elements.resourceTypeField.classList.toggle("hidden", !needsResourceType);
+    elements.groupTypeField.classList.toggle("hidden", !isGroup);
+    elements.actionField.classList.toggle("hidden", !isConditionalAccess);
+    elements.targetField.classList.toggle("hidden", isAzure);
+    elements.osField.classList.toggle("hidden", isAzure || isConditionalAccess);
+    elements.environmentField.classList.toggle("hidden", !isAzure);
+    elements.resourceTypeLabel.textContent = isAzure ? "Azure resource type" : "Resource type";
+    elements.typeFirstHelp.textContent = getOrderHelpText();
+
+    if (isConditionalAccess) {
+        populateSimpleSelect(elements.targetSelect, conditionalAccessTargetOptions);
+        elements.goalInput.placeholder = "Such as RequireMFA, BlockLegacyAuth, AdminRoles";
+    } else {
+        populateSimpleSelect(elements.targetSelect, targetOptions);
+        elements.goalInput.placeholder = isAzure ? "Such as prod, core, app01" : "Such as OneDrive, FSLogix, BitLocker, All Devices";
+    }
+
+    if (isGroup && !elements.osSelect.value) {
+        elements.osSelect.value = "";
+    }
+
+    populateTypeSelect(elements.resourceTypeSelect, getResourceCategories(), elements.resourceTypeSearchInput.value, elements.resourceTypeSelect.value);
+    populateTypeSelect(elements.groupTypeSelect, groupCategories, elements.groupTypeSearchInput.value, elements.groupTypeSelect.value);
+    updateTypeDescription();
+}
+
+function getOrderHelpText() {
+    if (state.objectType === "conditionalAccess") {
+        return "Switch the Prefix and Action order.";
+    }
+
+    if (state.objectType === "azureResource") {
+        return "Switch the Prefix and ResourceType order.";
+    }
+
+    return "Switch the Prefix and Type order.";
+}
+
+function getResourceCategories() {
+    return state.objectType === "azureResource" ? azureResourceCategories : intuneResourceCategories;
+}
+
+function populateTypeSelect(selectElement, categories, filter = "", preferredValue = "") {
+    const normalizedFilter = filter.trim().toLowerCase();
+    const previousValue = preferredValue || selectElement.value;
+    selectElement.innerHTML = "";
+
+    categories.forEach((category) => {
+        const matchingItems = category.items.filter((item) => matchesTypeFilter(item, category.category, normalizedFilter));
+
+        if (matchingItems.length === 0) {
+            return;
+        }
+
+        const optgroup = document.createElement("optgroup");
+        optgroup.label = category.category;
+
+        matchingItems.forEach((item, index) => {
+            const option = document.createElement("option");
+            const itemValue = getTypeValue(item, category.category, index);
+            option.value = itemValue;
+            option.textContent = `${item.code} - ${item.label}`;
+            option.dataset.code = item.code;
+            option.dataset.label = item.label;
+            option.dataset.category = category.category;
+            option.dataset.separator = item.separator ?? "-";
+            optgroup.appendChild(option);
+        });
+
+        selectElement.appendChild(optgroup);
+    });
+
+    if (selectElement.querySelector(`option[value="${cssEscape(previousValue)}"]`)) {
+        selectElement.value = previousValue;
+    }
+}
+
+function getTypeValue(item, category, index) {
+    return `${category}-${item.code}-${item.label}-${index}`;
+}
+
+function populateSimpleSelect(selectElement, options) {
+    selectElement.innerHTML = "";
+
+    options.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = item.code;
+        option.textContent = item.code && item.code !== item.label ? `${item.code} - ${item.label}` : item.label;
+        selectElement.appendChild(option);
+    });
+}
+
+function filterTypeSelect() {
+    if (state.objectType === "group") {
+        populateTypeSelect(elements.groupTypeSelect, groupCategories, elements.groupTypeSearchInput.value, elements.groupTypeSelect.value);
+        return;
+    }
+
+    populateTypeSelect(elements.resourceTypeSelect, getResourceCategories(), elements.resourceTypeSearchInput.value, elements.resourceTypeSelect.value);
 }
 
 function togglePanel(button) {
@@ -317,21 +640,22 @@ function togglePanel(button) {
 }
 
 function updatePreview() {
-    const prefix = sanitizePart(elements.prefixInput.value).toUpperCase();
-    const goal = sanitizeGoal(elements.goalInput.value);
-    const selectedType = getSelectedType();
-    const type = selectedType.code;
-    const target = elements.targetSelect.value;
-    const os = elements.osSelect.value;
-    const name = [prefix, type, target, os, goal].filter(Boolean).join("-");
-    const validation = validateName({ prefix, type, target, os, goal, name });
+    const parts = getNameParts();
+    const validation = validateName(parts);
 
-    elements.generatedName.textContent = name || "Complete the fields to generate a name";
-    elements.partPrefix.textContent = prefix || "-";
-    elements.partType.textContent = type || "-";
-    elements.partTarget.textContent = target || "-";
-    elements.partOs.textContent = os || "-";
-    elements.partGoal.textContent = goal || "-";
+    elements.generatedName.textContent = parts.name || "Complete the fields to generate a name";
+    elements.partPrefixLabel.textContent = parts.prefixLabel;
+    elements.partPrefix.textContent = parts.prefix || "-";
+    elements.partTypeLabel.textContent = parts.typeLabelName;
+    elements.partType.textContent = parts.type || "-";
+    elements.partTargetRow.classList.toggle("hidden", !parts.target);
+    elements.partTarget.textContent = parts.target || "-";
+    elements.partOsRow.classList.toggle("hidden", parts.os === null);
+    elements.partOs.textContent = parts.os || "-";
+    elements.partEnvironmentRow.classList.toggle("hidden", parts.environment === null);
+    elements.partEnvironment.textContent = parts.environment || "-";
+    elements.partGoal.textContent = parts.goal || "-";
+    elements.conventionText.textContent = parts.convention;
 
     elements.validationMessage.textContent = validation.message;
     elements.validationMessage.className = `validation-message ${validation.level}`;
@@ -339,15 +663,102 @@ function updatePreview() {
     updateTypeDescription();
 
     return {
+        ...parts,
+        isValid: validation.level !== "error"
+    };
+}
+
+function getNameParts() {
+    if (state.objectType === "conditionalAccess") {
+        return getConditionalAccessParts();
+    }
+
+    if (state.objectType === "azureResource") {
+        return getAzureResourceParts();
+    }
+
+    return getTypeBasedParts();
+}
+
+function getTypeBasedParts() {
+    const prefix = sanitizePart(elements.prefixInput.value).toUpperCase();
+    const goal = sanitizeGoal(elements.goalInput.value, false);
+    const selectedType = getSelectedType();
+    const type = selectedType.code;
+    const target = elements.targetSelect.value;
+    const os = elements.osSelect.value;
+    const leadParts = elements.typeFirstToggle.checked ? [type, prefix] : [prefix, type];
+    const name = [...leadParts, target, os, goal].filter(Boolean).join("-");
+    const firstTwo = elements.typeFirstToggle.checked ? "Type-Prefix" : "Prefix-Type";
+
+    return {
         name,
-        object: state.mode === "group" ? "Group" : "Intune Resource",
+        prefix,
+        prefixLabel: "Prefix",
         type,
+        typeLabelName: "Type",
         typeLabel: selectedType.label,
         target,
         os,
+        environment: null,
         goal,
+        convention: `${firstTwo}-Target-OS-Name/Goal`,
+        requiresOs: false
+    };
+}
+
+function getConditionalAccessParts() {
+    const prefix = sanitizePart(elements.prefixInput.value).toUpperCase();
+    const action = elements.actionSelect.value;
+    const target = elements.targetSelect.value;
+    const goal = sanitizeGoal(elements.goalInput.value, false);
+    const leadParts = elements.typeFirstToggle.checked ? [action, prefix] : [prefix, action];
+    const name = [...leadParts, target, goal].filter(Boolean).join("-");
+    const firstTwo = elements.typeFirstToggle.checked ? "Action-Prefix" : "Prefix-Action";
+
+    return {
+        name,
         prefix,
-        isValid: validation.level !== "error"
+        prefixLabel: "Prefix",
+        type: action,
+        typeLabelName: "Action",
+        typeLabel: "Conditional Access",
+        target,
+        os: null,
+        environment: null,
+        goal,
+        convention: `${firstTwo}-Target-Name/Goal`,
+        requiresOs: false
+    };
+}
+
+function getAzureResourceParts() {
+    const prefix = sanitizePart(elements.prefixInput.value).toLowerCase();
+    const selectedType = getSelectedType();
+    const type = selectedType.code.toLowerCase();
+    const separator = selectedType.separator;
+    const allowsHyphen = separator === "-";
+    const environment = elements.environmentSelect.value;
+    const goal = sanitizeGoal(elements.goalInput.value, true);
+    const leadParts = elements.typeFirstToggle.checked ? [type, prefix] : [prefix, type];
+    const name = allowsHyphen
+        ? [...leadParts, environment, goal].filter(Boolean).join("-")
+        : [...leadParts, environment, goal].filter(Boolean).join(separator);
+    const firstTwo = elements.typeFirstToggle.checked ? "ResourceType-Prefix" : "Prefix-ResourceType";
+
+    return {
+        name,
+        prefix,
+        prefixLabel: "Prefix",
+        type,
+        typeLabelName: "Resource type",
+        typeLabel: selectedType.label,
+        target: "",
+        os: null,
+        environment,
+        goal,
+        convention: `${firstTwo}-Environment-Name${allowsHyphen ? "" : " (no hyphens for this type)"}`,
+        requiresOs: false
     };
 }
 
@@ -357,27 +768,38 @@ function updateTypeDescription() {
         ? `${selectedType.code} means ${selectedType.label}.`
         : "No matching type found. Clear or adjust the search field.";
 
-    if (state.mode === "group") {
+    if (state.objectType === "group") {
         elements.groupTypeDescription.textContent = message;
+    } else if (state.objectType === "conditionalAccess") {
+        elements.resourceTypeDescription.textContent = "Conditional Access uses Action, Target and Name / Goal.";
     } else {
         elements.resourceTypeDescription.textContent = message;
     }
 }
 
 function getSelectedType() {
-    const select = state.mode === "group" ? elements.groupTypeSelect : elements.resourceTypeSelect;
+    const select = state.objectType === "group" ? elements.groupTypeSelect : elements.resourceTypeSelect;
     const option = select.selectedOptions[0];
 
     return {
-        code: option ? select.value : "",
+        code: option?.dataset.code || "",
         label: option?.dataset.label || option?.textContent || "",
-        category: option?.dataset.category || ""
+        category: option?.dataset.category || "",
+        separator: option?.dataset.separator ?? "-"
     };
 }
 
 function validateName(parts) {
-    if (!parts.prefix || !parts.type || !parts.target || !parts.os || !parts.goal) {
-        return { level: "error", message: "Prefix, type, target, OS and name/goal are required." };
+    if (!parts.prefix || !parts.type || !parts.goal) {
+        return { level: "error", message: "Prefix, type/action and name/goal are required." };
+    }
+
+    if (parts.target === "" && state.objectType !== "azureResource") {
+        return { level: "error", message: "Target is required." };
+    }
+
+    if (state.objectType === "azureResource" && parts.type === "vm" && parts.name.length > 15) {
+        return { level: "warning", message: "Virtual machine names should stay within 15 characters." };
     }
 
     if (parts.name.length > 80) {
@@ -394,29 +816,33 @@ function sanitizePart(value) {
         .slice(0, 20);
 }
 
-function sanitizeGoal(value) {
-    return String(value || "")
+function sanitizeGoal(value, lowercase) {
+    const cleanValue = String(value || "")
         .trim()
         .replace(/[\s_]+/g, "-")
         .replace(/[^a-zA-Z0-9-]/g, "")
         .replace(/-+/g, "-")
         .replace(/^-|-$/g, "");
+
+    return lowercase ? cleanValue.toLowerCase() : cleanValue;
 }
 
-function resetForm() {
-    elements.prefixInput.value = "JV";
-    elements.targetSelect.value = "D";
-    elements.osSelect.value = "Win";
+function resetForm(showMessage = true) {
+    const config = platformConfig[state.platform];
+    elements.prefixInput.value = config.prefixDefault;
+    elements.goalInput.value = config.goalDefault;
+    elements.typeFirstToggle.checked = config.typeFirstDefault;
     elements.resourceTypeSearchInput.value = "";
     elements.groupTypeSearchInput.value = "";
-    populateTypeSelect(elements.resourceTypeSelect, resourceCategories);
-    populateTypeSelect(elements.groupTypeSelect, groupCategories);
-    elements.resourceTypeSelect.value = "CP";
-    elements.groupTypeSelect.value = "SG";
-    elements.goalInput.value = "OneDrive";
-    setMode("resource");
+    elements.typeSearchInput.value = "";
+    setDefaultSelections();
+    applyObjectTypeUi();
+    renderTypeOverview("");
     updatePreview();
-    showToast("Form reset.");
+
+    if (showMessage) {
+        showToast("Form reset.");
+    }
 }
 
 async function copyText(text) {
@@ -454,49 +880,8 @@ function showToast(message) {
     }, 1800);
 }
 
-function addToHistory(result) {
-    const entry = {
-        ...result,
-        createdAt: new Date().toISOString()
-    };
-
-    state.history = [entry, ...state.history.filter((item) => item.name !== entry.name)].slice(0, 25);
-    renderHistory();
-}
-
-function renderHistory() {
-    elements.historyTableBody.innerHTML = "";
-
-    if (state.history.length === 0) {
-        const row = document.createElement("tr");
-        row.className = "empty-row";
-        row.innerHTML = '<td colspan="6">No generated names yet.</td>';
-        elements.historyTableBody.appendChild(row);
-        return;
-    }
-
-    state.history.forEach((item) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-            <td><strong>${escapeHtml(item.name)}</strong></td>
-            <td>${escapeHtml(item.object)}</td>
-            <td>${escapeHtml(item.type)} - ${escapeHtml(item.typeLabel)}</td>
-            <td>${escapeHtml(item.target)}</td>
-            <td>${escapeHtml(item.os)}</td>
-            <td><button class="history-copy-btn icon-btn" type="button" data-name="${escapeAttribute(item.name)}"><svg class="btn-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2V7Zm2 0v11h8V7h-8ZM4 3a2 2 0 0 1 2-2h9v2H6v12H4V3Z"/></svg>Copy</button></td>
-        `;
-        elements.historyTableBody.appendChild(row);
-    });
-
-    elements.historyTableBody.querySelectorAll(".history-copy-btn").forEach((button) => {
-        button.addEventListener("click", async () => {
-            await copyText(button.dataset.name);
-        });
-    });
-}
-
 function renderTypeOverview(filter = "") {
-    const categories = state.mode === "group" ? groupCategories : resourceCategories;
+    const categories = getOverviewCategories();
     const normalizedFilter = filter.trim().toLowerCase();
     elements.typeOverview.innerHTML = "";
 
@@ -517,24 +902,12 @@ function renderTypeOverview(filter = "") {
         const list = document.createElement("div");
         list.className = "type-list";
 
-        matchingItems.forEach((item) => {
+        matchingItems.forEach((item, index) => {
             const button = document.createElement("button");
             button.type = "button";
             button.className = "type-item";
             button.innerHTML = `<span class="type-code">${escapeHtml(item.code)}</span><span>${escapeHtml(item.label)}</span>`;
-            button.addEventListener("click", () => {
-                if (state.mode === "group") {
-                    elements.groupTypeSearchInput.value = "";
-                    populateTypeSelect(elements.groupTypeSelect, groupCategories);
-                    elements.groupTypeSelect.value = item.code;
-                } else {
-                    elements.resourceTypeSearchInput.value = "";
-                    populateTypeSelect(elements.resourceTypeSelect, resourceCategories);
-                    elements.resourceTypeSelect.value = item.code;
-                }
-                updatePreview();
-                showToast(`${item.code} selected.`);
-            });
+            button.addEventListener("click", () => selectTypeFromOverview(item, category.category, index));
             list.appendChild(button);
         });
 
@@ -547,6 +920,66 @@ function renderTypeOverview(filter = "") {
     }
 }
 
+function getOverviewCategories() {
+    if (state.objectType === "group") {
+        return groupCategories;
+    }
+
+    if (state.objectType === "azureResource") {
+        return azureResourceCategories;
+    }
+
+    if (state.objectType === "conditionalAccess") {
+        return [
+            {
+                category: "Conditional Access",
+                items: [
+                    { code: "Allow", label: "Allow access policy" },
+                    { code: "Block", label: "Block access policy" }
+                ]
+            },
+            {
+                category: "Targets",
+                items: conditionalAccessTargetOptions.map((item) => ({ code: item.code, label: item.label }))
+            }
+        ];
+    }
+
+    return intuneResourceCategories;
+}
+
+function selectTypeFromOverview(item, category, index) {
+    if (state.objectType === "conditionalAccess") {
+        const action = conditionalAccessActionOptions.find((option) => option.code === item.code);
+        const target = conditionalAccessTargetOptions.find((option) => option.code === item.code);
+
+        if (action) {
+            elements.actionSelect.value = action.code;
+        }
+
+        if (target) {
+            elements.targetSelect.value = target.code;
+        }
+
+        updatePreview();
+        showToast(`${item.code} selected.`);
+        return;
+    }
+
+    if (state.objectType === "group") {
+        elements.groupTypeSearchInput.value = "";
+        populateTypeSelect(elements.groupTypeSelect, groupCategories);
+        elements.groupTypeSelect.value = getTypeValue(item, category, index);
+    } else {
+        elements.resourceTypeSearchInput.value = "";
+        populateTypeSelect(elements.resourceTypeSelect, getResourceCategories());
+        elements.resourceTypeSelect.value = getTypeValue(item, category, index);
+    }
+
+    updatePreview();
+    showToast(`${item.code} selected.`);
+}
+
 function matchesTypeFilter(item, category, normalizedFilter) {
     if (!normalizedFilter) {
         return true;
@@ -554,48 +987,6 @@ function matchesTypeFilter(item, category, normalizedFilter) {
 
     const searchValue = `${item.code} ${item.label} ${category}`.toLowerCase();
     return searchValue.includes(normalizedFilter);
-}
-
-function exportHistoryCsv() {
-    if (state.history.length === 0) {
-        showToast("No history to export.");
-        return;
-    }
-
-    const rows = [
-        ["Name", "Object", "Type", "Type Label", "Target", "OS", "Goal", "Prefix", "Created At"],
-        ...state.history.map((item) => [
-            item.name,
-            item.object,
-            item.type,
-            item.typeLabel,
-            item.target,
-            item.os,
-            item.goal,
-            item.prefix,
-            item.createdAt
-        ])
-    ];
-
-    const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "intune-naming-history.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    showToast("CSV exported.");
-}
-
-function csvEscape(value) {
-    const stringValue = String(value ?? "");
-    if (/[",\n]/.test(stringValue)) {
-        return `"${stringValue.replace(/"/g, '""')}"`;
-    }
-    return stringValue;
 }
 
 function cssEscape(value) {
@@ -613,8 +1004,4 @@ function escapeHtml(value) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
-}
-
-function escapeAttribute(value) {
-    return escapeHtml(value).replace(/`/g, "&#096;");
 }
