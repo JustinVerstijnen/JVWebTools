@@ -50,7 +50,7 @@ In the Storage Account, we must set CORS to this values:
 
 ### 2. RBAC Roles
 
-- Assign the **Storage Blob Data Contributor** role at storage account level to the users which need to write to the containers
+Assign the **Storage Blob Data Contributor** role at storage account level to the users which need to write to the containers
 
 ### 3. App registration
 
