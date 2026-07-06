@@ -332,14 +332,17 @@ function applyCodeTheme() {
   if (!els.codeThemeToggleBtn) return;
   els.codeThemeToggleBtn.classList.toggle("is-dark-code", codeDarkMode);
   els.codeThemeToggleBtn.setAttribute("aria-pressed", String(codeDarkMode));
-  els.codeThemeToggleBtn.title = codeDarkMode ? "Switch Markdown code view to light mode" : "Switch Markdown code view to dark mode";
-  els.codeThemeToggleBtn.setAttribute("aria-label", els.codeThemeToggleBtn.title);
+  const title = codeDarkMode
+    ? "Code view is dark. Click to switch to light mode"
+    : "Code view is light. Click to switch to dark mode";
+  els.codeThemeToggleBtn.title = title;
+  els.codeThemeToggleBtn.setAttribute("aria-label", title);
 }
 function toggleCodeTheme() {
   codeDarkMode = !codeDarkMode;
   saveCodeDarkMode();
   applyCodeTheme();
-  showToast(codeDarkMode ? "Markdown dark mode on" : "Markdown dark mode off");
+  showToast(codeDarkMode ? "Code view set to dark mode" : "Code view set to light mode");
 }
 function highlightInlineTokens(value = "") {
   const tokenPattern = /(https?:\/\/[^\s<>"')\]]+|`[^`\n]+`)/gi;
@@ -1205,7 +1208,8 @@ async function uploadAndInsertPastedImage(source) {
   showToast("Uploading image...");
   try {
     const { file, result } = await uploadImageSourceToBlob(source);
-    insertHtmlAtCursor(imageHtml(result.url, getFileAltText(file, result.fileName), "Optional caption", result.url), { allowOldSelection: false, marker });
+    const altText = result.fileName || getFileAltText(file, result.fileName);
+    insertHtmlAtCursor(imageHtml(result.url, altText, "Optional caption", result.url), { allowOldSelection: false, marker });
     showToast("Image uploaded");
   } catch (error) {
     if (marker?.isConnected) marker.remove();
@@ -1219,7 +1223,7 @@ async function uploadImageSourceToPanel(source) {
   try {
     const { file, result } = await uploadImageSourceToBlob(source);
     els.imageUrl.value = result.url;
-    if (!els.imageAlt.value.trim()) els.imageAlt.value = getFileAltText(file, result.fileName);
+    if (!els.imageAlt.value.trim()) els.imageAlt.value = result.fileName || getFileAltText(file, result.fileName);
     if (!els.imageLink.value.trim() || els.imageLink.value.trim() === els.imageLink.dataset.autoValue) {
       els.imageLink.value = result.url;
       els.imageLink.dataset.autoValue = result.url;

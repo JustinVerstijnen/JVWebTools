@@ -364,12 +364,13 @@ button:active { transform: translateY(0); }
 .code-theme-toggle {
   display: none;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border: 1px solid rgba(18, 32, 51, 0.12);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #d88a00;
   box-shadow: 0 4px 12px rgba(15, 30, 50, 0.08);
 }
 body.is-markdown-view .code-theme-toggle {
@@ -382,22 +383,25 @@ body.is-markdown-view .code-theme-toggle {
   outline: none;
 }
 .code-theme-toggle.is-dark-code {
-  background: #050505;
-  border-color: rgba(255, 212, 0, 0.34);
+  background: #061923;
+  border-color: rgba(148, 203, 213, 0.34);
+  color: #d7f3ff;
   box-shadow: 0 6px 16px rgba(5, 5, 5, 0.18);
 }
 .code-theme-toggle.is-dark-code:hover,
 .code-theme-toggle.is-dark-code:focus-visible {
-  background: #111111;
+  background: #0b2734;
 }
-.bulb-icon {
-  width: 25px;
-  height: 25px;
-  display: block;
+.theme-toggle-icon {
+  display: none;
+  font-size: 18px;
+  line-height: 1;
 }
-.bulb-glass { fill: #ffd400; }
-.bulb-filament { fill: #050505; }
-.bulb-base { fill: #5d5963; }
+.code-theme-toggle:not(.is-dark-code) .theme-toggle-sun,
+.code-theme-toggle.is-dark-code .theme-toggle-moon {
+  display: inline-grid;
+  place-items: center;
+}
 .editor-toolbar {
   display: flex;
   gap: 8px;
