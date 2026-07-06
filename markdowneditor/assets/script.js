@@ -6,7 +6,10 @@ const AZURE_BLOB_API_VERSION = "2023-11-03";
 const DEFAULT_BLOB_SETTINGS = {
   accountName: "",
   endpointSuffix: "core.windows.net",
+  authMode: "accessKey",
   accessKey: "",
+  tenantId: "organizations",
+  clientId: "",
   container: "",
   folderPath: "",
   postId: ""
@@ -83,11 +86,23 @@ const els = {
   insertImageBtn: document.getElementById("insertImageBtn"),
   blobSettingsPanel: document.getElementById("blobSettingsPanel"),
   blobAccountName: document.getElementById("blobAccountName"),
+  blobAuthMode: document.getElementById("blobAuthMode"),
   blobAccessKey: document.getElementById("blobAccessKey"),
+  blobTenantId: document.getElementById("blobTenantId"),
+  blobClientId: document.getElementById("blobClientId"),
+  signInBlobBtn: document.getElementById("signInBlobBtn"),
+  signOutBlobBtn: document.getElementById("signOutBlobBtn"),
+  blobSignedInAccount: document.getElementById("blobSignedInAccount"),
   blobContainer: document.getElementById("blobContainer"),
   blobContainerOptions: document.getElementById("blobContainerOptions"),
   blobFolderPath: document.getElementById("blobFolderPath"),
   blobFolderOptions: document.getElementById("blobFolderOptions"),
+  blobFolderBrowser: document.getElementById("blobFolderBrowser"),
+  blobFolderBreadcrumbs: document.getElementById("blobFolderBreadcrumbs"),
+  blobFolderSearch: document.getElementById("blobFolderSearch"),
+  blobFolderList: document.getElementById("blobFolderList"),
+  blobFolderBrowserMeta: document.getElementById("blobFolderBrowserMeta"),
+  selectBlobFolderBtn: document.getElementById("selectBlobFolderBtn"),
   blobPostId: document.getElementById("blobPostId"),
   blobSettingsStatus: document.getElementById("blobSettingsStatus"),
   connectBlobBtn: document.getElementById("connectBlobBtn"),
@@ -152,6 +167,12 @@ const state = {
 
 let blobSettings = loadBlobSettings();
 let codeDarkMode = loadCodeDarkMode();
+let blobMsalApp = null;
+let blobMsalCacheKey = "";
+let blobFolderBrowserState = {
+  folders: [],
+  currentPath: ""
+};
 
 let savedRange = null;
 let saveTimer = null;
@@ -500,12 +521,23 @@ function normalizeBlobFolderPath(value = "") {
     .replace(/\/+$/, "")
     .replace(/\/+/g, "/");
 }
+function normalizeBlobAuthMode(value = "") {
+  return value === "entraId" ? "entraId" : "accessKey";
+}
+function normalizeTenantId(value = "") {
+  const raw = String(value || "").trim() || DEFAULT_BLOB_SETTINGS.tenantId;
+  const authorityMatch = raw.match(/^https:\/\/login\.microsoftonline\.com\/([^/?#]+)/i);
+  return authorityMatch ? authorityMatch[1] : raw.replace(/^\/+|\/+$/g, "");
+}
 function normalizeBlobSettings(value = {}) {
   const settings = { ...DEFAULT_BLOB_SETTINGS, ...(value || {}) };
   return {
     accountName: String(settings.accountName || "").trim(),
     endpointSuffix: DEFAULT_BLOB_SETTINGS.endpointSuffix,
+    authMode: normalizeBlobAuthMode(settings.authMode),
     accessKey: String(settings.accessKey || "").trim(),
+    tenantId: normalizeTenantId(settings.tenantId),
+    clientId: String(settings.clientId || "").trim(),
     container: String(settings.container || "").trim(),
     folderPath: normalizeBlobFolderPath(settings.folderPath),
     postId: String(settings.postId ?? "").trim()
@@ -522,7 +554,8 @@ function loadBlobSettings() {
 function getBlobSettingsError(settings = blobSettings) {
   const normalized = normalizeBlobSettings(settings);
   if (!normalized.accountName) return "Enter a storage account.";
-  if (!normalized.accessKey) return "Enter an access key.";
+  if (normalized.authMode === "accessKey" && !normalized.accessKey) return "Enter an access key.";
+  if (normalized.authMode === "entraId" && !normalized.clientId) return "Enter an app client ID.";
   if (!normalized.container) return "Enter a container.";
   if (!normalized.folderPath) return "Enter a folder / blob prefix.";
   if (!/^\d+$/.test(normalized.postId)) return "Post ID must be a whole number.";
@@ -544,20 +577,34 @@ function updateBlobSettingsButton() {
     els.blobSettingsBtn.title = configured ? "Azure Blob upload is configured" : "Set Azure Blob upload settings";
   }
 }
+function updateBlobAuthModeUi(settings = readBlobSettingsForm()) {
+  const normalized = normalizeBlobSettings(settings);
+  const useEntraId = normalized.authMode === "entraId";
+  els.blobSettingsPanel?.classList.toggle("blob-uses-entra-id", useEntraId);
+  els.blobSettingsPanel?.classList.toggle("blob-uses-access-key", !useEntraId);
+  updateBlobSignedInAccount();
+}
 function fillBlobSettingsForm() {
   const settings = normalizeBlobSettings(blobSettings);
   if (els.blobAccountName) els.blobAccountName.value = settings.accountName;
+  if (els.blobAuthMode) els.blobAuthMode.value = settings.authMode;
   if (els.blobAccessKey) els.blobAccessKey.value = settings.accessKey;
+  if (els.blobTenantId) els.blobTenantId.value = settings.tenantId;
+  if (els.blobClientId) els.blobClientId.value = settings.clientId;
   if (els.blobContainer) els.blobContainer.value = settings.container;
   if (els.blobFolderPath) els.blobFolderPath.value = settings.folderPath;
   if (els.blobPostId) els.blobPostId.value = settings.postId;
+  updateBlobAuthModeUi(settings);
   const error = getBlobSettingsError(settings);
   setBlobSettingsStatus(error ? "Incomplete settings." : "Ready to upload pasted images.", error ? "" : "success");
 }
 function readBlobSettingsForm() {
   return normalizeBlobSettings({
     accountName: els.blobAccountName?.value,
+    authMode: els.blobAuthMode?.value,
     accessKey: els.blobAccessKey?.value,
+    tenantId: els.blobTenantId?.value,
+    clientId: els.blobClientId?.value,
     container: els.blobContainer?.value,
     folderPath: els.blobFolderPath?.value,
     postId: els.blobPostId?.value
@@ -591,6 +638,7 @@ function clearBlobSettings() {
   localStorage.removeItem(BLOB_SETTINGS_KEY);
   setDatalistOptions(els.blobContainerOptions, []);
   setDatalistOptions(els.blobFolderOptions, []);
+  resetBlobFolderBrowser();
   fillBlobSettingsForm();
   updateBlobSettingsButton();
   setBlobSettingsStatus("Blob settings cleared.", "success");
@@ -604,6 +652,7 @@ function clearBlobPostTargetSettings() {
   });
   localStorage.setItem(BLOB_SETTINGS_KEY, JSON.stringify(blobSettings));
   setDatalistOptions(els.blobFolderOptions, []);
+  resetBlobFolderBrowser();
   if (els.blobContainer) els.blobContainer.value = "";
   if (els.blobFolderPath) els.blobFolderPath.value = "";
   if (els.blobPostId) els.blobPostId.value = "";
@@ -663,6 +712,127 @@ async function getArrayBufferHash12(buffer) {
   const hash = await globalThis.crypto.subtle.digest("SHA-256", buffer);
   return bytesToHex(new Uint8Array(hash)).slice(0, 12);
 }
+function getBlobMsalRedirectUri() {
+  return window.location.href.split("#")[0];
+}
+function getMsalBrowserGlobal() {
+  return globalThis.msal || globalThis.Msal || null;
+}
+function getBlobMsalApp(settings = blobSettings) {
+  const normalized = normalizeBlobSettings(settings);
+  if (normalized.authMode !== "entraId") return null;
+  if (!normalized.clientId) throw new Error("Enter an app client ID.");
+  const msalBrowser = getMsalBrowserGlobal();
+  if (!msalBrowser?.PublicClientApplication) {
+    throw new Error("MSAL Browser could not be loaded. Check your internet connection or host msal-browser.min.js locally.");
+  }
+  const cacheKey = `${normalized.tenantId}|${normalized.clientId}|${getBlobMsalRedirectUri()}`;
+  if (blobMsalApp && blobMsalCacheKey === cacheKey) return blobMsalApp;
+  blobMsalCacheKey = cacheKey;
+  blobMsalApp = new msalBrowser.PublicClientApplication({
+    auth: {
+      clientId: normalized.clientId,
+      authority: `https://login.microsoftonline.com/${normalized.tenantId}`,
+      redirectUri: getBlobMsalRedirectUri()
+    },
+    cache: {
+      cacheLocation: "localStorage",
+      storeAuthStateInCookie: false
+    }
+  });
+  return blobMsalApp;
+}
+function getBlobMsalAccount(settings = blobSettings) {
+  try {
+    const app = getBlobMsalApp(settings);
+    if (!app) return null;
+    return app.getActiveAccount?.() || app.getAllAccounts?.()[0] || null;
+  } catch {
+    return null;
+  }
+}
+function updateBlobSignedInAccount() {
+  if (!els.blobSignedInAccount) return;
+  const settings = readBlobSettingsForm();
+  if (settings.authMode !== "entraId" || !settings.clientId) {
+    els.blobSignedInAccount.textContent = "";
+    return;
+  }
+  const account = getBlobMsalAccount(settings);
+  els.blobSignedInAccount.textContent = account ? `Signed in as ${account.username || account.name || "account"}` : "Not signed in";
+}
+async function signInBlobStorage(settingsValue = readBlobSettingsForm()) {
+  const settings = normalizeBlobSettings(settingsValue);
+  if (settings.authMode !== "entraId") {
+    setBlobSettingsStatus("Choose Entra ID authentication first.", "error");
+    return null;
+  }
+  if (!settings.clientId) {
+    setBlobSettingsStatus("Enter an app client ID.", "error");
+    return null;
+  }
+  els.signInBlobBtn.disabled = true;
+  setBlobSettingsStatus("Opening Microsoft sign-in...", "");
+  try {
+    const app = getBlobMsalApp(settings);
+    const result = await app.loginPopup({
+      scopes: ["https://storage.azure.com/.default"],
+      prompt: "select_account"
+    });
+    app.setActiveAccount(result.account);
+    updateBlobSignedInAccount();
+    setBlobSettingsStatus("Signed in with Entra ID.", "success");
+    return result.account;
+  } catch (error) {
+    console.error(error);
+    setBlobSettingsStatus(getAzureRequestErrorMessage(error), "error");
+    return null;
+  } finally {
+    els.signInBlobBtn.disabled = false;
+  }
+}
+async function signOutBlobStorage() {
+  const settings = readBlobSettingsForm();
+  const account = getBlobMsalAccount(settings);
+  if (!account) {
+    updateBlobSignedInAccount();
+    return;
+  }
+  els.signOutBlobBtn.disabled = true;
+  try {
+    await getBlobMsalApp(settings).logoutPopup({ account, mainWindowRedirectUri: getBlobMsalRedirectUri() });
+  } catch (error) {
+    console.error(error);
+    setBlobSettingsStatus(getAzureRequestErrorMessage(error), "error");
+  } finally {
+    els.signOutBlobBtn.disabled = false;
+    updateBlobSignedInAccount();
+  }
+}
+async function getBlobBearerToken(settings = blobSettings) {
+  const normalized = normalizeBlobSettings(settings);
+  const app = getBlobMsalApp(normalized);
+  let account = getBlobMsalAccount(normalized);
+  if (!account) account = await signInBlobStorage(normalized);
+  if (!account) throw new Error("Sign in with Entra ID before connecting to Blob Storage.");
+  try {
+    const result = await app.acquireTokenSilent({
+      account,
+      scopes: ["https://storage.azure.com/.default"]
+    });
+    return result.accessToken;
+  } catch (error) {
+    const msalBrowser = getMsalBrowserGlobal();
+    if (!msalBrowser || !(error instanceof msalBrowser.InteractionRequiredAuthError)) throw error;
+    const result = await app.acquireTokenPopup({
+      account,
+      scopes: ["https://storage.azure.com/.default"]
+    });
+    app.setActiveAccount(result.account);
+    updateBlobSignedInAccount();
+    return result.accessToken;
+  }
+}
 function getCanonicalizedHeaders(headers) {
   return Object.keys(headers)
     .filter(key => key.toLowerCase().startsWith("x-ms-"))
@@ -698,7 +868,8 @@ function getBlobStorageBaseUrl(settings = blobSettings) {
 function getBlobConnectionError(settings = blobSettings) {
   const normalized = normalizeBlobSettings(settings);
   if (!normalized.accountName) return "Enter a storage account.";
-  if (!normalized.accessKey) return "Enter an access key.";
+  if (normalized.authMode === "accessKey" && !normalized.accessKey) return "Enter an access key.";
+  if (normalized.authMode === "entraId" && !normalized.clientId) return "Enter an app client ID.";
   return "";
 }
 function getBlobFolderLoadError(settings = blobSettings) {
@@ -723,15 +894,17 @@ async function invokeAzureBlobRequest({ settings, method, url, canonicalizedReso
     ...extraHeaders
   };
   const bodyBytes = body instanceof ArrayBuffer ? body : null;
-  const authorization = await buildAzureAuthorizationHeader({
-    method,
-    contentLength: bodyBytes ? bodyBytes.byteLength : null,
-    contentType,
-    canonicalizedResource,
-    headers,
-    accountName: normalized.accountName,
-    accessKey: normalized.accessKey
-  });
+  const authorization = normalized.authMode === "entraId"
+    ? `Bearer ${await getBlobBearerToken(normalized)}`
+    : await buildAzureAuthorizationHeader({
+      method,
+      contentLength: bodyBytes ? bodyBytes.byteLength : null,
+      contentType,
+      canonicalizedResource,
+      headers,
+      accountName: normalized.accountName,
+      accessKey: normalized.accessKey
+    });
   const fetchHeaders = {
     ...headers,
     Authorization: authorization
@@ -825,6 +998,89 @@ function setDatalistOptions(datalist, values = []) {
   if (!datalist) return;
   datalist.innerHTML = values.map(value => `<option value="${escapeHtml(value)}"></option>`).join("");
 }
+function resetBlobFolderBrowser() {
+  blobFolderBrowserState = { folders: [], currentPath: "" };
+  if (els.blobFolderBrowser) els.blobFolderBrowser.hidden = true;
+  if (els.blobFolderSearch) els.blobFolderSearch.value = "";
+  if (els.blobFolderBreadcrumbs) els.blobFolderBreadcrumbs.innerHTML = "";
+  if (els.blobFolderList) els.blobFolderList.innerHTML = "";
+  if (els.blobFolderBrowserMeta) els.blobFolderBrowserMeta.textContent = "";
+}
+function setBlobFolderBrowserPath(path = "") {
+  blobFolderBrowserState.currentPath = normalizeBlobFolderPath(path);
+  renderBlobFolderBrowser();
+}
+function getBlobFolderChildren() {
+  const folders = blobFolderBrowserState.folders;
+  const currentPath = blobFolderBrowserState.currentPath;
+  const query = String(els.blobFolderSearch?.value || "").trim().toLowerCase();
+  if (query) {
+    return folders
+      .filter(folder => folder.toLowerCase().includes(query))
+      .map(folder => ({
+        path: folder,
+        label: folder,
+        hasChildren: folders.some(other => other.startsWith(`${folder}/`))
+      }))
+      .slice(0, 120);
+  }
+  const prefix = currentPath ? `${currentPath}/` : "";
+  const children = new Map();
+  folders.forEach(folder => {
+    if (currentPath && folder === currentPath) return;
+    if (!folder.startsWith(prefix)) return;
+    const rest = folder.slice(prefix.length);
+    const childName = rest.split("/").filter(Boolean)[0];
+    if (!childName) return;
+    const childPath = `${prefix}${childName}`;
+    children.set(childPath, {
+      path: childPath,
+      label: childName,
+      hasChildren: folders.some(other => other.startsWith(`${childPath}/`))
+    });
+  });
+  return Array.from(children.values()).sort((a, b) => a.label.localeCompare(b.label));
+}
+function renderBlobFolderBreadcrumbs() {
+  if (!els.blobFolderBreadcrumbs) return;
+  const parts = blobFolderBrowserState.currentPath.split("/").filter(Boolean);
+  const buttons = [`<button type="button" data-path="">Root</button>`];
+  parts.forEach((part, index) => {
+    const path = parts.slice(0, index + 1).join("/");
+    buttons.push(`<span>/</span><button type="button" data-path="${escapeHtml(path)}">${escapeHtml(part)}</button>`);
+  });
+  els.blobFolderBreadcrumbs.innerHTML = buttons.join("");
+}
+function renderBlobFolderBrowser() {
+  if (!els.blobFolderBrowser || !els.blobFolderList) return;
+  const folders = blobFolderBrowserState.folders;
+  els.blobFolderBrowser.hidden = !folders.length;
+  if (!folders.length) return;
+  renderBlobFolderBreadcrumbs();
+  const rows = getBlobFolderChildren();
+  els.blobFolderList.innerHTML = rows.map(row => {
+    const selected = row.path === normalizeBlobFolderPath(els.blobFolderPath?.value || "");
+    const icon = row.hasChildren ? "fa-folder-tree" : "fa-layer-group";
+    return `<button class="blob-folder-item${selected ? " selected" : ""}" type="button" role="option" data-path="${escapeHtml(row.path)}" aria-selected="${selected ? "true" : "false"}"><i class="fa-solid ${icon}"></i><span>${escapeHtml(row.label)}</span></button>`;
+  }).join("");
+  if (els.blobFolderBrowserMeta) {
+    const current = blobFolderBrowserState.currentPath || "root";
+    const query = String(els.blobFolderSearch?.value || "").trim();
+    els.blobFolderBrowserMeta.textContent = query
+      ? `${rows.length} matching folder${rows.length === 1 ? "" : "s"} shown.`
+      : `${rows.length} folder${rows.length === 1 ? "" : "s"} in ${current}.`;
+  }
+}
+function selectCurrentBlobFolder() {
+  const path = blobFolderBrowserState.currentPath;
+  if (!path) {
+    setBlobSettingsStatus("Open or search for a folder first.", "error");
+    return;
+  }
+  if (els.blobFolderPath) els.blobFolderPath.value = path;
+  renderBlobFolderBrowser();
+  setBlobSettingsStatus(`Selected folder: ${path}`, "success");
+}
 async function connectBlobStorage() {
   const settings = readBlobSettingsForm();
   const error = getBlobConnectionError(settings);
@@ -859,6 +1115,12 @@ async function loadBlobFoldersFromForm(fromConnect = false) {
   try {
     const folders = getFolderSuggestionsFromBlobNames(await getBlobNames(settings));
     setDatalistOptions(els.blobFolderOptions, folders);
+    blobFolderBrowserState = {
+      folders,
+      currentPath: normalizeBlobFolderPath(els.blobFolderPath?.value || "") || ""
+    };
+    if (els.blobFolderSearch) els.blobFolderSearch.value = "";
+    renderBlobFolderBrowser();
     setBlobSettingsStatus(`${folders.length} folder suggestion${folders.length === 1 ? "" : "s"} loaded.`, "success");
     return folders;
   } catch (error) {
@@ -892,38 +1154,22 @@ async function uploadImageFileToBlob(file) {
   const encodedContainer = encodeURIComponent(settings.container);
   const encodedBlobPath = encodeBlobPathForUrl(blobPath);
   const url = `${baseUrl}/${encodedContainer}/${encodedBlobPath}`;
-  const headers = {
-    "x-ms-date": new Date().toUTCString(),
-    "x-ms-version": AZURE_BLOB_API_VERSION,
+  const extraHeaders = {
     "x-ms-blob-type": "BlockBlob",
     "x-ms-blob-content-type": contentType,
     "x-ms-blob-content-disposition": "inline",
     "x-ms-blob-cache-control": "no-cache"
   };
-  const authorization = await buildAzureAuthorizationHeader({
+
+  await invokeAzureBlobRequest({
+    settings,
     method: "PUT",
-    contentLength: body.byteLength,
-    contentType,
+    url,
     canonicalizedResource: `/${settings.accountName}/${settings.container}/${blobPath}`,
-    headers,
-    accountName: settings.accountName,
-    accessKey: settings.accessKey
+    body,
+    contentType,
+    extraHeaders
   });
-
-  const response = await fetch(url, {
-    method: "PUT",
-    headers: {
-      ...headers,
-      "Content-Type": contentType,
-      Authorization: authorization
-    },
-    body
-  });
-
-  if (!response.ok) {
-    const bodyText = await response.text().catch(() => "");
-    throw new Error(`Upload failed (${response.status}): ${bodyText || response.statusText}`);
-  }
 
   return { url, fileName, blobPath };
 }
@@ -4320,8 +4566,38 @@ els.imageUploadFile?.addEventListener("change", event => {
 els.imagePanel.addEventListener("click", event => { if (event.target === els.imagePanel) { els.imagePanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingImageEditFigure = null; } });
 els.imagePanel.addEventListener("keydown", handlePanelKeydown);
 els.connectBlobBtn?.addEventListener("click", connectBlobStorage);
+els.signInBlobBtn?.addEventListener("click", () => signInBlobStorage());
+els.signOutBlobBtn?.addEventListener("click", signOutBlobStorage);
+els.blobAuthMode?.addEventListener("change", () => {
+  updateBlobAuthModeUi();
+  setBlobSettingsStatus("");
+});
+els.blobTenantId?.addEventListener("input", updateBlobSignedInAccount);
+els.blobClientId?.addEventListener("input", updateBlobSignedInAccount);
 els.loadBlobFoldersBtn?.addEventListener("click", () => loadBlobFoldersFromForm(false));
-els.blobContainer?.addEventListener("change", () => loadBlobFoldersFromForm(false));
+els.blobContainer?.addEventListener("change", () => {
+  resetBlobFolderBrowser();
+  loadBlobFoldersFromForm(false);
+});
+els.blobFolderSearch?.addEventListener("input", renderBlobFolderBrowser);
+els.selectBlobFolderBtn?.addEventListener("click", selectCurrentBlobFolder);
+els.blobFolderPath?.addEventListener("input", () => {
+  const path = normalizeBlobFolderPath(els.blobFolderPath.value);
+  if (blobFolderBrowserState.folders.includes(path)) setBlobFolderBrowserPath(path);
+  else renderBlobFolderBrowser();
+});
+els.blobFolderBreadcrumbs?.addEventListener("click", event => {
+  const button = event.target.closest?.("button[data-path]");
+  if (!button) return;
+  setBlobFolderBrowserPath(button.dataset.path || "");
+});
+els.blobFolderList?.addEventListener("click", event => {
+  const button = event.target.closest?.(".blob-folder-item");
+  if (!button) return;
+  const path = normalizeBlobFolderPath(button.dataset.path || "");
+  if (els.blobFolderPath) els.blobFolderPath.value = path;
+  setBlobFolderBrowserPath(path);
+});
 els.cancelBlobSettingsBtn?.addEventListener("click", closeBlobSettingsPanel);
 els.saveBlobSettingsBtn?.addEventListener("click", saveBlobSettingsFromForm);
 els.clearBlobSettingsBtn?.addEventListener("click", clearBlobSettings);

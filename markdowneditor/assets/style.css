@@ -41,6 +41,8 @@
 .fa-html5::before { content: "H"; }
 .fa-folder-tree::before { content: "▤"; }
 .fa-layer-group::before { content: "▥"; }
+.fa-user-check::before { content: "✓"; }
+.fa-right-from-bracket::before { content: "⇥"; }
 .fa-window-maximize::before { content: "▣"; }
 .fa-rectangle-ad::before { content: "AD"; font-size: .72em; letter-spacing: 0; }
 .fa-shoe-prints::before { content: "¶"; }
@@ -666,6 +668,87 @@ textarea:focus,
 .blob-settings-status { min-height: 18px; }
 .blob-settings-status.error { color: #9f1239; font-weight: 800; }
 .blob-settings-status.success { color: #047857; font-weight: 800; }
+.modal-card.blob-modal {
+  width: min(720px, calc(100vw - 36px));
+  max-height: min(860px, calc(100vh - 36px));
+  overflow: auto;
+}
+.blob-auth-entra-id { display: none; }
+.blob-uses-entra-id .blob-auth-entra-id { display: block; }
+.blob-uses-entra-id .blob-auth-access-key { display: none; }
+.blob-account {
+  align-self: center;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+.blob-folder-browser {
+  margin: 2px 0 13px;
+  padding: 12px;
+  border: 1px solid rgba(18, 32, 51, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.52);
+}
+.blob-browser-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.blob-breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding-top: 4px;
+}
+.blob-breadcrumbs button {
+  border: 0;
+  background: transparent;
+  color: #0f4f72;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 2px 3px;
+  cursor: pointer;
+}
+.blob-breadcrumbs span { color: var(--muted); font-size: 12px; }
+.blob-folder-search { margin-bottom: 10px; }
+.blob-folder-list {
+  display: grid;
+  gap: 5px;
+  max-height: 260px;
+  overflow: auto;
+  padding-right: 2px;
+}
+.blob-folder-item {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid rgba(18, 32, 51, 0.10);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.76);
+  color: #173247;
+  text-align: left;
+  cursor: pointer;
+}
+.blob-folder-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.blob-folder-item:hover,
+.blob-folder-item:focus,
+.blob-folder-item.selected {
+  border-color: rgba(79, 148, 199, 0.45);
+  background: rgba(119, 176, 222, 0.18);
+}
 .cors-help {
   padding: 9px 10px;
   border-radius: 12px;
