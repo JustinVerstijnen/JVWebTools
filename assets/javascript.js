@@ -72,6 +72,14 @@ const tools = [
     image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-portchecker.png"
   },
   {
+    title: "Microsoft Naming Tool",
+    description: "This tool is a name generator for various Microsoft services like Intune, Entra ID and Azure.",
+    toolUrl: "https://tools.justinverstijnen.nl/microsoftnamingtool",
+    shortcut: "https://msftnamer.jvapp.nl",
+    github: "https://github.com/JustinVerstijnen/MicrosoftNamingTool",
+    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-microsoftnamingtool.jpg"
+  },
+  {
     title: "Azure Deployment Templates",
     description: "This tool is a gallery for various Azure Deployment Templates I regularly use for different researches and guides.",
     toolUrl: "https://tools.justinverstijnen.nl/azuredeploymenttemplates",
