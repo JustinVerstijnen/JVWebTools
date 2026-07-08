@@ -8,12 +8,20 @@ const tools = [
     image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-dnsmegatool.png"
   },
   {
-    title: "365 Records Generator",
-    description: "Generate DNS records needed to configure a domain in Microsoft 365, including verification and SMTP DANE records, based on your domain and tenant name.",
-    toolUrl: "https://tools.justinverstijnen.nl/365recordsgenerator",
-    shortcut: "https://365recgen.jvapp.nl",
-    github: "https://github.com/JustinVerstijnen/365RecordsGenerator",
-    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-365recordsgenerator.png"
+    title: "Microsoft Naming Tool",
+    description: "This tool is a name generator for various Microsoft services like Intune, Entra ID and Azure.",
+    toolUrl: "https://tools.justinverstijnen.nl/microsoftnamingtool",
+    shortcut: "https://msftnamer.jvapp.nl",
+    github: "https://github.com/JustinVerstijnen/MicrosoftNamingTool",
+    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-microsoftnamingtool.jpg"
+  },
+  {
+    title: "365 Tenant Lookup",
+    description: "Search Microsoft 365 tenants by custom domain or .onmicrosoft.com domain to find the associated tenant ID and location.",
+    toolUrl: "https://tools.justinverstijnen.nl/tenantlookuptool",
+    shortcut: "https://tenantlookup.jvapp.nl",
+    github: "https://github.com/JustinVerstijnen/TenantLookupTool",
+    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-tenantlookuptool.png"
   },
   {
     title: "Subnet Calculator",
@@ -22,6 +30,22 @@ const tools = [
     shortcut: "https://subnet.jvapp.nl",
     github: "https://github.com/JustinVerstijnen/SubnetCalculator",
     image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-subnetcalculator.png"
+  },
+  {
+    title: "IP Lookup Tool",
+    description: "Look up IPv4 or IPv6 addresses and view properties such as ISP, country, location and more. Includes export functionality.",
+    toolUrl: "https://tools.justinverstijnen.nl/iplookuptool",
+    shortcut: "https://iplookup.jvapp.nl",
+    github: "https://github.com/JustinVerstijnen/IPLookupTool",
+    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-iplookuptool.png"
+  },
+  {
+    title: "Port Checker Tool",
+    description: "Check whether TCP ports are open to the internet. Useful for troubleshooting firewall and DNAT rules.",
+    toolUrl: "https://tools.justinverstijnen.nl/portchecker",
+    shortcut: "https://portchecker.jvapp.nl",
+    github: "https://github.com/JustinVerstijnen/PortCheckerTool",
+    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-portchecker.png"
   },
   {
     title: "Password Generator",
@@ -40,20 +64,12 @@ const tools = [
     image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-registrytopowershell.png"
   },
   {
-    title: "IP Lookup Tool",
-    description: "Look up IPv4 or IPv6 addresses and view properties such as ISP, country, location and more. Includes export functionality.",
-    toolUrl: "https://tools.justinverstijnen.nl/iplookuptool",
-    shortcut: "https://iplookup.jvapp.nl",
-    github: "https://github.com/JustinVerstijnen/IPLookupTool",
-    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-iplookuptool.png"
-  },
-  {
-    title: "365 Tenant Lookup",
-    description: "Search Microsoft 365 tenants by custom domain or .onmicrosoft.com domain to find the associated tenant ID and location.",
-    toolUrl: "https://tools.justinverstijnen.nl/tenantlookuptool",
-    shortcut: "https://tenantlookup.jvapp.nl",
-    github: "https://github.com/JustinVerstijnen/TenantLookupTool",
-    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-tenantlookuptool.png"
+    title: "365 Records Generator",
+    description: "Generate DNS records needed to configure a domain in Microsoft 365, including verification and SMTP DANE records, based on your domain and tenant name.",
+    toolUrl: "https://tools.justinverstijnen.nl/365recordsgenerator",
+    shortcut: "https://365recgen.jvapp.nl",
+    github: "https://github.com/JustinVerstijnen/365RecordsGenerator",
+    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-365recordsgenerator.png"
   },
   {
     title: "HTML Color Picker",
@@ -62,22 +78,6 @@ const tools = [
     shortcut: "https://htmlcolor.jvapp.nl",
     github: "https://github.com/JustinVerstijnen/HTMLColorPicker",
     image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-htmlcolorpicker.png"
-  },
-  {
-    title: "Port Checker Tool",
-    description: "Check whether TCP ports are open to the internet. Useful for troubleshooting firewall and DNAT rules.",
-    toolUrl: "https://tools.justinverstijnen.nl/portchecker",
-    shortcut: "https://portchecker.jvapp.nl",
-    github: "https://github.com/JustinVerstijnen/PortCheckerTool",
-    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-portchecker.png"
-  },
-  {
-    title: "Microsoft Naming Tool",
-    description: "This tool is a name generator for various Microsoft services like Intune, Entra ID and Azure.",
-    toolUrl: "https://tools.justinverstijnen.nl/microsoftnamingtool",
-    shortcut: "https://msftnamer.jvapp.nl",
-    github: "https://github.com/JustinVerstijnen/MicrosoftNamingTool",
-    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-microsoftnamingtool.jpg"
   },
   {
     title: "Azure Deployment Templates",
