@@ -2,6 +2,10 @@
     "use strict";
 
     const headerInput = document.getElementById("headerInput");
+    const searchbox = document.querySelector(".searchbox");
+    const inputCollapsedBar = document.getElementById("inputCollapsedBar");
+    const newHeaderBtn = document.getElementById("newHeaderBtn");
+    const showHeaderBtn = document.getElementById("showHeaderBtn");
     const analyzeBtn = document.getElementById("analyzeBtn");
     const clearBtn = document.getElementById("clearBtn");
     const copyBtn = document.getElementById("copyBtn");
@@ -61,6 +65,8 @@
     analyzeBtn.addEventListener("click", analyze);
     clearBtn.addEventListener("click", clearAll);
     copyBtn.addEventListener("click", copyAnalysis);
+    newHeaderBtn.addEventListener("click", startNewHeader);
+    showHeaderBtn.addEventListener("click", showCurrentHeader);
     exportBtn.addEventListener("click", (event) => {
         event.stopPropagation();
         if (exportBtn.disabled) return;
@@ -84,6 +90,7 @@
     function clearAll() {
         headerInput.value = "";
         lastAnalysis = null;
+        expandInput();
         resultsSection.hidden = true;
         emptyState.hidden = false;
         copyBtn.disabled = true;
@@ -114,6 +121,29 @@
         resultsSection.hidden = false;
         copyBtn.disabled = false;
         exportBtn.disabled = false;
+        collapseInput();
+    }
+
+    function collapseInput() {
+        searchbox.classList.add("input-collapsed");
+        inputCollapsedBar.hidden = false;
+    }
+
+    function expandInput() {
+        searchbox.classList.remove("input-collapsed");
+        inputCollapsedBar.hidden = true;
+    }
+
+    function startNewHeader() {
+        headerInput.value = "";
+        expandInput();
+        headerInput.focus();
+    }
+
+    function showCurrentHeader() {
+        expandInput();
+        headerInput.focus();
+        headerInput.select();
     }
 
     function parseHeaders(raw) {
@@ -515,9 +545,9 @@
             tr.className = rowClass(row.status);
             tr.innerHTML = `
                 <td><strong>${escapeHtml(row.check)}</strong></td>
-                <td>${statusBadge(row.status)}</td>
                 <td>${escapeHtml(row.details || "")}</td>
                 <td>${escapeHtml(row.source || "")}</td>
+                <td class="status-cell">${statusIcon(row.status, row.details)}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -599,6 +629,28 @@
         return `<span class="badge ${badgeClass(status)}">${escapeHtml(status || "unknown")}</span>`;
     }
 
+    function statusIcon(status, details) {
+        const level = statusLevel(status);
+        const label = `${String(status || "unknown").toUpperCase()}${details ? ": " + details : ""}`;
+        return `<span class="status-icon status-${level}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">${statusIconSvg(level)}</span>`;
+    }
+
+    function statusIconSvg(level) {
+        if (level === "success") {
+            return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.2 16.6 4.9 12.3 3.5 13.7l5.7 5.7L20.5 8.1l-1.4-1.4-9.9 9.9Z"/></svg>`;
+        }
+        if (level === "error") {
+            return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13.4 12 5.3-5.3-1.4-1.4-5.3 5.3-5.3-5.3-1.4 1.4 5.3 5.3-5.3 5.3 1.4 1.4 5.3-5.3 5.3 5.3 1.4-1.4-5.3-5.3Z"/></svg>`;
+        }
+        return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 21h22L12 2 1 21Zm12-3h-2v-2h2v2Zm0-4h-2v-4h2v4Z"/></svg>`;
+    }
+
+    function statusLevel(status) {
+        if (status === "pass" || status === "success") return "success";
+        if (status === "fail" || status === "error") return "error";
+        return "warning";
+    }
+
     function badgeClass(status) {
         if (status === "pass" || status === "success") return "badge-success";
         if (status === "fail" || status === "error") return "badge-error";
@@ -609,7 +661,7 @@
         if (!lastAnalysis) return;
         const text = analysisToText(lastAnalysis);
         navigator.clipboard.writeText(text).then(() => {
-            copyBtn.textContent = "Copied";
+            copyBtn.innerHTML = "Copied";
             window.setTimeout(() => {
                 copyBtn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg>Copy`;
             }, 1100);

@@ -20,9 +20,22 @@
 
         <section class="searchbox" aria-label="Mail header invoer">
             <textarea id="headerInput" autofocus required spellcheck="false" placeholder="Paste headers here."></textarea>
-            <div class="action-row">
+            <div id="inputCollapsedBar" class="collapsed-input-bar" hidden>
+                <span>Header geanalyseerd. Het invoerveld is ingeklapt.</span>
+                <div class="collapsed-actions">
+                    <button id="newHeaderBtn" type="button" title="Nieuwe header invoeren">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2Z"/></svg>
+                        New header
+                    </button>
+                    <button id="showHeaderBtn" type="button" class="details-btn" title="Toon geplakte header">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v2H4V5Zm0 6h16v2H4v-2Zm0 6h16v2H4v-2Z"/></svg>
+                        Show header
+                    </button>
+                </div>
+            </div>
+            <div id="inputActionRow" class="action-row">
                 <button id="analyzeBtn" type="button" title="Analyze headers">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2a8 8 0 1 0 4.9 14.3l4.4 4.4 1.4-1.4-4.4-4.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/></svg>
+                    <svg viewBox="0 0 512 512" aria-hidden="true"><path d="M505 442.7 405.3 343c-4.5-4.5-10.6-7-17-7H372c27.6-35.3 44-79.7 44-128C416 93.1 322.9 0 208 0S0 93.1 0 208s93.1 208 208 208c48.3 0 92.7-16.4 128-44v16.3c0 6.4 2.5 12.5 7 17l99.7 99.7c9.4 9.4 24.6 9.4 33.9 0l28.3-28.3c9.4-9.4 9.4-24.6.1-34ZM208 336c-70.7 0-128-57.2-128-128S137.3 80 208 80s128 57.3 128 128-57.3 128-128 128Z"/></svg>
                     Analyze
                 </button>
                 <button id="clearBtn" type="button" class="bulk-btn" title="Clear">
@@ -35,7 +48,7 @@
                 </button>
                 <div id="exportControl" class="export-control">
                     <button id="exportBtn" type="button" class="export-trigger" disabled aria-haspopup="true" aria-expanded="false" title="Export">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm0 2.5L17.5 8H14V4.5ZM12 12v4.2l1.8-1.8 1.4 1.4L12 19l-3.2-3.2 1.4-1.4 1.8 1.8V12h2Z"/></svg>
+                        <svg viewBox="0 0 384 512" aria-hidden="true"><path d="M64 0C28.7 0 0 28.7 0 64v384c0 35.3 28.7 64 64 64h256c35.3 0 64-28.7 64-64V160H256c-17.7 0-32-14.3-32-32V0H64Zm192 0v128h128L256 0Zm-40 232v102.1l31-31c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-72 72c-9.4 9.4-24.6 9.4-33.9 0l-72-72c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l31 31V232c0-13.3 10.7-24 24-24s24 10.7 24 24Z"/></svg>
                         Export<span class="export-caret" aria-hidden="true"></span>
                     </button>
                     <div id="exportMenu" class="export-menu" role="menu">
@@ -59,7 +72,7 @@
             <div class="table-wrapper">
                 <table id="authTable">
                     <thead>
-                        <tr><th>Check</th><th>Status</th><th>Details</th><th>Bron</th></tr>
+                        <tr><th>Check</th><th>Details</th><th>Bron</th><th>Status</th></tr>
                     </thead>
                     <tbody></tbody>
                 </table>

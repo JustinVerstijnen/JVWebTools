@@ -115,7 +115,7 @@ summary:focus-visible {
 }
 
 button {
-    min-height: var(--control-height);
+    height: var(--control-height);
     padding: 0 20px;
     font-size: 16px;
     background-color: var(--blue);
@@ -139,8 +139,8 @@ button:disabled {
 }
 
 button svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     fill: currentColor;
     flex-shrink: 0;
 }
@@ -149,6 +149,36 @@ button svg {
 .action-row > .export-control {
     flex: 1 1 150px;
     max-width: 190px;
+}
+
+.collapsed-input-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #dbe3dd;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0 0 10px rgba(0,0,0,0.06);
+    color: #4b5563;
+}
+
+.collapsed-input-bar[hidden] {
+    display: none;
+}
+
+.collapsed-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.input-collapsed #headerInput,
+.input-collapsed #inputActionRow {
+    display: none;
 }
 
 .bulk-btn {
@@ -216,7 +246,7 @@ button svg {
 
 .export-menu button {
     width: 100%;
-    min-height: 38px;
+    height: 38px;
     margin: 0;
     padding: 0 12px;
     justify-content: flex-start;
@@ -381,6 +411,48 @@ tbody tr.row-error:nth-child(even) {
     background: #fde8e7;
 }
 
+.status-cell {
+    text-align: right;
+}
+
+.status-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    vertical-align: middle;
+    cursor: help;
+}
+
+.status-icon svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.status-success {
+    color: #18803a;
+    background: #e6f5eb;
+}
+
+.status-warning {
+    color: #9a6700;
+    background: #fff3cd;
+}
+
+.status-error {
+    color: #b42318;
+    background: #fde8e7;
+}
+
+#authTable th:last-child,
+#authTable td:last-child {
+    width: 82px;
+    text-align: right;
+}
+
 .value-list {
     margin: 0;
     padding-left: 18px;
@@ -436,8 +508,23 @@ summary {
     }
 
     .action-row > button,
-    .action-row > .export-control {
+    .action-row > .export-control,
+    .collapsed-actions button {
         max-width: none;
+    }
+
+    .collapsed-input-bar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .collapsed-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .collapsed-actions button {
+        flex: 1 1 150px;
     }
 
     table {
