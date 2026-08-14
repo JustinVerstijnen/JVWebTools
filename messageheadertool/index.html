@@ -1,1 +1,126 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Client-side Mail Header Analyzer voor SPF, DKIM, DMARC, Received hops en mailflow vertraging.">
+<title>Mail Header Analyzer - justinverstijnen.nl</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" type="image/svg+xml" href="https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/logo.svg">
+</head>
+<body>
+    <main class="container">
+        <div class="header">
+            <a href="https://justinverstijnen.nl" target="_blank" rel="noopener noreferrer">
+                <img src="https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/logo.svg" alt="Logo" width="50" height="50">
+            </a>
+        </div>
+        <h1>Mail Header Analyzer</h1>
+        <div class="subtitle">Analyseer mailheaders lokaal op authenticatie, route, vertraging en opvallende signalen.</div>
 
+        <section class="searchbox" aria-label="Mail header invoer">
+            <textarea id="headerInput" autofocus required spellcheck="false" placeholder="Paste headers here."></textarea>
+            <div class="action-row">
+                <button id="analyzeBtn" type="button" title="Analyze headers">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2a8 8 0 1 0 4.9 14.3l4.4 4.4 1.4-1.4-4.4-4.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/></svg>
+                    Analyze
+                </button>
+                <button id="clearBtn" type="button" class="bulk-btn" title="Clear">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V7H6v12ZM8 9h8v10H8V9Zm7.5-5-1-1h-5l-1 1H5v2h14V4h-3.5Z"/></svg>
+                    Clear
+                </button>
+                <button id="copyBtn" type="button" class="details-btn" disabled title="Copy analysis results">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg>
+                    Copy
+                </button>
+                <div id="exportControl" class="export-control">
+                    <button id="exportBtn" type="button" class="export-trigger" disabled aria-haspopup="true" aria-expanded="false" title="Export">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm0 2.5L17.5 8H14V4.5ZM12 12v4.2l1.8-1.8 1.4 1.4L12 19l-3.2-3.2 1.4-1.4 1.8 1.8V12h2Z"/></svg>
+                        Export<span class="export-caret" aria-hidden="true"></span>
+                    </button>
+                    <div id="exportMenu" class="export-menu" role="menu">
+                        <button type="button" role="menuitem" data-export-format="html">HTML</button>
+                        <button type="button" role="menuitem" data-export-format="json">JSON</button>
+                        <button type="button" role="menuitem" data-export-format="txt">TXT</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div id="emptyState" class="infobox">Klaar om headers te analyseren.</div>
+
+        <section id="resultsSection" hidden>
+            <div id="scoreCards" class="score-grid"></div>
+            <div id="analysisBox" class="analysis-box"></div>
+
+            <div class="section-title-row">
+                <h2>Authenticatie</h2>
+            </div>
+            <div class="table-wrapper">
+                <table id="authTable">
+                    <thead>
+                        <tr><th>Check</th><th>Status</th><th>Details</th><th>Bron</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="section-title-row">
+                <h2>Received headers</h2>
+            </div>
+            <div class="table-wrapper wide-table">
+                <table id="receivedTable">
+                    <thead>
+                        <tr>
+                            <th>Hop</th>
+                            <th>Submitting host</th>
+                            <th>Receiving host</th>
+                            <th>Time</th>
+                            <th>Delay</th>
+                            <th>Type</th>
+                            <th>Id / For</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="section-title-row">
+                <h2>Samenvatting</h2>
+            </div>
+            <div class="table-wrapper">
+                <table id="summaryTable">
+                    <thead><tr><th>Header</th><th>Waarde</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="section-title-row">
+                <h2>Security headers</h2>
+            </div>
+            <div class="table-wrapper">
+                <table id="securityTable">
+                    <thead><tr><th>Header</th><th>Waarde</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <details class="raw-details">
+                <summary>Overige headers</summary>
+                <div class="table-wrapper">
+                    <table id="otherTable">
+                        <thead><tr><th>#</th><th>Header</th><th>Waarde</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </details>
+        </section>
+
+        <div class="footer">
+            <a href="https://justinverstijnen.nl" target="_blank" rel="noopener noreferrer">&copy; <span id="copyright-year"></span> Mail Header Analyzer by Justin Verstijnen.</a>
+        </div>
+    </main>
+
+<script src="assets/app.js"></script>
+</body>
+</html>
