@@ -25,6 +25,7 @@
         Subject: "https://tools.ietf.org/html/rfc5322#section-3.6.5",
         "Message Id": "https://tools.ietf.org/html/rfc5322#section-3.6.4",
         "Creation time": "https://tools.ietf.org/html/rfc5322#section-3.6.1",
+        "Return-Path": "https://tools.ietf.org/html/rfc5321#section-4.4",
         From: "https://tools.ietf.org/html/rfc5322#section-3.6.2",
         To: "https://tools.ietf.org/html/rfc5322#section-3.6.3"
     };
@@ -233,13 +234,13 @@
             { label: "Subject", value: firstValue(byName, "Subject"), url: summaryLinks.Subject },
             { label: "Message Id", value: firstValue(byName, "Message-ID"), url: summaryLinks["Message Id"] },
             { label: "Creation time", value: formatCreationTime(date, metrics.totalDelivery), url: summaryLinks["Creation time"] },
+            { label: "Return-Path", value: firstValue(byName, "Return-Path"), url: summaryLinks["Return-Path"] },
             { label: "From", value: firstValue(byName, "From"), url: summaryLinks.From },
             { label: "To", value: firstValue(byName, "To"), url: summaryLinks.To }
         ].filter((row) => row.value);
 
         return {
             rows,
-            text: buildMessageSummaryText(byName),
             spam: buildSpamSummary(byName)
         };
     }
@@ -249,18 +250,6 @@
         return totalDelivery ? `${date} (Delivered after ${totalDelivery})` : date;
     }
 
-    function buildMessageSummaryText(byName) {
-        const from = firstValue(byName, "From");
-        const to = firstValue(byName, "To");
-        const subject = firstValue(byName, "Subject");
-        const parts = [];
-        if (from && to) parts.push(`This message was sent from ${from} to ${to}.`);
-        else if (from) parts.push(`This message was sent from ${from}.`);
-        else if (to) parts.push(`This message was sent to ${to}.`);
-        if (subject) parts.push(`Subject: ${subject}`);
-        return parts.join(" ");
-    }
-
     function buildSpamSummary(byName) {
         const report = firstValue(byName, "X-Forefront-Antispam-Report");
         const sfv = (report.match(/\bSFV:([^;\s]+)/i) || [])[1] || "";
@@ -268,18 +257,16 @@
 
         if (sfv.toUpperCase() === "NSPM") {
             return {
-                level: "info",
+                level: "success",
                 title: "Email Not Spam",
-                source: "X-Forefront-Antispam-Report / SFV:NSPM",
-                partOf: "Email not spam and sent to inbox"
+                detail: "Microsoft filtering marked this message as not spam and delivered it to the inbox."
             };
         }
 
         return {
             level: "warning",
-            title: `Spam filtering signal: ${sfv.toUpperCase()}`,
-            source: `X-Forefront-Antispam-Report / SFV:${sfv.toUpperCase()}`,
-            partOf: "Review the X-Forefront-Antispam-Report header for the exact Microsoft filtering verdict"
+            title: "Email Spam",
+            detail: `Microsoft filtering returned spam signal ${sfv.toUpperCase()}. Review the filtering headers for the exact verdict.`
         };
     }
 
@@ -446,20 +433,22 @@
     function extractAuthCheck(label, authText, fallbackText, token, fallbackSource) {
         const tokenResult = extractToken(authText, token);
         if (tokenResult) {
+            const status = normalizeStatus(tokenResult.status);
             return {
                 check: label,
-                status: normalizeStatus(tokenResult.status),
-                details: tokenResult.details || tokenResult.status,
+                status,
+                details: addPolicyDetail(label, tokenResult.details || tokenResult.status, status),
                 source: "Authentication-Results"
             };
         }
 
         if (token === "spf" && fallbackText) {
             const match = fallbackText.match(/\b(pass|fail|softfail|neutral|none|temperror|permerror)\b/i);
+            const status = normalizeStatus(match ? match[1] : "unknown");
             return {
                 check: label,
-                status: normalizeStatus(match ? match[1] : "unknown"),
-                details: cleanupField(fallbackText),
+                status,
+                details: addPolicyDetail(label, cleanupField(fallbackText), status),
                 source: fallbackSource
             };
         }
@@ -470,6 +459,35 @@
             details: "Not found in the pasted headers.",
             source: fallbackSource
         };
+    }
+
+    function addPolicyDetail(label, details, status) {
+        const policy = label === "SPF"
+            ? getSpfPolicy(status)
+            : label === "DMARC"
+                ? getDmarcPolicy(details)
+                : "";
+
+        if (!policy) return details;
+        return `${details} | Policy: ${policy}`;
+    }
+
+    function getSpfPolicy(status) {
+        if (status === "fail") return "Hardfail";
+        if (status === "softfail") return "Softfail";
+        return "";
+    }
+
+    function getDmarcPolicy(details) {
+        const text = String(details || "");
+        const match = text.match(/\b(?:action|p|policy)\s*=\s*(none|quarantine|reject)\b/i);
+        if (!match) return "";
+        return titleCase(match[1]);
+    }
+
+    function titleCase(value) {
+        const text = String(value || "").toLowerCase();
+        return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
     }
 
     function extractToken(text, token) {
@@ -546,10 +564,6 @@
         if (!firstValue(byName, "Authentication-Results") && !firstValue(byName, "Received-SPF")) {
             findings.push({ level: "warning", text: "No Authentication-Results or Received-SPF headers were found." });
         }
-        if (!findings.length) {
-            findings.push({ level: "success", text: "No immediate red flags were found in the pasted headers." });
-        }
-
         return findings;
     }
 
@@ -587,28 +601,27 @@
             : `<tr class="row-warning"><td colspan="2">No summary headers found.</td></tr>`;
 
         const spam = summary.spam ? `
-            <div class="spam-summary">
+            <div class="spam-summary spam-summary-${statusLevel(summary.spam.level)}">
                 <span class="badge ${badgeClass(summary.spam.level)}">${escapeHtml(summary.spam.level)}</span>
                 <strong>${escapeHtml(summary.spam.title)}</strong>
-                <span>${escapeHtml(summary.spam.source)}</span>
-                <span>Part of: ${escapeHtml(summary.spam.partOf)}</span>
+                <span>${escapeHtml(summary.spam.detail)}</span>
             </div>
         ` : "";
 
         messageSummary.innerHTML = `
-            ${summary.text ? `<p class="message-summary-text">${escapeHtml(summary.text)}</p>` : ""}
+            ${spam}
             <div class="table-wrapper">
                 <table id="messageSummaryTable">
                     <thead><tr><th>Header</th><th>Value</th></tr></thead>
                     <tbody>${tableRows}</tbody>
                 </table>
             </div>
-            ${spam}
         `;
     }
 
     function renderFindings(findings) {
         const analysisBox = document.getElementById("analysisBox");
+        analysisBox.hidden = !findings.length;
         analysisBox.innerHTML = findings.map((finding) => `
             <p><span class="badge ${badgeClass(finding.level)}">${escapeHtml(finding.level)}</span> ${escapeHtml(finding.text)}</p>
         `).join("");
@@ -623,7 +636,6 @@
             tr.innerHTML = `
                 <td><strong>${escapeHtml(row.check)}</strong></td>
                 <td>${escapeHtml(row.details || "")}</td>
-                <td>${escapeHtml(row.source || "")}</td>
                 <td class="status-cell">${statusIcon(row.status, row.details)}</td>
             `;
             tbody.appendChild(tr);
@@ -634,20 +646,17 @@
         const tbody = document.querySelector("#receivedTable tbody");
         tbody.innerHTML = "";
         if (!rows.length) {
-            tbody.innerHTML = `<tr class="row-warning"><td colspan="7">No Received headers found.</td></tr>`;
+            tbody.innerHTML = `<tr class="row-warning"><td colspan="4">No Received headers found.</td></tr>`;
             return;
         }
         rows.forEach((row) => {
             const tr = document.createElement("tr");
             tr.className = receivedRowClass(row);
             tr.innerHTML = `
-                <td>${escapeHtml(row.hop)}</td>
                 <td>${renderServerValue(row.from)}</td>
                 <td>${renderServerValue(row.by)}</td>
                 <td>${escapeHtml(row.date)}</td>
-                <td>${escapeHtml(row.delay)}${row.delayPercent ? ` (${row.delayPercent}%)` : ""}</td>
                 <td>${escapeHtml(row.with)}</td>
-                <td>${escapeHtml([row.id, row.for].filter(Boolean).join(" / "))}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -779,13 +788,11 @@
         lines.push(`Generated: ${analysis.generatedAt}`);
         lines.push("");
         lines.push("Message summary:");
-        analysis.summary.rows.forEach((row) => lines.push(`- ${row.label}: ${row.value}`));
-        if (analysis.summary.text) lines.push(`- Summary: ${analysis.summary.text}`);
         if (analysis.summary.spam) {
             lines.push(`- ${analysis.summary.spam.level.toUpperCase()}: ${analysis.summary.spam.title}`);
-            lines.push(`- ${analysis.summary.spam.source}`);
-            lines.push(`- Part of: ${analysis.summary.spam.partOf}`);
+            lines.push(`- ${analysis.summary.spam.detail}`);
         }
+        analysis.summary.rows.forEach((row) => lines.push(`- ${row.label}: ${row.value}`));
         lines.push("");
         lines.push("Findings:");
         analysis.findings.forEach((finding) => lines.push(`- ${finding.level}: ${finding.text}`));
@@ -794,7 +801,7 @@
         analysis.auth.forEach((row) => lines.push(`- ${row.check}: ${row.status} (${row.details})`));
         lines.push("");
         lines.push("Received:");
-        analysis.received.forEach((row) => lines.push(`- Hop ${row.hop}: ${row.from} -> ${row.by}; ${row.date}; delay ${row.delay || "unknown"}`));
+        analysis.received.forEach((row) => lines.push(`- ${row.from} -> ${row.by}; ${row.date}; ${row.with || "unknown type"}`));
         return lines.join("\n");
     }
 
@@ -830,13 +837,12 @@ th{background:#f2f2f2}.row-success{background:#eef8f1}.row-warning{background:#f
 <h1>Mail Header Analysis</h1>
 <p><strong>Generated:</strong> ${escapeHtml(analysis.generatedAt)}</p>
 <h2>Message Summary</h2>
-${analysis.summary.text ? `<p>${escapeHtml(analysis.summary.text)}</p>` : ""}
+${analysis.summary.spam ? `<p><strong>${escapeHtml(analysis.summary.spam.level.toUpperCase())}: ${escapeHtml(analysis.summary.spam.title)}</strong><br>${escapeHtml(analysis.summary.spam.detail)}</p>` : ""}
 ${tableHtml("Summary", ["Header", "Value"], analysis.summary.rows.map((row) => [row.label, row.value]))}
-${analysis.summary.spam ? `<p><strong>${escapeHtml(analysis.summary.spam.level.toUpperCase())}: ${escapeHtml(analysis.summary.spam.title)}</strong><br>${escapeHtml(analysis.summary.spam.source)}<br>Part of: ${escapeHtml(analysis.summary.spam.partOf)}</p>` : ""}
 <h2>Findings</h2>
 <ul>${analysis.findings.map((f) => `<li><strong>${escapeHtml(f.level)}:</strong> ${escapeHtml(f.text)}</li>`).join("")}</ul>
-${tableHtml("Authentication", ["Check", "Status", "Details", "Source"], analysis.auth.map((row) => [row.check, row.status, row.details, row.source]))}
-${tableHtml("Received", ["Hop", "From", "By", "Time", "Delay", "Type"], analysis.received.map((row) => [row.hop, removeIpv6Addresses(row.from), removeIpv6Addresses(row.by), row.date, row.delay, row.with]))}
+${tableHtml("Authentication", ["Check", "Details", "Status"], analysis.auth.map((row) => [row.check, row.details, row.status]))}
+${tableHtml("Received", ["From", "By", "Time", "Type"], analysis.received.map((row) => [removeIpv6Addresses(row.from), removeIpv6Addresses(row.by), row.date, row.with]))}
 </div></body></html>`;
     }
 

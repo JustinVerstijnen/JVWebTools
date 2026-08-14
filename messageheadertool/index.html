@@ -68,11 +68,12 @@
 
             <div class="section-title-row">
                 <h2>Authentication</h2>
+                <p>SPF, DKIM, DMARC and related authentication results from the receiving system.</p>
             </div>
             <div class="table-wrapper">
                 <table id="authTable">
                     <thead>
-                        <tr><th>Check</th><th>Details</th><th>Source</th><th>Status</th></tr>
+                        <tr><th>Check</th><th>Details</th><th>Status</th></tr>
                     </thead>
                     <tbody></tbody>
                 </table>
@@ -80,18 +81,16 @@
 
             <div class="section-title-row">
                 <h2>Received headers</h2>
+                <p>Mail server hops in delivery order, with visible IPv6 addresses hidden and preserved as tooltips.</p>
             </div>
             <div class="table-wrapper wide-table">
                 <table id="receivedTable">
                     <thead>
                         <tr>
-                            <th>Hop</th>
                             <th>Submitting host</th>
                             <th>Receiving host</th>
                             <th>Time</th>
-                            <th>Delay</th>
                             <th>Type</th>
-                            <th>Id / For</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -100,6 +99,7 @@
 
             <div class="section-title-row">
                 <h2>Security headers</h2>
+                <p>Security and filtering headers extracted from the pasted message.</p>
             </div>
             <div class="table-wrapper">
                 <table id="securityTable">

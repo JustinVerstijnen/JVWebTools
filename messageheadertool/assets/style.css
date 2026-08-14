@@ -271,6 +271,10 @@ button svg {
     border-radius: 5px;
 }
 
+.analysis-box[hidden] {
+    display: none;
+}
+
 .analysis-box {
     display: grid;
     gap: 8px;
@@ -286,7 +290,6 @@ button svg {
     margin-bottom: 18px;
 }
 
-.message-summary-text,
 .spam-summary {
     background-color: #e0f0ff;
     border: 1px solid #aad;
@@ -294,21 +297,26 @@ button svg {
     border-radius: 5px;
 }
 
-.message-summary-text {
-    margin: 0;
-    line-height: 1.5;
-}
-
 .spam-summary {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 4px 12px;
+    gap: 8px 12px;
     align-items: start;
 }
 
 .spam-summary .badge {
-    grid-row: span 3;
+    grid-row: span 2;
     align-self: start;
+}
+
+.spam-summary-success {
+    background-color: #eef8f1;
+    border-color: #b7dfc2;
+}
+
+.spam-summary-warning {
+    background-color: #fff7e6;
+    border-color: #ffe0a3;
 }
 
 .spam-summary strong {
@@ -337,9 +345,20 @@ button svg {
 
 .section-title-row {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    text-align: center;
+    gap: 4px;
     margin: 22px 0 8px;
+}
+
+.section-title-row p {
+    max-width: 720px;
+    margin: 0;
+    color: #555;
+    font-size: 14px;
+    line-height: 1.45;
 }
 
 .table-wrapper {
@@ -358,7 +377,7 @@ table {
 }
 
 .wide-table table {
-    min-width: 980px;
+    min-width: 760px;
     table-layout: auto;
 }
 
@@ -479,6 +498,11 @@ tbody tr.row-error:nth-child(even) {
 #authTable td:last-child {
     width: 82px;
     text-align: right;
+}
+
+#authTable th:first-child,
+#authTable td:first-child {
+    width: 130px;
 }
 
 .value-list {
