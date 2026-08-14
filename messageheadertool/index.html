@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Client-side Mail Header Analyzer voor SPF, DKIM, DMARC, Received hops en mailflow vertraging.">
+<meta name="description" content="Client-side Mail Header Analyzer for SPF, DKIM, DMARC, Received hops and mail flow delay.">
 <title>Mail Header Analyzer - justinverstijnen.nl</title>
 <link rel="stylesheet" href="assets/style.css">
 <link rel="icon" type="image/svg+xml" href="https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/logo.svg">
@@ -16,18 +16,18 @@
             </a>
         </div>
         <h1>Mail Header Analyzer</h1>
-        <div class="subtitle">Analyseer mailheaders lokaal op authenticatie, route, vertraging en opvallende signalen.</div>
+        <div class="subtitle">Analyze mail headers locally for authentication, route, delay and notable signals.</div>
 
-        <section class="searchbox" aria-label="Mail header invoer">
+        <section class="searchbox" aria-label="Mail header input">
             <textarea id="headerInput" autofocus required spellcheck="false" placeholder="Paste headers here."></textarea>
             <div id="inputCollapsedBar" class="collapsed-input-bar" hidden>
-                <span>Header geanalyseerd. Het invoerveld is ingeklapt.</span>
+                <span>Header analyzed. The input field is collapsed.</span>
                 <div class="collapsed-actions">
-                    <button id="newHeaderBtn" type="button" title="Nieuwe header invoeren">
+                    <button id="newHeaderBtn" type="button" title="Enter a new header">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2Z"/></svg>
                         New header
                     </button>
-                    <button id="showHeaderBtn" type="button" class="details-btn" title="Toon geplakte header">
+                    <button id="showHeaderBtn" type="button" class="details-btn" title="Show pasted header">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v2H4V5Zm0 6h16v2H4v-2Zm0 6h16v2H4v-2Z"/></svg>
                         Show header
                     </button>
@@ -60,19 +60,19 @@
             </div>
         </section>
 
-        <div id="emptyState" class="infobox">Klaar om headers te analyseren.</div>
+        <div id="emptyState" class="infobox">Ready to analyze headers.</div>
 
         <section id="resultsSection" hidden>
-            <div id="scoreCards" class="score-grid"></div>
+            <div id="messageSummary" class="message-summary"></div>
             <div id="analysisBox" class="analysis-box"></div>
 
             <div class="section-title-row">
-                <h2>Authenticatie</h2>
+                <h2>Authentication</h2>
             </div>
             <div class="table-wrapper">
                 <table id="authTable">
                     <thead>
-                        <tr><th>Check</th><th>Details</th><th>Bron</th><th>Status</th></tr>
+                        <tr><th>Check</th><th>Details</th><th>Source</th><th>Status</th></tr>
                     </thead>
                     <tbody></tbody>
                 </table>
@@ -99,30 +99,20 @@
             </div>
 
             <div class="section-title-row">
-                <h2>Samenvatting</h2>
-            </div>
-            <div class="table-wrapper">
-                <table id="summaryTable">
-                    <thead><tr><th>Header</th><th>Waarde</th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-
-            <div class="section-title-row">
                 <h2>Security headers</h2>
             </div>
             <div class="table-wrapper">
                 <table id="securityTable">
-                    <thead><tr><th>Header</th><th>Waarde</th></tr></thead>
+                    <thead><tr><th>Header</th><th>Value</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
 
             <details class="raw-details">
-                <summary>Overige headers</summary>
+                <summary>Other headers</summary>
                 <div class="table-wrapper">
                     <table id="otherTable">
-                        <thead><tr><th>#</th><th>Header</th><th>Waarde</th></tr></thead>
+                        <thead><tr><th>#</th><th>Header</th><th>Value</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>

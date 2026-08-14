@@ -21,6 +21,14 @@
         "Subject", "Message-ID", "Archived-At", "Date", "From", "Reply-To", "To", "CC", "Return-Path"
     ];
 
+    const summaryLinks = {
+        Subject: "https://tools.ietf.org/html/rfc5322#section-3.6.5",
+        "Message Id": "https://tools.ietf.org/html/rfc5322#section-3.6.4",
+        "Creation time": "https://tools.ietf.org/html/rfc5322#section-3.6.1",
+        From: "https://tools.ietf.org/html/rfc5322#section-3.6.2",
+        To: "https://tools.ietf.org/html/rfc5322#section-3.6.3"
+    };
+
     const securityHeaderNames = [
         "Authentication-Results",
         "ARC-Authentication-Results",
@@ -101,7 +109,7 @@
     function analyze() {
         const raw = headerInput.value.trim();
         if (!raw) {
-            emptyState.textContent = "Geen headers gevonden.";
+            emptyState.textContent = "No headers found.";
             emptyState.hidden = false;
             resultsSection.hidden = true;
             return;
@@ -109,7 +117,7 @@
 
         const headers = parseHeaders(raw);
         if (!headers.length) {
-            emptyState.textContent = "Geen bruikbare headers gevonden.";
+            emptyState.textContent = "No usable headers found.";
             emptyState.hidden = false;
             resultsSection.hidden = true;
             return;
@@ -194,9 +202,8 @@
         const byName = groupByHeader(headers);
         const received = parseReceivedHeaders(byName.get("received") || []);
         const auth = parseAuthentication(headers, byName);
-        const summary = summaryHeaders
-            .map((name) => ({ name, value: firstValue(byName, name) }))
-            .filter((row) => row.value);
+        const metrics = buildMetrics(headers, received, auth);
+        const summary = buildMessageSummary(byName, metrics);
         const security = securityHeaderNames
             .flatMap((name) => (byName.get(name.toLowerCase()) || []).map((header) => ({ name: header.name, value: header.value })));
         const other = headers
@@ -216,7 +223,63 @@
             received,
             auth,
             findings,
-            metrics: buildMetrics(headers, received, auth)
+            metrics
+        };
+    }
+
+    function buildMessageSummary(byName, metrics) {
+        const date = firstValue(byName, "Date");
+        const rows = [
+            { label: "Subject", value: firstValue(byName, "Subject"), url: summaryLinks.Subject },
+            { label: "Message Id", value: firstValue(byName, "Message-ID"), url: summaryLinks["Message Id"] },
+            { label: "Creation time", value: formatCreationTime(date, metrics.totalDelivery), url: summaryLinks["Creation time"] },
+            { label: "From", value: firstValue(byName, "From"), url: summaryLinks.From },
+            { label: "To", value: firstValue(byName, "To"), url: summaryLinks.To }
+        ].filter((row) => row.value);
+
+        return {
+            rows,
+            text: buildMessageSummaryText(byName),
+            spam: buildSpamSummary(byName)
+        };
+    }
+
+    function formatCreationTime(date, totalDelivery) {
+        if (!date) return "";
+        return totalDelivery ? `${date} (Delivered after ${totalDelivery})` : date;
+    }
+
+    function buildMessageSummaryText(byName) {
+        const from = firstValue(byName, "From");
+        const to = firstValue(byName, "To");
+        const subject = firstValue(byName, "Subject");
+        const parts = [];
+        if (from && to) parts.push(`This message was sent from ${from} to ${to}.`);
+        else if (from) parts.push(`This message was sent from ${from}.`);
+        else if (to) parts.push(`This message was sent to ${to}.`);
+        if (subject) parts.push(`Subject: ${subject}`);
+        return parts.join(" ");
+    }
+
+    function buildSpamSummary(byName) {
+        const report = firstValue(byName, "X-Forefront-Antispam-Report");
+        const sfv = (report.match(/\bSFV:([^;\s]+)/i) || [])[1] || "";
+        if (!sfv) return null;
+
+        if (sfv.toUpperCase() === "NSPM") {
+            return {
+                level: "info",
+                title: "Email Not Spam",
+                source: "X-Forefront-Antispam-Report / SFV:NSPM",
+                partOf: "Email not spam and sent to inbox"
+            };
+        }
+
+        return {
+            level: "warning",
+            title: `Spam filtering signal: ${sfv.toUpperCase()}`,
+            source: `X-Forefront-Antispam-Report / SFV:${sfv.toUpperCase()}`,
+            partOf: "Review the X-Forefront-Antispam-Report header for the exact Microsoft filtering verdict"
         };
     }
 
@@ -372,7 +435,7 @@
             authRows.push({
                 check: "DKIM-Signature",
                 status: "info",
-                details: domains.length ? "Signing domain(s): " + unique(domains).join(", ") : dkimSigs.length + " DKIM signature header(s) gevonden.",
+                details: domains.length ? "Signing domain(s): " + unique(domains).join(", ") : dkimSigs.length + " DKIM signature header(s) found.",
                 source: "DKIM-Signature"
             });
         }
@@ -404,7 +467,7 @@
         return {
             check: label,
             status: "unknown",
-            details: "Niet gevonden in de geplakte headers.",
+            details: "Not found in the pasted headers.",
             source: fallbackSource
         };
     }
@@ -466,25 +529,25 @@
         const negativeDelays = received.filter((row) => !Number.isNaN(row.delayMs) && row.delayMs < 0);
 
         if (failRows.length) {
-            findings.push({ level: "error", text: `${failRows.map((row) => row.check).join(", ")} heeft een fail-resultaat. Controleer spoofing, forwarding of DNS policy.` });
+            findings.push({ level: "error", text: `${failRows.map((row) => row.check).join(", ")} returned a fail result. Check spoofing, forwarding or DNS policy.` });
         }
         if (warnRows.length) {
-            findings.push({ level: "warning", text: `${warnRows.map((row) => row.check).join(", ")} is onbekend of niet overtuigend. Interpreteer dit samen met de ontvangerheader.` });
+            findings.push({ level: "warning", text: `${warnRows.map((row) => row.check).join(", ")} is unknown or inconclusive. Interpret this together with the receiving system headers.` });
         }
         if (longDelays.length) {
-            findings.push({ level: "warning", text: `${longDelays.length} hop(s) hebben meer dan 5 minuten vertraging.` });
+            findings.push({ level: "warning", text: `${longDelays.length} hop(s) have more than 5 minutes of delay.` });
         }
         if (negativeDelays.length) {
-            findings.push({ level: "warning", text: "Een negatieve delay wijst meestal op klokverschil tussen mailservers." });
+            findings.push({ level: "warning", text: "A negative delay usually indicates clock skew between mail servers." });
         }
         if (!received.length) {
-            findings.push({ level: "warning", text: "Er zijn geen Received headers gevonden; de route en vertraging kunnen niet worden bepaald." });
+            findings.push({ level: "warning", text: "No Received headers were found; route and delay cannot be determined." });
         }
         if (!firstValue(byName, "Authentication-Results") && !firstValue(byName, "Received-SPF")) {
-            findings.push({ level: "warning", text: "Er zijn geen Authentication-Results of Received-SPF headers gevonden." });
+            findings.push({ level: "warning", text: "No Authentication-Results or Received-SPF headers were found." });
         }
         if (!findings.length) {
-            findings.push({ level: "success", text: "Geen directe rode vlaggen gevonden in de geplakte headers." });
+            findings.push({ level: "success", text: "No immediate red flags were found in the pasted headers." });
         }
 
         return findings;
@@ -498,36 +561,50 @@
         remaining -= minutes * 60000;
         const seconds = Math.floor(remaining / 1000);
         const parts = [];
-        if (minutes) parts.push(`${minutes} min`);
-        if (seconds || !parts.length) parts.push(`${seconds} sec`);
+        if (minutes) parts.push(`${minutes} ${minutes === 1 ? "minute" : "minutes"}`);
+        if (seconds || !parts.length) parts.push(`${seconds} ${seconds === 1 ? "second" : "seconds"}`);
         return `${negative ? "Negative " : ""}${parts.join(" ")}`;
     }
 
     function render(analysis) {
-        renderScoreCards(analysis);
+        renderMessageSummary(analysis.summary);
         renderFindings(analysis.findings);
         renderAuth(analysis.auth);
         renderReceived(analysis.received);
-        renderKeyValueTable("summaryTable", analysis.summary);
         renderKeyValueTable("securityTable", analysis.security);
         renderOther(analysis.other);
     }
 
-    function renderScoreCards(analysis) {
-        const scoreCards = document.getElementById("scoreCards");
-        const cards = [
-            ["Headers", analysis.metrics.headerCount, "Totaal geparst"],
-            ["Received hops", analysis.metrics.hopCount, "Mailroute"],
-            ["Delivery time", analysis.metrics.totalDelivery || "Onbekend", "Tussen eerste en laatste hop"],
-            ["Auth checks", `${analysis.metrics.passed}/${analysis.auth.length}`, `${analysis.metrics.failed} fail, ${analysis.metrics.unknown} overig`]
-        ];
-        scoreCards.innerHTML = cards.map(([label, value, detail]) => `
-            <div class="score-card">
-                <div class="score-label">${escapeHtml(label)}</div>
-                <div class="score-value">${escapeHtml(value)}</div>
-                <div class="score-detail">${escapeHtml(detail)}</div>
+    function renderMessageSummary(summary) {
+        const messageSummary = document.getElementById("messageSummary");
+        const tableRows = summary.rows.length
+            ? summary.rows.map((row) => `
+                <tr>
+                    <td><a class="summary-link" href="${escapeHtml(row.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.label)}</a></td>
+                    <td>${escapeHtml(row.value)}</td>
+                </tr>
+            `).join("")
+            : `<tr class="row-warning"><td colspan="2">No summary headers found.</td></tr>`;
+
+        const spam = summary.spam ? `
+            <div class="spam-summary">
+                <span class="badge ${badgeClass(summary.spam.level)}">${escapeHtml(summary.spam.level)}</span>
+                <strong>${escapeHtml(summary.spam.title)}</strong>
+                <span>${escapeHtml(summary.spam.source)}</span>
+                <span>Part of: ${escapeHtml(summary.spam.partOf)}</span>
             </div>
-        `).join("");
+        ` : "";
+
+        messageSummary.innerHTML = `
+            ${summary.text ? `<p class="message-summary-text">${escapeHtml(summary.text)}</p>` : ""}
+            <div class="table-wrapper">
+                <table id="messageSummaryTable">
+                    <thead><tr><th>Header</th><th>Value</th></tr></thead>
+                    <tbody>${tableRows}</tbody>
+                </table>
+            </div>
+            ${spam}
+        `;
     }
 
     function renderFindings(findings) {
@@ -557,7 +634,7 @@
         const tbody = document.querySelector("#receivedTable tbody");
         tbody.innerHTML = "";
         if (!rows.length) {
-            tbody.innerHTML = `<tr class="row-warning"><td colspan="7">Geen Received headers gevonden.</td></tr>`;
+            tbody.innerHTML = `<tr class="row-warning"><td colspan="7">No Received headers found.</td></tr>`;
             return;
         }
         rows.forEach((row) => {
@@ -565,8 +642,8 @@
             tr.className = receivedRowClass(row);
             tr.innerHTML = `
                 <td>${escapeHtml(row.hop)}</td>
-                <td>${escapeHtml(row.from)}</td>
-                <td>${escapeHtml(row.by)}</td>
+                <td>${renderServerValue(row.from)}</td>
+                <td>${renderServerValue(row.by)}</td>
                 <td>${escapeHtml(row.date)}</td>
                 <td>${escapeHtml(row.delay)}${row.delayPercent ? ` (${row.delayPercent}%)` : ""}</td>
                 <td>${escapeHtml(row.with)}</td>
@@ -580,7 +657,7 @@
         const tbody = document.querySelector(`#${tableId} tbody`);
         tbody.innerHTML = "";
         if (!rows.length) {
-            tbody.innerHTML = `<tr class="row-warning"><td colspan="2">Niet gevonden.</td></tr>`;
+            tbody.innerHTML = `<tr class="row-warning"><td colspan="2">Not found.</td></tr>`;
             return;
         }
         rows.forEach((row) => {
@@ -594,7 +671,7 @@
         const tbody = document.querySelector("#otherTable tbody");
         tbody.innerHTML = "";
         if (!rows.length) {
-            tbody.innerHTML = `<tr><td colspan="3">Geen overige headers.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="3">No other headers.</td></tr>`;
             return;
         }
         rows.forEach((row) => {
@@ -610,6 +687,27 @@
             return `<ul class="value-list">${values.map((entry) => `<li>${escapeHtml(entry)}</li>`).join("")}</ul>`;
         }
         return escapeHtml(value);
+    }
+
+    function renderServerValue(value) {
+        const cleaned = removeIpv6Addresses(value);
+        const original = String(value || "");
+        const title = cleaned !== original ? ` title="${escapeHtml(original)}"` : "";
+        return `<span${title}>${escapeHtml(cleaned)}</span>`;
+    }
+
+    function removeIpv6Addresses(value) {
+        const cleaned = String(value || "")
+            .replace(/\s*\[(?:IPv6:)?[0-9a-f:.%]+\]/gi, "")
+            .replace(/\s*\((?:IPv6:)?[0-9a-f]{0,4}:[0-9a-f:.%]+\)/gi, "")
+            .replace(/\(\s*\)/g, "")
+            .replace(/\s{2,}/g, " ")
+            .trim();
+        const duplicateHost = cleaned.match(/^(.+?)\s+\((.+)\)$/);
+        if (duplicateHost && duplicateHost[1].trim().toLowerCase() === duplicateHost[2].trim().toLowerCase()) {
+            return duplicateHost[1].trim();
+        }
+        return cleaned;
     }
 
     function rowClass(status) {
@@ -631,8 +729,14 @@
 
     function statusIcon(status, details) {
         const level = statusLevel(status);
-        const label = `${String(status || "unknown").toUpperCase()}${details ? ": " + details : ""}`;
+        const label = statusTooltipLabel(status);
         return `<span class="status-icon status-${level}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">${statusIconSvg(level)}</span>`;
+    }
+
+    function statusTooltipLabel(status) {
+        if (status === "pass" || status === "success") return "Pass";
+        if (status === "fail" || status === "error") return "Fail";
+        return `Other status: ${String(status || "Unknown")}`;
     }
 
     function statusIconSvg(level) {
@@ -652,6 +756,7 @@
     }
 
     function badgeClass(status) {
+        if (status === "info") return "badge-info";
         if (status === "pass" || status === "success") return "badge-success";
         if (status === "fail" || status === "error") return "badge-error";
         return "badge-warning";
@@ -672,6 +777,15 @@
         const lines = [];
         lines.push("Mail Header Analyzer");
         lines.push(`Generated: ${analysis.generatedAt}`);
+        lines.push("");
+        lines.push("Message summary:");
+        analysis.summary.rows.forEach((row) => lines.push(`- ${row.label}: ${row.value}`));
+        if (analysis.summary.text) lines.push(`- Summary: ${analysis.summary.text}`);
+        if (analysis.summary.spam) {
+            lines.push(`- ${analysis.summary.spam.level.toUpperCase()}: ${analysis.summary.spam.title}`);
+            lines.push(`- ${analysis.summary.spam.source}`);
+            lines.push(`- Part of: ${analysis.summary.spam.partOf}`);
+        }
         lines.push("");
         lines.push("Findings:");
         analysis.findings.forEach((finding) => lines.push(`- ${finding.level}: ${finding.text}`));
@@ -700,7 +814,7 @@
 
     function buildHtmlExport(analysis) {
         return `<!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Mail Header Analysis</title>
@@ -715,11 +829,14 @@ th{background:#f2f2f2}.row-success{background:#eef8f1}.row-warning{background:#f
 <body><div class="wrap">
 <h1>Mail Header Analysis</h1>
 <p><strong>Generated:</strong> ${escapeHtml(analysis.generatedAt)}</p>
+<h2>Message Summary</h2>
+${analysis.summary.text ? `<p>${escapeHtml(analysis.summary.text)}</p>` : ""}
+${tableHtml("Summary", ["Header", "Value"], analysis.summary.rows.map((row) => [row.label, row.value]))}
+${analysis.summary.spam ? `<p><strong>${escapeHtml(analysis.summary.spam.level.toUpperCase())}: ${escapeHtml(analysis.summary.spam.title)}</strong><br>${escapeHtml(analysis.summary.spam.source)}<br>Part of: ${escapeHtml(analysis.summary.spam.partOf)}</p>` : ""}
 <h2>Findings</h2>
 <ul>${analysis.findings.map((f) => `<li><strong>${escapeHtml(f.level)}:</strong> ${escapeHtml(f.text)}</li>`).join("")}</ul>
 ${tableHtml("Authentication", ["Check", "Status", "Details", "Source"], analysis.auth.map((row) => [row.check, row.status, row.details, row.source]))}
-${tableHtml("Received", ["Hop", "From", "By", "Time", "Delay", "Type"], analysis.received.map((row) => [row.hop, row.from, row.by, row.date, row.delay, row.with]))}
-${tableHtml("Summary", ["Header", "Value"], analysis.summary.map((row) => [row.name, row.value]))}
+${tableHtml("Received", ["Hop", "From", "By", "Time", "Delay", "Type"], analysis.received.map((row) => [row.hop, removeIpv6Addresses(row.from), removeIpv6Addresses(row.by), row.date, row.delay, row.with]))}
 </div></body></html>`;
     }
 

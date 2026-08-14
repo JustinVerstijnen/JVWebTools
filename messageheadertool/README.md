@@ -1,21 +1,22 @@
 # Mail Header Analyzer
 
-Statische, client-side Mail Header Analyzer in dezelfde stijl als de DNS MEGAtool.
+Static, client-side Mail Header Analyzer in the same visual style as DNS MEGAtool.
 
-## Functionaliteit
+## Features
 
-- Header-invoer met autofocus bij openen.
-- Plakken analyseert automatisch; Enter analyseert wanneer er headers in het veld staan.
-- Parseert gevouwen RFC 5322 headers.
-- Toont samenvatting, SPF, DKIM, DMARC, ARC, Composite Auth, DKIM-Signature, Received hops en overige headers.
-- Kleurt SPF/DKIM/DMARC groen bij pass, rood bij fail en oranje bij onbekend/overig.
-- Berekent mailflow-delays tussen Received hops.
-- Kopieert analyse naar clipboard.
-- Exporteert naar HTML, JSON en TXT.
-- Geen API, geen opslag, geen server-side verwerking.
+- Header input with autofocus on page load.
+- Paste analyzes automatically; Enter analyzes when headers are present.
+- Parses folded RFC 5322 headers.
+- Shows message summary, SPF, DKIM, DMARC, ARC, Composite Auth, DKIM-Signature, Received hops and other headers.
+- Colors SPF/DKIM/DMARC green for pass, red for fail and orange for unknown or other statuses.
+- Calculates mail flow delays between Received hops.
+- Hides IPv6 addresses in visible Received tables while keeping them in tooltips.
+- Copies analysis to clipboard.
+- Exports to HTML, JSON and TXT.
+- No API, no storage and no server-side processing.
 
-## Azure Web App
+## Hosting
 
-Voor GitHub Pages kun je deze map rechtstreeks publiceren. `index.html` verwijst naar `assets/style.css` en `assets/app.js`, dus de standaard GitHub Pages-structuur werkt zonder buildstap.
+For GitHub Pages, publish this folder directly. `index.html` references `assets/style.css` and `assets/app.js`, so no build step is required.
 
-Voor Azure kun je de inhoud van deze map uploaden naar de `wwwroot` van een Azure App Service / Azure Web App. De meegeleverde `web.config` zorgt voor correcte statische hosting op Windows App Service.
+For Azure, upload this folder to the `wwwroot` of an Azure App Service / Azure Web App. The included `web.config` supports static hosting on Windows App Service.
