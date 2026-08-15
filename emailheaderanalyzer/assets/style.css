@@ -919,14 +919,6 @@ summary {
     pointer-events: none;
 }
 
-.import-btn {
-    background-color: #7aa6d8;
-}
-
-.import-btn:hover:not(:disabled) {
-    background-color: #648fc2;
-}
-
 .import-status {
     width: 100%;
     margin-top: 2px;
@@ -949,4 +941,25 @@ summary {
     grid-column: 2;
     color: #7a7f87;
     font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Email summary: delivery/filter verdicts live inside the table */
+#messageSummaryTable .summary-status-row td {
+    vertical-align: top;
+}
+
+.summary-status-title {
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.summary-status-detail {
+    line-height: 1.45;
+}
+
+.summary-row-technical {
+    margin-top: 3px;
+    color: #7a7f87;
+    font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    overflow-wrap: anywhere;
 }

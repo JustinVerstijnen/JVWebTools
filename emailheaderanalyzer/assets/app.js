@@ -4,12 +4,10 @@
     const headerInput = document.getElementById("headerInput");
     const searchbox = document.querySelector(".searchbox");
     const inputToggle = document.getElementById("inputToggle");
-    const analyzeBtn = document.getElementById("analyzeBtn");
     const importBtn = document.getElementById("importBtn");
     const fileInput = document.getElementById("fileInput");
     const importStatus = document.getElementById("importStatus");
     const clearBtn = document.getElementById("clearBtn");
-    const copyBtn = document.getElementById("copyBtn");
     const exportBtn = document.getElementById("exportBtn");
     const exportControl = document.getElementById("exportControl");
     const exportMenu = document.getElementById("exportMenu");
@@ -77,7 +75,6 @@
         }, 80);
     });
 
-    analyzeBtn.addEventListener("click", analyze);
     importBtn.addEventListener("click", () => fileInput.click());
     fileInput.addEventListener("change", async () => {
         const file = fileInput.files && fileInput.files[0];
@@ -86,7 +83,6 @@
     });
     setupFileDrop();
     clearBtn.addEventListener("click", clearAll);
-    copyBtn.addEventListener("click", copyAnalysis);
     inputToggle.addEventListener("click", toggleInput);
     exportBtn.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -115,7 +111,6 @@
         inputToggle.hidden = true;
         resultsSection.hidden = true;
         setImportStatus("");
-        copyBtn.disabled = true;
         exportBtn.disabled = true;
         headerInput.focus();
     }
@@ -139,7 +134,6 @@
         lastAnalysis = buildAnalysis(raw, headers);
         render(lastAnalysis);
         resultsSection.hidden = false;
-        copyBtn.disabled = false;
         exportBtn.disabled = false;
         collapseInput();
     }
@@ -365,15 +359,16 @@
 
     function buildMessageSummary(byName, metrics) {
         const date = firstValue(byName, "Date");
+        const subject = firstValue(byName, "Subject");
+        const messageId = firstValue(byName, "Message-ID");
         const rows = [
-            { label: "Subject", value: firstValue(byName, "Subject"), url: summaryLinks.Subject },
-            { label: "Message Id", value: firstValue(byName, "Message-ID"), url: summaryLinks["Message Id"] },
+            { label: "Subject", value: subject, url: summaryLinks.Subject, technicalLabel: "Message ID", technical: messageId },
             { label: "Creation time", value: date, url: summaryLinks["Creation time"] },
             { label: "Delivery time", value: metrics.totalDelivery, url: summaryLinks["Creation time"] },
             { label: "Return-Path", value: firstValue(byName, "Return-Path"), url: summaryLinks["Return-Path"] },
             { label: "From", value: firstValue(byName, "From"), url: summaryLinks.From },
             { label: "To", value: firstValue(byName, "To"), url: summaryLinks.To }
-        ].filter((row) => row.value);
+        ].filter((row) => row.value || row.technical);
 
         return {
             rows,
@@ -515,7 +510,14 @@
 
     function buildSpamSummary(byName) {
         const report = firstValue(byName, "X-Forefront-Antispam-Report");
-        if (!report) return null;
+        if (!report) {
+            return {
+                level: "info",
+                title: "Spam verdict not recorded",
+                detail: "This header does not contain an X-Forefront-Antispam-Report verdict that proves whether Microsoft marked the message as spam or non-spam.",
+                technical: "No X-Forefront-Antispam-Report verdict found."
+            };
+        }
 
         const fields = parseSemicolonFields(report);
         const sfv = (fields.SFV || "").toUpperCase();
@@ -1062,35 +1064,47 @@
 
     function renderMessageSummary(summary) {
         const messageSummary = document.getElementById("messageSummary");
-        const tableRows = summary.rows.length
-            ? summary.rows.map((row) => `
-                <tr>
-                    <td><a class="summary-link" href="${escapeHtml(row.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.label)}</a></td>
-                    <td>${escapeHtml(row.value)}</td>
-                </tr>
-            `).join("")
-            : `<tr class="row-warning"><td colspan="2">No summary headers found.</td></tr>`;
+        const statusRows = [
+            summary.delivery ? {
+                label: "Delivery",
+                status: summary.delivery.level,
+                title: summary.delivery.title,
+                detail: summary.delivery.detail,
+                technical: summary.delivery.technical
+            } : null,
+            summary.spam ? {
+                label: "Spam filtering",
+                status: summary.spam.level,
+                title: summary.spam.title,
+                detail: summary.spam.detail,
+                technical: summary.spam.technical
+            } : null
+        ].filter(Boolean);
 
-        const delivery = summary.delivery ? `
-            <div class="spam-summary delivery-summary spam-summary-${statusLevel(summary.delivery.level)}">
-                <span class="badge ${badgeClass(summary.delivery.level)}">${escapeHtml(summary.delivery.badge || summary.delivery.level)}</span>
-                <strong>${escapeHtml(summary.delivery.title)}</strong>
-                <span>${escapeHtml(summary.delivery.detail)}</span>
-                ${summary.delivery.technical ? `<small class="summary-technical">${escapeHtml(summary.delivery.technical)}</small>` : ""}
-            </div>
-        ` : "";
+        const statusHtml = statusRows.map((row) => `
+            <tr class="summary-status-row ${rowClass(row.status)}">
+                <td><strong>${escapeHtml(row.label)}</strong></td>
+                <td>
+                    <div class="summary-status-title">${escapeHtml(row.title)}</div>
+                    <div class="summary-status-detail">${escapeHtml(row.detail)}</div>
+                    ${row.technical ? `<div class="summary-row-technical">${escapeHtml(row.technical)}</div>` : ""}
+                </td>
+            </tr>
+        `).join("");
 
-        const spam = summary.spam ? `
-            <div class="spam-summary spam-summary-${statusLevel(summary.spam.level)}">
-                <span class="badge ${badgeClass(summary.spam.level)}">${escapeHtml(summary.spam.level)}</span>
-                <strong>${escapeHtml(summary.spam.title)}</strong>
-                <span>${escapeHtml(summary.spam.detail)}</span>
-            </div>
-        ` : "";
+        const headerRows = summary.rows.map((row) => `
+            <tr>
+                <td><a class="summary-link" href="${escapeHtml(row.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.label)}</a></td>
+                <td>
+                    ${row.value ? `<div>${escapeHtml(row.value)}</div>` : ""}
+                    ${row.technical ? `<div class="summary-row-technical">${escapeHtml(row.technicalLabel || "Technical")}: ${escapeHtml(row.technical)}</div>` : ""}
+                </td>
+            </tr>
+        `).join("");
+
+        const tableRows = statusHtml + headerRows || `<tr class="row-warning"><td colspan="2">No summary headers found.</td></tr>`;
 
         messageSummary.innerHTML = `
-            ${delivery}
-            ${spam}
             <div class="table-wrapper">
                 <table id="messageSummaryTable">
                     <thead><tr><th>Header</th><th>Value</th></tr></thead>
@@ -1355,16 +1369,6 @@
         return "badge-warning";
     }
 
-    function copyAnalysis() {
-        if (!lastAnalysis) return;
-        const text = analysisToText(lastAnalysis);
-        navigator.clipboard.writeText(text).then(() => {
-            copyBtn.innerHTML = "Copied";
-            window.setTimeout(() => {
-                copyBtn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg>Copy`;
-            }, 1100);
-        });
-    }
 
     function analysisToText(analysis) {
         const lines = [];
@@ -1374,15 +1378,19 @@
 
         lines.push("1. Email summary");
         if (analysis.summary.delivery) {
-            lines.push(`- ${analysis.summary.delivery.level.toUpperCase()}: ${analysis.summary.delivery.title}`);
-            lines.push(`- ${analysis.summary.delivery.detail}`);
-            if (analysis.summary.delivery.technical) lines.push(`- ${analysis.summary.delivery.technical}`);
+            lines.push(`- Delivery: ${analysis.summary.delivery.title}`);
+            lines.push(`  ${analysis.summary.delivery.detail}`);
+            if (analysis.summary.delivery.technical) lines.push(`  ${analysis.summary.delivery.technical}`);
         }
         if (analysis.summary.spam) {
-            lines.push(`- ${analysis.summary.spam.level.toUpperCase()}: ${analysis.summary.spam.title}`);
-            lines.push(`- ${analysis.summary.spam.detail}`);
+            lines.push(`- Spam filtering: ${analysis.summary.spam.title}`);
+            lines.push(`  ${analysis.summary.spam.detail}`);
+            if (analysis.summary.spam.technical) lines.push(`  ${analysis.summary.spam.technical}`);
         }
-        analysis.summary.rows.forEach((row) => lines.push(`- ${row.label}: ${row.value}`));
+        analysis.summary.rows.forEach((row) => {
+            lines.push(`- ${row.label}: ${row.value || ""}`);
+            if (row.technical) lines.push(`  ${row.technicalLabel || "Technical"}: ${row.technical}`);
+        });
         analysis.findings.forEach((finding) => lines.push(`- ${finding.level}: ${finding.text}`));
         lines.push("");
 
@@ -1489,9 +1497,11 @@ th{background:#f2f2f2}.row-success{background:#eef8f1}.row-warning{background:#f
 <h1>Mail Header Analysis</h1>
 <p><strong>Generated:</strong> ${escapeHtml(analysis.generatedAt)}</p>
 <h2>1. Email summary</h2><p class="sub">Key message details, delivery time and the overall filtering result at a glance.</p>
-${analysis.summary.delivery ? `<p><strong>${escapeHtml(analysis.summary.delivery.level.toUpperCase())}: ${escapeHtml(analysis.summary.delivery.title)}</strong><br>${escapeHtml(analysis.summary.delivery.detail)}${analysis.summary.delivery.technical ? `<br><small>${escapeHtml(analysis.summary.delivery.technical)}</small>` : ""}</p>` : ""}
-${analysis.summary.spam ? `<p><strong>${escapeHtml(analysis.summary.spam.level.toUpperCase())}: ${escapeHtml(analysis.summary.spam.title)}</strong><br>${escapeHtml(analysis.summary.spam.detail)}</p>` : ""}
-${tableHtml("", ["Header", "Value"], analysis.summary.rows.map((row) => [row.label, row.value]))}
+${tableHtml("", ["Header", "Value"], [
+    analysis.summary.delivery ? ["Delivery", `${analysis.summary.delivery.title} — ${analysis.summary.delivery.detail}${analysis.summary.delivery.technical ? ` · ${analysis.summary.delivery.technical}` : ""}`] : null,
+    analysis.summary.spam ? ["Spam filtering", `${analysis.summary.spam.title} — ${analysis.summary.spam.detail}${analysis.summary.spam.technical ? ` · ${analysis.summary.spam.technical}` : ""}`] : null,
+    ...analysis.summary.rows.map((row) => [row.label, `${row.value || ""}${row.technical ? ` · ${row.technicalLabel || "Technical"}: ${row.technical}` : ""}`])
+].filter(Boolean))}
 <h2>2. Authentication checks</h2><p class="sub">SPF, DKIM, DMARC, ARC and Microsoft authentication checks.</p>
 ${tableHtml("", ["Check", "Details", "Status"], analysis.auth.map((row) => [row.check, row.details, row.status]))}
 <h2>3. Email route</h2><p class="sub">The mail servers that handled the message and when each delivery step took place.</p>

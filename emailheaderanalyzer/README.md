@@ -11,7 +11,6 @@ Static, client-side Mail Header Analyzer in the same visual style as DNS MEGAtoo
 - Colors SPF/DKIM/DMARC green for pass, red for fail and orange for unknown or other statuses.
 - Calculates mail flow delays between Received hops.
 - Hides IPv6 addresses in visible Received tables while keeping them in tooltips.
-- Copies analysis to clipboard.
 - Exports to HTML, JSON and TXT.
 - No API, no storage and no server-side processing.
 
@@ -35,6 +34,7 @@ Reference: Microsoft Learn, "Anti-spam message headers in cloud organizations".
 ## Interface improvements
 
 - DKIM verification and DKIM signature metadata are shown together in one authentication row.
+- Email Summary starts with Delivery and Spam filtering rows; Inbox/non-spam verdicts are green, Junk/spam verdicts are orange, and unknown verdicts remain informational. Message-ID is shown as a compact subline below Subject.
 - Message Summary includes a separate delivery-time value based on the message Date header to the final Received timestamp when available, with the Received chain span as fallback.
 - After analysis, the pasted-header field collapses with an animated disclosure triangle and can be expanded again without separate New header / Show header buttons.
 - Received headers focus on submitting host, receiving host, and timestamp; the transport Type column is omitted from the main table.
