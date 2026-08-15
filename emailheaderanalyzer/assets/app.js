@@ -5,13 +5,15 @@
     const searchbox = document.querySelector(".searchbox");
     const inputToggle = document.getElementById("inputToggle");
     const analyzeBtn = document.getElementById("analyzeBtn");
+    const importBtn = document.getElementById("importBtn");
+    const fileInput = document.getElementById("fileInput");
+    const importStatus = document.getElementById("importStatus");
     const clearBtn = document.getElementById("clearBtn");
     const copyBtn = document.getElementById("copyBtn");
     const exportBtn = document.getElementById("exportBtn");
     const exportControl = document.getElementById("exportControl");
     const exportMenu = document.getElementById("exportMenu");
     const resultsSection = document.getElementById("resultsSection");
-    const emptyState = document.getElementById("emptyState");
 
     let lastAnalysis = null;
 
@@ -52,8 +54,6 @@
         "Additional Rule IDs"
     ]);
 
-    document.getElementById("copyright-year").textContent = new Date().getFullYear();
-
     window.addEventListener("load", () => {
         headerInput.focus();
         headerInput.select();
@@ -78,6 +78,13 @@
     });
 
     analyzeBtn.addEventListener("click", analyze);
+    importBtn.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", async () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (file) await importMailFile(file);
+        fileInput.value = "";
+    });
+    setupFileDrop();
     clearBtn.addEventListener("click", clearAll);
     copyBtn.addEventListener("click", copyAnalysis);
     inputToggle.addEventListener("click", toggleInput);
@@ -107,32 +114,30 @@
         expandInput();
         inputToggle.hidden = true;
         resultsSection.hidden = true;
-        emptyState.hidden = false;
+        setImportStatus("");
         copyBtn.disabled = true;
         exportBtn.disabled = true;
         headerInput.focus();
     }
 
     function analyze() {
+        setImportStatus("");
         const raw = headerInput.value.trim();
         if (!raw) {
-            emptyState.textContent = "No headers found.";
-            emptyState.hidden = false;
             resultsSection.hidden = true;
+            setImportStatus("No headers found.", "warning");
             return;
         }
 
         const headers = parseHeaders(raw);
         if (!headers.length) {
-            emptyState.textContent = "No usable headers found.";
-            emptyState.hidden = false;
             resultsSection.hidden = true;
+            setImportStatus("No usable headers found.", "warning");
             return;
         }
 
         lastAnalysis = buildAnalysis(raw, headers);
         render(lastAnalysis);
-        emptyState.hidden = true;
         resultsSection.hidden = false;
         copyBtn.disabled = false;
         exportBtn.disabled = false;
@@ -160,6 +165,123 @@
         } else {
             collapseInput();
         }
+    }
+
+
+    function setImportStatus(message, level = "info") {
+        if (!importStatus) return;
+        importStatus.textContent = message || "";
+        importStatus.className = message ? `import-status import-status-${level}` : "import-status";
+        importStatus.hidden = !message;
+    }
+
+    function setupFileDrop() {
+        let dragDepth = 0;
+        const hasFiles = (event) => Array.from(event.dataTransfer?.types || []).includes("Files");
+
+        searchbox.addEventListener("dragenter", (event) => {
+            if (!hasFiles(event)) return;
+            event.preventDefault();
+            dragDepth += 1;
+            searchbox.classList.add("file-drag-active");
+        });
+
+        searchbox.addEventListener("dragover", (event) => {
+            if (!hasFiles(event)) return;
+            event.preventDefault();
+            if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+        });
+
+        searchbox.addEventListener("dragleave", (event) => {
+            if (!hasFiles(event)) return;
+            dragDepth = Math.max(0, dragDepth - 1);
+            if (!dragDepth) searchbox.classList.remove("file-drag-active");
+        });
+
+        searchbox.addEventListener("drop", async (event) => {
+            if (!hasFiles(event)) return;
+            event.preventDefault();
+            dragDepth = 0;
+            searchbox.classList.remove("file-drag-active");
+            const file = event.dataTransfer?.files?.[0];
+            if (file) await importMailFile(file);
+        });
+    }
+
+    async function importMailFile(file) {
+        const extension = (file.name.split(".").pop() || "").toLowerCase();
+        if (!new Set(["eml", "msg"]).has(extension)) {
+            setImportStatus("Unsupported file. Please choose an EML or MSG file.", "warning");
+            return;
+        }
+
+        importBtn.disabled = true;
+        setImportStatus(`Reading ${file.name}...`);
+        try {
+            let headers = "";
+            let fallback = false;
+            if (extension === "eml") {
+                headers = extractHeaderBlock(await file.text());
+            } else {
+                const result = await extractHeadersFromMsg(file);
+                headers = result.headers;
+                fallback = result.fallback;
+            }
+
+            if (!headers.trim()) throw new Error("No message headers were found in this file.");
+            expandInput();
+            headerInput.value = headers.trim();
+            analyze();
+            setImportStatus(
+                fallback
+                    ? `${file.name} imported. The MSG did not contain original transport headers, so only basic message properties could be imported.`
+                    : `${file.name} imported successfully.`,
+                fallback ? "warning" : "success"
+            );
+        } catch (error) {
+            console.error(error);
+            setImportStatus(`Could not import ${file.name}: ${error?.message || "Unknown error"}`, "error");
+        } finally {
+            importBtn.disabled = false;
+        }
+    }
+
+    function extractHeaderBlock(emlText) {
+        const normalized = String(emlText || "").replace(/\r\n|\r/g, "\n").replace(/^\uFEFF/, "");
+        const separator = normalized.search(/\n\s*\n/);
+        const headerBlock = separator >= 0 ? normalized.slice(0, separator) : normalized;
+        return headerBlock.replace(/\n/g, "\r\n").trim();
+    }
+
+    async function extractHeadersFromMsg(file) {
+        // @kenjiuno/msgreader runs in the browser through esm.sh. The message
+        // bytes stay in this page; only the JavaScript module is fetched.
+        const module = await import("https://esm.sh/@kenjiuno/msgreader@1.28.0?standalone&target=es2020");
+        const MsgReader = module.default?.default || module.default || module.MsgReader;
+        if (typeof MsgReader !== "function") throw new Error("MSG reader could not be loaded.");
+
+        const reader = new MsgReader(await file.arrayBuffer());
+        const data = reader.getFileData();
+        if (data?.error) throw new Error(data.error);
+        if (data?.headers && String(data.headers).trim()) {
+            return { headers: extractHeaderBlock(data.headers), fallback: false };
+        }
+
+        const fallbackHeaders = [];
+        if (data?.senderName || data?.senderSmtpAddress || data?.senderEmail) {
+            const email = data.senderSmtpAddress || data.senderEmail || "";
+            const from = data.senderName && email ? `${data.senderName} <${email}>` : (email || data.senderName);
+            if (from) fallbackHeaders.push(`From: ${from}`);
+        }
+        const recipients = Array.isArray(data?.recipients) ? data.recipients : [];
+        for (const [type, headerName] of [["to", "To"], ["cc", "Cc"]]) {
+            const values = recipients.filter((r) => r.recipType === type).map((r) => r.smtpAddress || r.email || r.name).filter(Boolean);
+            if (values.length) fallbackHeaders.push(`${headerName}: ${values.join(", ")}`);
+        }
+        if (data?.subject) fallbackHeaders.push(`Subject: ${data.subject}`);
+        if (data?.clientSubmitTime || data?.messageDeliveryTime || data?.creationTime) fallbackHeaders.push(`Date: ${data.clientSubmitTime || data.messageDeliveryTime || data.creationTime}`);
+        if (data?.messageId) fallbackHeaders.push(`Message-ID: ${data.messageId}`);
+        return { headers: fallbackHeaders.join("\r\n"), fallback: true };
     }
 
     function parseHeaders(raw) {
@@ -255,6 +377,7 @@
 
         return {
             rows,
+            delivery: buildDeliverySummary(byName),
             spam: buildSpamSummary(byName)
         };
     }
@@ -333,6 +456,61 @@
         if (extra.length) rows.push({ label: "Additional fields", value: extra.map(([key, value]) => `${key}:${value}`).join("; "), display: `${extra.length} additional field${extra.length === 1 ? "" : "s"}`, technical: extra.map(([key, value]) => `${key}:${value}`).join(" · ") });
         rows.push({ label: "Source header", value: raw, raw: true, summary: "Show X-Microsoft-Antispam" });
         return rows;
+    }
+
+    function buildDeliverySummary(byName) {
+        const mailboxDeliveryHeaders = byName.get("x-microsoft-antispam-mailbox-delivery") || [];
+        const mailboxDelivery = mailboxDeliveryHeaders[mailboxDeliveryHeaders.length - 1]?.value || "";
+        if (mailboxDelivery) {
+            const match = String(mailboxDelivery).match(/(?:^|;)\s*dest\s*:\s*([A-Za-z])/i);
+            const dest = match ? match[1].toUpperCase() : "";
+            if (dest === "I") {
+                return {
+                    level: "success",
+                    badge: "Inbox",
+                    title: "Delivered to Inbox",
+                    detail: "Microsoft mailbox delivery reports dest:I, which indicates Inbox delivery.",
+                    technical: "X-Microsoft-Antispam-Mailbox-Delivery · dest:I"
+                };
+            }
+            if (dest === "J") {
+                return {
+                    level: "warning",
+                    badge: "Junk",
+                    title: "Delivered to Junk / Spam",
+                    detail: "Microsoft mailbox delivery reports dest:J, which indicates delivery to the Junk Email folder.",
+                    technical: "X-Microsoft-Antispam-Mailbox-Delivery · dest:J"
+                };
+            }
+            if (dest) {
+                return {
+                    level: "info",
+                    badge: dest,
+                    title: `Mailbox destination: ${dest}`,
+                    detail: "A Microsoft mailbox destination code is present, but this tool does not map this value to Inbox or Junk.",
+                    technical: `X-Microsoft-Antispam-Mailbox-Delivery · dest:${dest}`
+                };
+            }
+        }
+
+        const gmailLabelHeaders = byName.get("x-gmail-labels") || [];
+        const gmailLabels = gmailLabelHeaders[gmailLabelHeaders.length - 1]?.value || "";
+        if (gmailLabels) {
+            if (/\bspam\b/i.test(gmailLabels)) {
+                return { level: "warning", badge: "Spam", title: "Delivered to Spam", detail: "The Gmail labels stored in the header include Spam.", technical: `X-Gmail-Labels: ${gmailLabels}` };
+            }
+            if (/\binbox\b/i.test(gmailLabels)) {
+                return { level: "success", badge: "Inbox", title: "Delivered to Inbox", detail: "The Gmail labels stored in the header include Inbox.", technical: `X-Gmail-Labels: ${gmailLabels}` };
+            }
+        }
+
+        return {
+            level: "info",
+            badge: "Unknown",
+            title: "Delivery destination not recorded",
+            detail: "This header does not contain a mailbox-delivery field that proves whether the message ended up in Inbox or Junk / Spam.",
+            technical: "No supported mailbox destination header found."
+        };
     }
 
     function buildSpamSummary(byName) {
@@ -893,6 +1071,15 @@
             `).join("")
             : `<tr class="row-warning"><td colspan="2">No summary headers found.</td></tr>`;
 
+        const delivery = summary.delivery ? `
+            <div class="spam-summary delivery-summary spam-summary-${statusLevel(summary.delivery.level)}">
+                <span class="badge ${badgeClass(summary.delivery.level)}">${escapeHtml(summary.delivery.badge || summary.delivery.level)}</span>
+                <strong>${escapeHtml(summary.delivery.title)}</strong>
+                <span>${escapeHtml(summary.delivery.detail)}</span>
+                ${summary.delivery.technical ? `<small class="summary-technical">${escapeHtml(summary.delivery.technical)}</small>` : ""}
+            </div>
+        ` : "";
+
         const spam = summary.spam ? `
             <div class="spam-summary spam-summary-${statusLevel(summary.spam.level)}">
                 <span class="badge ${badgeClass(summary.spam.level)}">${escapeHtml(summary.spam.level)}</span>
@@ -902,6 +1089,7 @@
         ` : "";
 
         messageSummary.innerHTML = `
+            ${delivery}
             ${spam}
             <div class="table-wrapper">
                 <table id="messageSummaryTable">
@@ -1185,6 +1373,11 @@
         lines.push("");
 
         lines.push("1. Email summary");
+        if (analysis.summary.delivery) {
+            lines.push(`- ${analysis.summary.delivery.level.toUpperCase()}: ${analysis.summary.delivery.title}`);
+            lines.push(`- ${analysis.summary.delivery.detail}`);
+            if (analysis.summary.delivery.technical) lines.push(`- ${analysis.summary.delivery.technical}`);
+        }
         if (analysis.summary.spam) {
             lines.push(`- ${analysis.summary.spam.level.toUpperCase()}: ${analysis.summary.spam.title}`);
             lines.push(`- ${analysis.summary.spam.detail}`);
@@ -1296,6 +1489,7 @@ th{background:#f2f2f2}.row-success{background:#eef8f1}.row-warning{background:#f
 <h1>Mail Header Analysis</h1>
 <p><strong>Generated:</strong> ${escapeHtml(analysis.generatedAt)}</p>
 <h2>1. Email summary</h2><p class="sub">Key message details, delivery time and the overall filtering result at a glance.</p>
+${analysis.summary.delivery ? `<p><strong>${escapeHtml(analysis.summary.delivery.level.toUpperCase())}: ${escapeHtml(analysis.summary.delivery.title)}</strong><br>${escapeHtml(analysis.summary.delivery.detail)}${analysis.summary.delivery.technical ? `<br><small>${escapeHtml(analysis.summary.delivery.technical)}</small>` : ""}</p>` : ""}
 ${analysis.summary.spam ? `<p><strong>${escapeHtml(analysis.summary.spam.level.toUpperCase())}: ${escapeHtml(analysis.summary.spam.title)}</strong><br>${escapeHtml(analysis.summary.spam.detail)}</p>` : ""}
 ${tableHtml("", ["Header", "Value"], analysis.summary.rows.map((row) => [row.label, row.value]))}
 <h2>2. Authentication checks</h2><p class="sub">SPF, DKIM, DMARC, ARC and Microsoft authentication checks.</p>

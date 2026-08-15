@@ -41,3 +41,8 @@ Reference: Microsoft Learn, "Anti-spam message headers in cloud organizations".
 - Microsoft `X-Forefront-Antispam-Report` and `X-Microsoft-Antispam` values are combined into one Anti-spam table with clear sub-sections; missing headers are shown as a centered “Not found in this header.” row.
 - Security headers and other non-summary headers are combined into one collapsed Advanced details section.
 
+
+
+## File import
+
+The browser UI supports pasted headers plus drag-and-drop/import of `.eml` and `.msg` files. EML files are parsed locally. MSG transport headers are read client-side with `@kenjiuno/msgreader` 1.28.0 (Apache-2.0), loaded as an ES module through esm.sh. If an MSG file does not contain `PidTagTransportMessageHeaders`, the UI imports only basic message properties and clearly labels that fallback.
