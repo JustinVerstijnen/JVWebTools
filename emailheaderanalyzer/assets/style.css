@@ -89,6 +89,7 @@ h2 {
 
 #headerInput {
     min-height: 240px;
+    max-height: 70vh;
     width: 100%;
     padding: 12px;
     border: 1px solid #ccc;
@@ -97,6 +98,9 @@ h2 {
     font: 14px/1.45 Consolas, "Courier New", monospace;
     background: rgba(255,255,255,0.94);
     color: var(--text);
+    opacity: 1;
+    overflow: auto;
+    transition: min-height .22s ease, max-height .22s ease, padding .22s ease, border-width .22s ease, opacity .16s ease, margin .22s ease;
 }
 
 #headerInput:focus,
@@ -151,35 +155,64 @@ button svg {
     max-width: 190px;
 }
 
-.collapsed-input-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+
+
+
+.input-toggle {
     width: 100%;
-    padding: 12px;
+    height: 40px;
+    padding: 0 12px;
+    justify-content: flex-start;
+    gap: 10px;
     border: 1px solid #dbe3dd;
     border-radius: 8px;
     background: rgba(255,255,255,0.9);
-    box-shadow: 0 0 10px rgba(0,0,0,0.06);
     color: #4b5563;
+    box-shadow: 0 0 10px rgba(0,0,0,0.06);
+    transition: background-color .18s ease, box-shadow .18s ease;
 }
 
-.collapsed-input-bar[hidden] {
+.input-toggle:hover:not(:disabled) {
+    background: #f8faf9;
+    box-shadow: 0 0 12px rgba(0,0,0,0.09);
+}
+
+.input-toggle[hidden] {
     display: none;
 }
 
-.collapsed-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
+.input-toggle-triangle {
+    width: 0;
+    height: 0;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    border-left: 8px solid currentColor;
+    transform-origin: 3px 6px;
+    transition: transform .2s ease;
 }
 
-.input-collapsed #headerInput,
-.input-collapsed #inputActionRow {
-    display: none;
+.input-toggle[aria-expanded="true"] .input-toggle-triangle {
+    transform: rotate(90deg);
 }
+
+.input-toggle-text {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+
+.input-collapsed #headerInput {
+    min-height: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+    opacity: 0;
+    margin: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
 
 .bulk-btn {
     background-color: var(--orange);
@@ -514,6 +547,46 @@ tbody tr.row-error:nth-child(even) {
     margin-top: 4px;
 }
 
+
+.antispam-table th:first-child,
+.antispam-table td:first-child {
+    width: 230px;
+}
+
+.antispam-value {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.antispam-value > div {
+    min-width: 0;
+}
+
+.antispam-description {
+    margin-top: 3px;
+    color: #4b5563;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.inline-details summary {
+    cursor: pointer;
+    color: #374151;
+    font-weight: 600;
+}
+
+.inline-details code {
+    display: block;
+    margin-top: 8px;
+    padding: 9px 10px;
+    border-radius: 6px;
+    background: #f6f7f8;
+    font: 12px/1.5 Consolas, "Courier New", monospace;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
 .raw-details {
     margin-top: 22px;
 }
@@ -556,26 +629,79 @@ summary {
     }
 
     .action-row > button,
-    .action-row > .export-control,
-    .collapsed-actions button {
+    .action-row > .export-control {
         max-width: none;
     }
 
-    .collapsed-input-bar {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .collapsed-actions {
-        width: 100%;
-        flex-wrap: wrap;
-    }
-
-    .collapsed-actions button {
-        flex: 1 1 150px;
+    .antispam-table th:first-child,
+    .antispam-table td:first-child {
+        width: 190px;
     }
 
     table {
         min-width: 660px;
     }
+}
+
+/* Authentication table: compact result + human-readable explanation */
+#authTable {
+    table-layout: auto;
+}
+
+#authTable th {
+    text-align: left;
+}
+
+#authTable th:first-child,
+#authTable td:first-child {
+    width: 155px;
+}
+
+#authTable .auth-check {
+    padding-top: 17px;
+}
+
+#authTable .auth-result {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.auth-result-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 30px;
+}
+
+.auth-result-label {
+    font-size: 15px;
+    line-height: 1.2;
+}
+
+.auth-explanation {
+    margin-top: 3px;
+    color: #4b5563;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.auth-technical {
+    margin-top: 2px;
+    color: #7a7f87;
+    font-size: 11px;
+    line-height: 1.4;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+@media (max-width: 640px) {
+    #authTable th:first-child,
+    #authTable td:first-child {
+        width: 115px;
+    }
+}
+
+#authTable th:last-child,
+#authTable td:last-child {
+    width: auto;
+    text-align: left;
 }

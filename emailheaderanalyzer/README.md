@@ -1,6 +1,7 @@
 # Mail Header Analyzer
 
-Static, client-side Mail Header Analyzer for fast and effective analytics about email delivery.
+Static, client-side Mail Header Analyzer in the same visual style as DNS MEGAtool.
+
 ## Features
 
 - Header input with autofocus on page load.
@@ -31,3 +32,11 @@ The message summary interprets Microsoft 365 filtering conservatively:
 - `SCL` is shown as context, but is not treated as the sole cloud spam verdict.
 
 Reference: Microsoft Learn, "Anti-spam message headers in cloud organizations".
+## Interface improvements
+
+- DKIM verification and DKIM signature metadata are shown together in one authentication row.
+- Message Summary includes a separate delivery-time value based on the message Date header to the final Received timestamp when available, with the Received chain span as fallback.
+- After analysis, the pasted-header field collapses with an animated disclosure triangle and can be expanded again without separate New header / Show header buttons.
+- Received headers focus on submitting host, receiving host, and timestamp; the transport Type column is omitted from the main table.
+- Microsoft `X-Forefront-Antispam-Report` and `X-Microsoft-Antispam` values are parsed into dedicated compact tables; long rule lists and raw source values remain available as technical details.
+

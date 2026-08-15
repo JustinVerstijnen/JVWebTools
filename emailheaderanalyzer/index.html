@@ -20,19 +20,10 @@
 
         <section class="searchbox" aria-label="Mail header input">
             <textarea id="headerInput" autofocus required spellcheck="false" placeholder="Paste headers here and the report will be generated automatically."></textarea>
-            <div id="inputCollapsedBar" class="collapsed-input-bar" hidden>
-                <span>Header analyzed. The input field is collapsed.</span>
-                <div class="collapsed-actions">
-                    <button id="newHeaderBtn" type="button" title="Enter a new header">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2Z"/></svg>
-                        New header
-                    </button>
-                    <button id="showHeaderBtn" type="button" class="details-btn" title="Show pasted header">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v2H4V5Zm0 6h16v2H4v-2Zm0 6h16v2H4v-2Z"/></svg>
-                        Show header
-                    </button>
-                </div>
-            </div>
+            <button id="inputToggle" class="input-toggle" type="button" hidden aria-expanded="false" title="Show pasted header">
+                <span class="input-toggle-triangle" aria-hidden="true"></span>
+                <span class="input-toggle-text">Pasted header</span>
+            </button>
             <div id="inputActionRow" class="action-row">
                 <button id="analyzeBtn" type="button" title="Analyze headers">
                     <svg viewBox="0 0 512 512" aria-hidden="true"><path d="M505 442.7 405.3 343c-4.5-4.5-10.6-7-17-7H372c27.6-35.3 44-79.7 44-128C416 93.1 322.9 0 208 0S0 93.1 0 208s93.1 208 208 208c48.3 0 92.7-16.4 128-44v16.3c0 6.4 2.5 12.5 7 17l99.7 99.7c9.4 9.4 24.6 9.4 33.9 0l28.3-28.3c9.4-9.4 9.4-24.6.1-34ZM208 336c-70.7 0-128-57.2-128-128S137.3 80 208 80s128 57.3 128 128-57.3 128-128 128Z"/></svg>
@@ -73,7 +64,7 @@
             <div class="table-wrapper">
                 <table id="authTable">
                     <thead>
-                        <tr><th>Check</th><th>Details</th><th>Status</th></tr>
+                        <tr><th>Check</th><th>Result</th></tr>
                     </thead>
                     <tbody></tbody>
                 </table>
@@ -90,9 +81,31 @@
                             <th>Submitting host</th>
                             <th>Receiving host</th>
                             <th>Time</th>
-                            <th>Type</th>
                         </tr>
                     </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+
+            <div class="section-title-row">
+                <h2>Forefront Antispam Report</h2>
+                <p>Microsoft filtering details extracted from X-Forefront-Antispam-Report.</p>
+            </div>
+            <div class="table-wrapper">
+                <table id="forefrontTable" class="antispam-table">
+                    <thead><tr><th>Field</th><th>Result</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="section-title-row">
+                <h2>Microsoft Antispam Header</h2>
+                <p>Bulk and additional Microsoft antispam values extracted from X-Microsoft-Antispam.</p>
+            </div>
+            <div class="table-wrapper">
+                <table id="microsoftAntispamTable" class="antispam-table">
+                    <thead><tr><th>Field</th><th>Result</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>

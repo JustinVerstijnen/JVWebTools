@@ -3,9 +3,7 @@
 
     const headerInput = document.getElementById("headerInput");
     const searchbox = document.querySelector(".searchbox");
-    const inputCollapsedBar = document.getElementById("inputCollapsedBar");
-    const newHeaderBtn = document.getElementById("newHeaderBtn");
-    const showHeaderBtn = document.getElementById("showHeaderBtn");
+    const inputToggle = document.getElementById("inputToggle");
     const analyzeBtn = document.getElementById("analyzeBtn");
     const clearBtn = document.getElementById("clearBtn");
     const copyBtn = document.getElementById("copyBtn");
@@ -74,8 +72,7 @@
     analyzeBtn.addEventListener("click", analyze);
     clearBtn.addEventListener("click", clearAll);
     copyBtn.addEventListener("click", copyAnalysis);
-    newHeaderBtn.addEventListener("click", startNewHeader);
-    showHeaderBtn.addEventListener("click", showCurrentHeader);
+    inputToggle.addEventListener("click", toggleInput);
     exportBtn.addEventListener("click", (event) => {
         event.stopPropagation();
         if (exportBtn.disabled) return;
@@ -100,6 +97,7 @@
         headerInput.value = "";
         lastAnalysis = null;
         expandInput();
+        inputToggle.hidden = true;
         resultsSection.hidden = true;
         emptyState.hidden = false;
         copyBtn.disabled = true;
@@ -134,25 +132,26 @@
     }
 
     function collapseInput() {
-        searchbox.classList.add("input-collapsed");
-        inputCollapsedBar.hidden = false;
+        inputToggle.hidden = false;
+        requestAnimationFrame(() => searchbox.classList.add("input-collapsed"));
+        inputToggle.setAttribute("aria-expanded", "false");
+        inputToggle.title = "Show pasted header";
     }
 
     function expandInput() {
         searchbox.classList.remove("input-collapsed");
-        inputCollapsedBar.hidden = true;
+        inputToggle.hidden = false;
+        inputToggle.setAttribute("aria-expanded", "true");
+        inputToggle.title = "Hide pasted header";
     }
 
-    function startNewHeader() {
-        headerInput.value = "";
-        expandInput();
-        headerInput.focus();
-    }
-
-    function showCurrentHeader() {
-        expandInput();
-        headerInput.focus();
-        headerInput.select();
+    function toggleInput() {
+        if (searchbox.classList.contains("input-collapsed")) {
+            expandInput();
+            window.setTimeout(() => headerInput.focus(), 180);
+        } else {
+            collapseInput();
+        }
     }
 
     function parseHeaders(raw) {
@@ -205,7 +204,10 @@
         const auth = parseAuthentication(headers, byName);
         const metrics = buildMetrics(headers, received, auth);
         const summary = buildMessageSummary(byName, metrics);
+        const antispam = buildAntispamTables(byName);
+        const specializedSecurityHeaders = new Set(["x-forefront-antispam-report", "x-microsoft-antispam"]);
         const security = securityHeaderNames
+            .filter((name) => !specializedSecurityHeaders.has(name.toLowerCase()))
             .flatMap((name) => (byName.get(name.toLowerCase()) || []).map((header) => ({ name: header.name, value: header.value })));
         const other = headers
             .filter((header) => !summaryHeaders.some((name) => equalsHeader(name, header.name)))
@@ -219,6 +221,7 @@
             raw,
             headers,
             summary,
+            antispam,
             security,
             other,
             received,
@@ -233,7 +236,8 @@
         const rows = [
             { label: "Subject", value: firstValue(byName, "Subject"), url: summaryLinks.Subject },
             { label: "Message Id", value: firstValue(byName, "Message-ID"), url: summaryLinks["Message Id"] },
-            { label: "Creation time", value: formatCreationTime(date, metrics.totalDelivery), url: summaryLinks["Creation time"] },
+            { label: "Creation time", value: date, url: summaryLinks["Creation time"] },
+            { label: "Delivery time", value: metrics.totalDelivery, url: summaryLinks["Creation time"] },
             { label: "Return-Path", value: firstValue(byName, "Return-Path"), url: summaryLinks["Return-Path"] },
             { label: "From", value: firstValue(byName, "From"), url: summaryLinks.From },
             { label: "To", value: firstValue(byName, "To"), url: summaryLinks.To }
@@ -245,9 +249,80 @@
         };
     }
 
-    function formatCreationTime(date, totalDelivery) {
-        if (!date) return "";
-        return totalDelivery ? `${date} (Delivered after ${totalDelivery})` : date;
+    function buildAntispamTables(byName) {
+        const forefrontRaw = firstValue(byName, "X-Forefront-Antispam-Report");
+        const microsoftRaw = firstValue(byName, "X-Microsoft-Antispam");
+        return {
+            forefront: buildForefrontRows(forefrontRaw),
+            microsoft: buildMicrosoftAntispamRows(microsoftRaw)
+        };
+    }
+
+    function buildForefrontRows(raw) {
+        if (!raw) return [];
+        const fields = parseSemicolonFields(raw);
+        const rows = [];
+        const sfv = String(fields.SFV || "").toUpperCase();
+        const cat = String(fields.CAT || "").toUpperCase();
+        const scl = String(fields.SCL || "");
+        const sfvInfo = {
+            NSPM: ["pass", "Not spam", "Microsoft spam filtering classified the message as not spam."],
+            SPM: ["fail", "Spam", "Microsoft spam filtering classified the message as spam."],
+            SFE: ["pass", "Safe sender", "Filtering was skipped because the sender is in the user's Safe Senders list."],
+            SKN: ["pass", "Marked as non-spam", "The message was marked as non-spam before spam filtering."],
+            SKS: ["warning", "Marked as spam", "The message was marked as spam before spam filtering."],
+            SKQ: ["pass", "Released from quarantine", "The message was released from quarantine."],
+            SKB: ["fail", "Blocked sender", "The sender is on the recipient's blocked senders list."],
+            BLK: ["fail", "Blocked", "Microsoft filtering blocked the message."],
+            SKA: ["pass", "Allowed", "The message matched an allow condition."],
+            SKI: ["pass", "Allowed", "The message was allowed by filtering intelligence or policy."]
+        };
+        const sfvMeta = sfvInfo[sfv] || ["info", sfv || "Unknown", sfv ? "Microsoft returned this spam filtering verdict." : "No spam filtering verdict was present."];
+
+        if (fields.LANG) rows.push({ label: "Language", value: fields.LANG, display: fields.LANG.toLowerCase(), description: "Detected message language." });
+        if (scl) {
+            const n = Number(scl);
+            const status = n === -1 || (Number.isFinite(n) && n <= 1) ? "pass" : (Number.isFinite(n) && n >= 5 ? "fail" : "warning");
+            const desc = n === -1 ? "Spam filtering was bypassed for the final message." : "Microsoft Spam Confidence Level.";
+            rows.push({ label: "Spam Confidence Level", value: scl, display: `SCL ${scl}`, status, description: desc });
+        }
+        if (sfv) rows.push({ label: "Spam Filtering Verdict", value: sfv, display: `${sfv} — ${sfvMeta[1]}`, status: sfvMeta[0], description: sfvMeta[2] });
+        if (fields.IPV) rows.push({ label: "IP Filter Verdict", value: fields.IPV, display: fields.IPV, description: "IP filtering verdict returned by Microsoft." });
+        if (fields.H) rows.push({ label: "HELO/EHLO String", value: fields.H, display: fields.H });
+        if (fields.PTR) rows.push({ label: "PTR Record", value: fields.PTR, display: fields.PTR });
+        if (fields.CIP) rows.push({ label: "Connecting IP Address", value: fields.CIP, display: fields.CIP });
+        if (cat) {
+            const status = cat === "NONE" ? "pass" : "warning";
+            rows.push({ label: "Protection Policy Category", value: cat, display: cat, status, description: cat === "NONE" ? "No Microsoft threat protection category was applied." : "Microsoft applied this protection category." });
+        }
+        if (fields.SFS) {
+            const rules = String(fields.SFS).match(/\d+/g) || [];
+            rows.push({ label: "Spam Rules", value: fields.SFS, display: `${rules.length} rule ID${rules.length === 1 ? "" : "s"}`, description: "Microsoft filtering rule identifiers present in the report.", technical: rules.join(" · ") || fields.SFS });
+        }
+        if (fields.DIR) rows.push({ label: "Direction", value: fields.DIR, display: fields.DIR === "INB" ? "Inbound" : fields.DIR === "OUT" ? "Outbound" : fields.DIR, description: `DIR:${fields.DIR}` });
+        rows.push({ label: "Source header", value: raw, raw: true, summary: "Show X-Forefront-Antispam-Report" });
+        return rows;
+    }
+
+    function buildMicrosoftAntispamRows(raw) {
+        if (!raw) return [];
+        const fields = parseSemicolonFields(raw);
+        const rows = [];
+        if (fields.BCL !== undefined) {
+            const bcl = String(fields.BCL);
+            const n = Number(bcl);
+            const status = Number.isFinite(n) && n <= 3 ? "pass" : Number.isFinite(n) && n >= 7 ? "fail" : "warning";
+            rows.push({ label: "Bulk Complaint Level", value: bcl, display: `BCL ${bcl}`, status, description: "Microsoft bulk-mail confidence score." });
+        }
+        if (fields.ARA) {
+            const ids = String(fields.ARA).split("|").map((item) => item.trim()).filter(Boolean);
+            rows.push({ label: "Additional Rule IDs", value: fields.ARA, display: `${ids.length} rule ID${ids.length === 1 ? "" : "s"}`, description: "Additional Microsoft antispam rule identifiers.", technical: ids.join(" · ") });
+        }
+        const known = new Set(["BCL", "ARA"]);
+        const extra = Object.entries(fields).filter(([key]) => !known.has(key));
+        if (extra.length) rows.push({ label: "Additional fields", value: extra.map(([key, value]) => `${key}:${value}`).join("; "), display: `${extra.length} additional field${extra.length === 1 ? "" : "s"}`, technical: extra.map(([key, value]) => `${key}:${value}`).join(" · ") });
+        rows.push({ label: "Source header", value: raw, raw: true, summary: "Show X-Microsoft-Antispam" });
+        return rows;
     }
 
     function buildSpamSummary(byName) {
@@ -468,15 +543,20 @@
         const authText = authResults.map((header) => header.value).join(" \n ");
         const receivedSpfText = receivedSpf.map((header) => header.value).join(" \n ");
 
-        authRows.push(extractAuthCheck("SPF", authText, receivedSpfText, "spf", "Received-SPF"));
-        authRows.push(extractAuthCheck("DKIM", authText, "", "dkim", "Authentication-Results"));
-        authRows.push(extractAuthCheck("DMARC", authText, "", "dmarc", "Authentication-Results"));
+        authRows.push(extractAuthCheck("SPF", authText, receivedSpfText, "spf", "Received-SPF", authText));
+        const dkimRow = extractAuthCheck("DKIM", authText, "", "dkim", "Authentication-Results", authText);
+        enrichDkimRowWithSignature(dkimRow, dkimSigs);
+        authRows.push(dkimRow);
+        authRows.push(extractAuthCheck("DMARC", authText, "", "dmarc", "Authentication-Results", authText));
 
         const arcStatus = extractToken(authText, "arc");
         if (arcStatus) {
+            const status = normalizeStatus(arcStatus.status);
             authRows.push({
                 check: "ARC",
-                status: normalizeStatus(arcStatus.status),
+                status,
+                result: authResultLabel(status),
+                description: buildAuthDescription("ARC", status, arcStatus.details || arcStatus.status, authText),
                 details: arcStatus.details || arcStatus.status,
                 source: "ARC-Authentication-Results"
             });
@@ -484,35 +564,32 @@
 
         const compAuth = extractToken(authText, "compauth");
         if (compAuth) {
+            const status = normalizeStatus(compAuth.status);
             authRows.push({
                 check: "Composite auth",
-                status: normalizeStatus(compAuth.status),
+                status,
+                result: authResultLabel(status),
+                description: buildAuthDescription("Composite auth", status, compAuth.details || compAuth.status, authText),
                 details: compAuth.details || compAuth.status,
                 source: "Authentication-Results"
             });
         }
 
-        if (dkimSigs.length) {
-            const domains = dkimSigs.map((header) => extractDkimSignatureDomain(header.value)).filter(Boolean);
-            authRows.push({
-                check: "DKIM-Signature",
-                status: "info",
-                details: domains.length ? "Signing domain(s): " + unique(domains).join(", ") : dkimSigs.length + " DKIM signature header(s) found.",
-                source: "DKIM-Signature"
-            });
-        }
 
         return authRows;
     }
 
-    function extractAuthCheck(label, authText, fallbackText, token, fallbackSource) {
+    function extractAuthCheck(label, authText, fallbackText, token, fallbackSource, fullAuthText) {
         const tokenResult = extractToken(authText, token);
         if (tokenResult) {
             const status = normalizeStatus(tokenResult.status);
+            const details = tokenResult.details || tokenResult.status;
             return {
                 check: label,
                 status,
-                details: addPolicyDetail(label, tokenResult.details || tokenResult.status, status),
+                result: authResultLabel(status),
+                description: buildAuthDescription(label, status, details, fullAuthText || authText),
+                details,
                 source: "Authentication-Results"
             };
         }
@@ -520,10 +597,13 @@
         if (token === "spf" && fallbackText) {
             const match = fallbackText.match(/\b(pass|fail|softfail|neutral|none|temperror|permerror)\b/i);
             const status = normalizeStatus(match ? match[1] : "unknown");
+            const details = cleanupField(fallbackText);
             return {
                 check: label,
                 status,
-                details: addPolicyDetail(label, cleanupField(fallbackText), status),
+                result: authResultLabel(status),
+                description: buildAuthDescription(label, status, details, fullAuthText || authText),
+                details,
                 source: fallbackSource
             };
         }
@@ -531,33 +611,146 @@
         return {
             check: label,
             status: "unknown",
+            result: "Not found",
+            description: "No result was found in the pasted headers.",
             details: "Not found in the pasted headers.",
             source: fallbackSource
         };
     }
 
-    function addPolicyDetail(label, details, status) {
-        const policy = label === "SPF"
-            ? getSpfPolicy(status)
-            : label === "DMARC"
-                ? getDmarcPolicy(details)
-                : "";
-
-        if (!policy) return details;
-        return `${details} | Policy: ${policy}`;
+    function authResultLabel(status) {
+        const normalized = String(status || "unknown").toLowerCase();
+        if (normalized === "pass") return "Passed";
+        if (normalized === "fail") return "Failed";
+        if (normalized === "softfail") return "Soft fail";
+        if (normalized === "temperror") return "Temporary error";
+        if (normalized === "permerror") return "Permanent error";
+        if (normalized === "neutral") return "Neutral";
+        if (normalized === "none") return "None";
+        return "Unknown";
     }
 
-    function getSpfPolicy(status) {
-        if (status === "fail") return "Hardfail";
-        if (status === "softfail") return "Softfail";
+    function buildAuthDescription(label, status, details, authText) {
+        const technical = cleanupField(details);
+
+        if (label === "SPF") {
+            const senderIp = firstMatch(technical, /sender\s+ip\s+is\s+([^\s)]+)/i) || firstMatch(technical, /client-ip\s*=\s*([^;\s]+)/i);
+            const mailFrom = firstMatch(technical, /smtp\.mailfrom\s*=\s*([^;\s)]+)/i);
+            const prefix = status === "pass"
+                ? "Sender IP is correctly authorized by SPF."
+                : status === "fail"
+                    ? "Sender IP is not authorized by SPF."
+                    : "SPF returned " + authResultLabel(status).toLowerCase() + ".";
+            const parts = [];
+            if (senderIp) parts.push("Sender IP: " + senderIp);
+            if (mailFrom) parts.push("smtp.mailfrom=" + mailFrom);
+            return appendTechnical(prefix, parts.length ? parts.join(" · ") : technical);
+        }
+
+        if (label === "DKIM") {
+            const domain = firstMatch(technical, /header\.d\s*=\s*([^;\s)]+)/i);
+            const prefix = status === "pass"
+                ? "DKIM signature was correctly verified."
+                : status === "fail"
+                    ? "DKIM signature verification failed."
+                    : "DKIM verification returned " + authResultLabel(status).toLowerCase() + ".";
+            return appendTechnical(prefix, domain ? "header.d=" + domain : technical);
+        }
+
+        if (label === "DMARC") {
+            const fromDomain = firstMatch(technical, /header\.from\s*=\s*([^;\s)]+)/i);
+            const policy = getEffectiveDmarcPolicy(authText);
+            const action = firstMatch(technical, /\baction\s*=\s*(none|quarantine|reject)\b/i);
+            let prefix = status === "pass"
+                ? "DMARC alignment passed."
+                : status === "fail"
+                    ? "DMARC alignment failed."
+                    : "DMARC returned " + authResultLabel(status).toLowerCase() + ".";
+            if (policy) prefix += " Effective policy: " + policy + ".";
+            const parts = [];
+            if (action) parts.push("action=" + action.toLowerCase());
+            if (fromDomain) parts.push("header.from=" + fromDomain);
+            return appendTechnical(prefix, parts.length ? parts.join(" · ") : technical);
+        }
+
+        if (label === "ARC") {
+            const prefix = status === "pass"
+                ? "Authenticated Received Chain validated successfully."
+                : status === "fail"
+                    ? "Authenticated Received Chain validation failed."
+                    : "ARC returned " + authResultLabel(status).toLowerCase() + ".";
+            return appendTechnical(prefix, technical);
+        }
+
+        if (label === "Composite auth") {
+            const reason = firstMatch(technical, /\breason\s*=\s*([^;\s)]+)/i);
+            const instance = firstMatch(technical, /\bi\s*=\s*([^;\s)]+)/i);
+            const prefix = status === "pass"
+                ? "Microsoft composite authentication passed."
+                : status === "fail"
+                    ? "Microsoft composite authentication failed."
+                    : "Microsoft composite authentication returned " + authResultLabel(status).toLowerCase() + ".";
+            const parts = [];
+            if (reason) parts.push("reason=" + reason);
+            if (instance) parts.push("i=" + instance);
+            return appendTechnical(prefix, parts.length ? parts.join(" · ") : technical);
+        }
+
+        return technical;
+    }
+
+    function enrichDkimRowWithSignature(row, dkimSigs) {
+        if (!row || !dkimSigs.length) return;
+        const signatures = dkimSigs.map((header) => extractDkimSignatureParts(header.value)).filter((item) => item.domain || item.selector);
+        if (!signatures.length) return;
+
+        const uniqueSignatures = [];
+        signatures.forEach((signature) => {
+            const key = `${signature.domain}|${signature.selector}`;
+            if (!uniqueSignatures.some((item) => `${item.domain}|${item.selector}` === key)) uniqueSignatures.push(signature);
+        });
+
+        const signatureText = uniqueSignatures.map((signature) => {
+            if (signature.domain && signature.selector) return `Signing domain: ${signature.domain} · selector=${signature.selector}`;
+            if (signature.domain) return `Signing domain: ${signature.domain}`;
+            return `selector=${signature.selector}`;
+        }).join(" · ");
+
+        const parts = String(row.description || "").split("||");
+        const summary = parts.shift() || "";
+        const technical = [parts.join("||"), signatureText].filter(Boolean).join(" · ");
+        row.description = appendTechnical(summary, technical);
+        row.signature = uniqueSignatures;
+    }
+
+    function buildDkimSignatureDescription(domains, status, hasVerdict) {
+        const signatureText = domains.length
+            ? "Signature present for " + unique(domains).join(", ") + "."
+            : "DKIM signature header is present.";
+        if (!hasVerdict) return signatureText + " No DKIM verification result was found.";
+        if (status === "pass") return signatureText + " The DKIM verification result is Passed.";
+        if (status === "fail") return signatureText + " The DKIM verification result is Failed.";
+        return signatureText + " DKIM verification returned " + authResultLabel(status) + ".";
+    }
+
+    function appendTechnical(summary, technical) {
+        const cleanTechnical = cleanupField(technical);
+        return cleanTechnical ? summary + "||" + cleanTechnical : summary;
+    }
+
+    function firstMatch(text, pattern) {
+        const match = String(text || "").match(pattern);
+        return match ? cleanupField(match[1]) : "";
+    }
+
+    function getEffectiveDmarcPolicy(authText) {
+        const text = String(authText || "");
+        const dmarcSegments = text.match(/\bdmarc\s*=\s*[^;]+/gi) || [];
+        for (const segment of dmarcSegments) {
+            const policy = segment.match(/(?:^|[\s(])p\s*=\s*(none|quarantine|reject)\b/i);
+            if (policy) return titleCase(policy[1]);
+        }
         return "";
-    }
-
-    function getDmarcPolicy(details) {
-        const text = String(details || "");
-        const match = text.match(/\b(?:action|p|policy)\s*=\s*(none|quarantine|reject)\b/i);
-        if (!match) return "";
-        return titleCase(match[1]);
     }
 
     function titleCase(value) {
@@ -584,12 +777,19 @@
         return "unknown";
     }
 
-    function extractDkimSignatureDomain(value) {
+    function extractDkimSignatureParts(value) {
         const domain = String(value || "").match(/\bd=([^;\s]+)/i);
         const selector = String(value || "").match(/\bs=([^;\s]+)/i);
-        if (domain && selector) return `${domain[1]} (selector ${selector[1]})`;
-        if (domain) return domain[1];
-        return "";
+        return {
+            domain: domain ? domain[1] : "",
+            selector: selector ? selector[1] : ""
+        };
+    }
+
+    function extractDkimSignatureDomain(value) {
+        const parts = extractDkimSignatureParts(value);
+        if (parts.domain && parts.selector) return `${parts.domain} (selector ${parts.selector})`;
+        return parts.domain;
     }
 
     function unique(values) {
@@ -599,10 +799,17 @@
     function buildMetrics(headers, received, auth) {
         const start = received.find((row) => !Number.isNaN(row.timestamp));
         const end = [...received].reverse().find((row) => !Number.isNaN(row.timestamp));
-        const totalMs = start && end ? end.timestamp - start.timestamp : NaN;
-        const failed = auth.filter((row) => row.status === "fail").length;
-        const passed = auth.filter((row) => row.status === "pass").length;
-        const unknown = auth.filter((row) => ["unknown", "none", "neutral", "softfail", "temperror"].includes(row.status)).length;
+        const dateHeader = headers.find((header) => equalsHeader(header.name, "Date"));
+        const messageDate = dateHeader ? parseDate(dateHeader.value).timestamp : NaN;
+        const receivedSpanMs = start && end ? end.timestamp - start.timestamp : NaN;
+        const messageToDeliveryMs = end && !Number.isNaN(messageDate) ? end.timestamp - messageDate : NaN;
+        const totalMs = !Number.isNaN(messageToDeliveryMs) && messageToDeliveryMs >= 0
+            ? messageToDeliveryMs
+            : receivedSpanMs;
+        const countedAuth = auth.filter((row) => row.countsAsCheck !== false);
+        const failed = countedAuth.filter((row) => row.status === "fail").length;
+        const passed = countedAuth.filter((row) => row.status === "pass").length;
+        const unknown = countedAuth.filter((row) => ["unknown", "none", "neutral", "softfail", "temperror"].includes(row.status)).length;
 
         return {
             headerCount: headers.length,
@@ -616,8 +823,9 @@
 
     function buildFindings(headers, received, auth, byName) {
         const findings = [];
-        const failRows = auth.filter((row) => row.status === "fail");
-        const warnRows = auth.filter((row) => ["softfail", "temperror", "neutral", "none", "unknown"].includes(row.status));
+        const findingAuth = auth.filter((row) => row.countsAsCheck !== false);
+        const failRows = findingAuth.filter((row) => row.status === "fail");
+        const warnRows = findingAuth.filter((row) => ["softfail", "temperror", "neutral", "none", "unknown"].includes(row.status));
         const longDelays = received.filter((row) => !Number.isNaN(row.delayMs) && row.delayMs > 5 * 60 * 1000);
         const negativeDelays = received.filter((row) => !Number.isNaN(row.delayMs) && row.delayMs < 0);
 
@@ -660,6 +868,8 @@
         renderFindings(analysis.findings);
         renderAuth(analysis.auth);
         renderReceived(analysis.received);
+        renderAntispamTable("forefrontTable", analysis.antispam.forefront);
+        renderAntispamTable("microsoftAntispamTable", analysis.antispam.microsoft);
         renderKeyValueTable("securityTable", analysis.security);
         renderOther(analysis.other);
     }
@@ -708,10 +918,19 @@
         rows.forEach((row) => {
             const tr = document.createElement("tr");
             tr.className = rowClass(row.status);
+            const descriptionParts = String(row.description || row.details || "").split("||");
+            const summary = descriptionParts.shift() || "";
+            const technical = descriptionParts.join("||");
             tr.innerHTML = `
-                <td><strong>${escapeHtml(row.check)}</strong></td>
-                <td>${escapeHtml(row.details || "")}</td>
-                <td class="status-cell">${statusIcon(row.status, row.details)}</td>
+                <td class="auth-check"><strong>${escapeHtml(row.check)}</strong></td>
+                <td class="auth-result">
+                    <div class="auth-result-line">
+                        ${statusIcon(row.status, row.details)}
+                        <strong class="auth-result-label">${escapeHtml(row.result || authResultLabel(row.status))}</strong>
+                    </div>
+                    <div class="auth-explanation">${escapeHtml(summary)}</div>
+                    ${technical ? `<div class="auth-technical">${escapeHtml(technical)}</div>` : ""}
+                </td>
             `;
             tbody.appendChild(tr);
         });
@@ -721,7 +940,7 @@
         const tbody = document.querySelector("#receivedTable tbody");
         tbody.innerHTML = "";
         if (!rows.length) {
-            tbody.innerHTML = `<tr class="row-warning"><td colspan="4">No Received headers found.</td></tr>`;
+            tbody.innerHTML = `<tr class="row-warning"><td colspan="3">No Received headers found.</td></tr>`;
             return;
         }
         rows.forEach((row) => {
@@ -731,8 +950,25 @@
                 <td>${renderServerValue(row.from)}</td>
                 <td>${renderServerValue(row.by)}</td>
                 <td>${escapeHtml(row.date)}</td>
-                <td>${escapeHtml(row.with)}</td>
             `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderAntispamTable(tableId, rows) {
+        const tbody = document.querySelector(`#${tableId} tbody`);
+        tbody.innerHTML = "";
+        if (!rows || !rows.length) {
+            tbody.innerHTML = `<tr class="row-warning"><td colspan="2">Not found in this header.</td></tr>`;
+            return;
+        }
+        rows.forEach((row) => {
+            const tr = document.createElement("tr");
+            if (row.status) tr.className = rowClass(row.status);
+            const valueHtml = row.raw
+                ? `<details class="inline-details"><summary>${escapeHtml(row.summary || "Show raw header")}</summary><code>${escapeHtml(row.value)}</code></details>`
+                : `<div class="antispam-value">${row.status ? statusIcon(row.status, row.value) : ""}<div><strong>${escapeHtml(row.display || row.value)}</strong>${row.description ? `<div class="antispam-description">${escapeHtml(row.description)}</div>` : ""}${row.technical ? `<div class="auth-technical">${escapeHtml(row.technical)}</div>` : ""}</div></div>`;
+            tr.innerHTML = `<td class="antispam-field"><strong>${escapeHtml(row.label)}</strong></td><td>${valueHtml}</td>`;
             tbody.appendChild(tr);
         });
     }
@@ -876,7 +1112,13 @@
         analysis.auth.forEach((row) => lines.push(`- ${row.check}: ${row.status} (${row.details})`));
         lines.push("");
         lines.push("Received:");
-        analysis.received.forEach((row) => lines.push(`- ${row.from} -> ${row.by}; ${row.date}; ${row.with || "unknown type"}`));
+        analysis.received.forEach((row) => lines.push(`- ${row.from} -> ${row.by}; ${row.date}`));
+        lines.push("");
+        lines.push("Forefront Antispam Report:");
+        analysis.antispam.forefront.forEach((row) => lines.push(`- ${row.label}: ${row.display || row.value}`));
+        lines.push("");
+        lines.push("Microsoft Antispam Header:");
+        analysis.antispam.microsoft.forEach((row) => lines.push(`- ${row.label}: ${row.display || row.value}`));
         return lines.join("\n");
     }
 
@@ -917,7 +1159,9 @@ ${tableHtml("Summary", ["Header", "Value"], analysis.summary.rows.map((row) => [
 <h2>Findings</h2>
 <ul>${analysis.findings.map((f) => `<li><strong>${escapeHtml(f.level)}:</strong> ${escapeHtml(f.text)}</li>`).join("")}</ul>
 ${tableHtml("Authentication", ["Check", "Details", "Status"], analysis.auth.map((row) => [row.check, row.details, row.status]))}
-${tableHtml("Received", ["From", "By", "Time", "Type"], analysis.received.map((row) => [removeIpv6Addresses(row.from), removeIpv6Addresses(row.by), row.date, row.with]))}
+${tableHtml("Received", ["From", "By", "Time"], analysis.received.map((row) => [removeIpv6Addresses(row.from), removeIpv6Addresses(row.by), row.date]))}
+${tableHtml("Forefront Antispam Report", ["Field", "Result"], analysis.antispam.forefront.map((row) => [row.label, row.display || row.value]))}
+${tableHtml("Microsoft Antispam Header", ["Field", "Result"], analysis.antispam.microsoft.map((row) => [row.label, row.display || row.value]))}
 </div></body></html>`;
     }
 
