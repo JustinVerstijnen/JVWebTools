@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A simple and effective tool to check the details of email message headers.">
+<title>Email Header Analyzer - justinverstijnen.nl</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" type="image/svg+xml" href="https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/logo.svg">
+</head>
+<body>
+    <main class="container">
+        <div class="header">
+            <a href="https://justinverstijnen.nl" target="_blank" rel="noopener noreferrer">
+                <img src="https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/logo.svg" alt="Logo" width="50" height="50">
+            </a>
+        </div>
+        <h1>Email Header Analyzer</h1>
+        <div class="subtitle">A simple and effective tool to check the details of email message headers.</div>
+
+        <section class="searchbox" aria-label="Mail header input">
+            <textarea id="headerInput" autofocus required spellcheck="false" placeholder="Paste headers here and the report will be generated automatically."></textarea>
+            <div id="inputCollapsedBar" class="collapsed-input-bar" hidden>
+                <span>Header analyzed. The input field is collapsed.</span>
+                <div class="collapsed-actions">
+                    <button id="newHeaderBtn" type="button" title="Enter a new header">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2Z"/></svg>
+                        New header
+                    </button>
+                    <button id="showHeaderBtn" type="button" class="details-btn" title="Show pasted header">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v2H4V5Zm0 6h16v2H4v-2Zm0 6h16v2H4v-2Z"/></svg>
+                        Show header
+                    </button>
+                </div>
+            </div>
+            <div id="inputActionRow" class="action-row">
+                <button id="analyzeBtn" type="button" title="Analyze headers">
+                    <svg viewBox="0 0 512 512" aria-hidden="true"><path d="M505 442.7 405.3 343c-4.5-4.5-10.6-7-17-7H372c27.6-35.3 44-79.7 44-128C416 93.1 322.9 0 208 0S0 93.1 0 208s93.1 208 208 208c48.3 0 92.7-16.4 128-44v16.3c0 6.4 2.5 12.5 7 17l99.7 99.7c9.4 9.4 24.6 9.4 33.9 0l28.3-28.3c9.4-9.4 9.4-24.6.1-34ZM208 336c-70.7 0-128-57.2-128-128S137.3 80 208 80s128 57.3 128 128-57.3 128-128 128Z"/></svg>
+                    Analyze
+                </button>
+                <button id="clearBtn" type="button" class="bulk-btn" title="Clear">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V7H6v12ZM8 9h8v10H8V9Zm7.5-5-1-1h-5l-1 1H5v2h14V4h-3.5Z"/></svg>
+                    Clear
+                </button>
+                <button id="copyBtn" type="button" class="details-btn" disabled title="Copy analysis results">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg>
+                    Copy
+                </button>
+                <div id="exportControl" class="export-control">
+                    <button id="exportBtn" type="button" class="export-trigger" disabled aria-haspopup="true" aria-expanded="false" title="Export">
+                        <svg viewBox="0 0 384 512" aria-hidden="true"><path d="M64 0C28.7 0 0 28.7 0 64v384c0 35.3 28.7 64 64 64h256c35.3 0 64-28.7 64-64V160H256c-17.7 0-32-14.3-32-32V0H64Zm192 0v128h128L256 0Zm-40 232v102.1l31-31c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-72 72c-9.4 9.4-24.6 9.4-33.9 0l-72-72c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l31 31V232c0-13.3 10.7-24 24-24s24 10.7 24 24Z"/></svg>
+                        Export<span class="export-caret" aria-hidden="true"></span>
+                    </button>
+                    <div id="exportMenu" class="export-menu" role="menu">
+                        <button type="button" role="menuitem" data-export-format="html">HTML</button>
+                        <button type="button" role="menuitem" data-export-format="json">JSON</button>
+                        <button type="button" role="menuitem" data-export-format="txt">TXT</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div id="emptyState" class="infobox">Ready to analyze headers.</div>
+
+        <section id="resultsSection" hidden>
+            <div id="messageSummary" class="message-summary"></div>
+            <div id="analysisBox" class="analysis-box"></div>
+
+            <div class="section-title-row">
+                <h2>Authentication</h2>
+                <p>SPF, DKIM, DMARC and related authentication results from the receiving system.</p>
+            </div>
+            <div class="table-wrapper">
+                <table id="authTable">
+                    <thead>
+                        <tr><th>Check</th><th>Details</th><th>Status</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="section-title-row">
+                <h2>Received headers</h2>
+                <p>Mail server hops in delivery order, with visible IPv6 addresses hidden and preserved as tooltips.</p>
+            </div>
+            <div class="table-wrapper wide-table">
+                <table id="receivedTable">
+                    <thead>
+                        <tr>
+                            <th>Submitting host</th>
+                            <th>Receiving host</th>
+                            <th>Time</th>
+                            <th>Type</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="section-title-row">
+                <h2>Security headers</h2>
+                <p>Security and filtering headers extracted from the pasted message.</p>
+            </div>
+            <div class="table-wrapper">
+                <table id="securityTable">
+                    <thead><tr><th>Header</th><th>Value</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <details class="raw-details">
+                <summary>Other headers</summary>
+                <div class="table-wrapper">
+                    <table id="otherTable">
+                        <thead><tr><th>#</th><th>Header</th><th>Value</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </details>
+        </section>
+
+        <div class="footer">
+            <a href="https://justinverstijnen.nl" target="_blank" rel="noopener noreferrer">&copy; <span id="copyright-year"></span> Mail Header Analyzer by Justin Verstijnen.</a>
+        </div>
+    </main>
+
+<script src="assets/app.js"></script>
+</body>
+</html>
