@@ -923,14 +923,11 @@
             const technical = descriptionParts.join("||");
             tr.innerHTML = `
                 <td class="auth-check"><strong>${escapeHtml(row.check)}</strong></td>
-                <td class="auth-result">
-                    <div class="auth-result-line">
-                        ${statusIcon(row.status, row.details)}
-                        <strong class="auth-result-label">${escapeHtml(row.result || authResultLabel(row.status))}</strong>
-                    </div>
+                <td class="auth-details">
                     <div class="auth-explanation">${escapeHtml(summary)}</div>
                     ${technical ? `<div class="auth-technical">${escapeHtml(technical)}</div>` : ""}
                 </td>
+                <td class="status-cell">${renderStatusResult(row.status, row.result || authResultLabel(row.status))}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -959,16 +956,21 @@
         const tbody = document.querySelector(`#${tableId} tbody`);
         tbody.innerHTML = "";
         if (!rows || !rows.length) {
-            tbody.innerHTML = `<tr class="row-warning"><td colspan="2">Not found in this header.</td></tr>`;
+            tbody.innerHTML = `<tr class="row-warning"><td colspan="3">Not found in this header.</td></tr>`;
             return;
         }
         rows.forEach((row) => {
             const tr = document.createElement("tr");
-            if (row.status) tr.className = rowClass(row.status);
+            const status = row.status || "info";
+            tr.className = rowClass(status);
             const valueHtml = row.raw
                 ? `<details class="inline-details"><summary>${escapeHtml(row.summary || "Show raw header")}</summary><code>${escapeHtml(row.value)}</code></details>`
-                : `<div class="antispam-value">${row.status ? statusIcon(row.status, row.value) : ""}<div><strong>${escapeHtml(row.display || row.value)}</strong>${row.description ? `<div class="antispam-description">${escapeHtml(row.description)}</div>` : ""}${row.technical ? `<div class="auth-technical">${escapeHtml(row.technical)}</div>` : ""}</div></div>`;
-            tr.innerHTML = `<td class="antispam-field"><strong>${escapeHtml(row.label)}</strong></td><td>${valueHtml}</td>`;
+                : `<div class="antispam-main"><strong>${escapeHtml(row.display || row.value)}</strong>${row.description ? `<div class="antispam-description">${escapeHtml(row.description)}</div>` : ""}${row.technical ? `<div class="auth-technical">${escapeHtml(row.technical)}</div>` : ""}</div>`;
+            tr.innerHTML = `
+                <td class="antispam-field"><strong>${escapeHtml(row.label)}</strong></td>
+                <td class="antispam-details">${valueHtml}</td>
+                <td class="status-cell">${renderStatusResult(status, statusDisplayLabel(status))}</td>
+            `;
             tbody.appendChild(tr);
         });
     }
@@ -1033,6 +1035,7 @@
     function rowClass(status) {
         if (status === "pass" || status === "success") return "row-success";
         if (status === "fail" || status === "error") return "row-error";
+        if (status === "info") return "row-info";
         return "row-warning";
     }
 
@@ -1041,6 +1044,20 @@
         if (!Number.isNaN(row.delayMs) && row.delayMs > 10 * 60 * 1000) return "row-error";
         if (!Number.isNaN(row.delayMs) && row.delayMs > 5 * 60 * 1000) return "row-warning";
         return "";
+    }
+
+
+    function statusDisplayLabel(status) {
+        const normalized = String(status || "unknown").toLowerCase();
+        if (normalized === "pass" || normalized === "success") return "Passed";
+        if (normalized === "fail" || normalized === "error") return "Failed";
+        if (normalized === "info") return "Info";
+        if (normalized === "warning") return "Warning";
+        return authResultLabel(normalized);
+    }
+
+    function renderStatusResult(status, label) {
+        return `<span class="status-result">${statusIcon(status)}<strong>${escapeHtml(label || statusDisplayLabel(status))}</strong></span>`;
     }
 
     function statusBadge(status) {
@@ -1056,6 +1073,7 @@
     function statusTooltipLabel(status) {
         if (status === "pass" || status === "success") return "Pass";
         if (status === "fail" || status === "error") return "Fail";
+        if (status === "info") return "Information";
         return `Other status: ${String(status || "Unknown")}`;
     }
 
@@ -1066,12 +1084,16 @@
         if (level === "error") {
             return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13.4 12 5.3-5.3-1.4-1.4-5.3 5.3-5.3-5.3-1.4 1.4 5.3 5.3-5.3 5.3 1.4 1.4 5.3-5.3 5.3 5.3 1.4-1.4-5.3-5.3Z"/></svg>`;
         }
+        if (level === "info") {
+            return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 10h2v7h-2v-7Zm0-3h2v2h-2V7Zm1-5a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z"/></svg>`;
+        }
         return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 21h22L12 2 1 21Zm12-3h-2v-2h2v2Zm0-4h-2v-4h2v4Z"/></svg>`;
     }
 
     function statusLevel(status) {
         if (status === "pass" || status === "success") return "success";
         if (status === "fail" || status === "error") return "error";
+        if (status === "info") return "info";
         return "warning";
     }
 
