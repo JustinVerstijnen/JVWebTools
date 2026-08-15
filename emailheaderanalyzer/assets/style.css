@@ -843,3 +843,52 @@ summary {
         width: 190px;
     }
 }
+
+/* Collapsible technical anti-spam rows */
+.antispam-technical-toggle-row td {
+    padding: 0;
+    text-align: center;
+    background: #fafafa;
+    border-top: 1px solid #e5e7eb;
+}
+
+.antispam-technical-toggle {
+    width: 100%;
+    padding: 12px 16px;
+    border: 0;
+    background: transparent;
+    color: #4b5563;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.antispam-technical-toggle:hover {
+    background: #f3f4f6;
+}
+
+.antispam-toggle-triangle {
+    display: inline-block;
+    margin-right: 7px;
+    font-size: 10px;
+    transition: transform 0.18s ease;
+}
+
+.antispam-technical-toggle[aria-expanded="true"] .antispam-toggle-triangle {
+    transform: rotate(90deg);
+}
+
+.antispam-technical-subheading th {
+    padding: 8px 12px;
+    text-align: center !important;
+    background: #f7f8fa;
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.antispam-technical-row[hidden] {
+    display: none;
+}
+

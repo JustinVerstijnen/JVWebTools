@@ -44,6 +44,14 @@
         "X-Originating-IP"
     ];
 
+    const technicalAntispamLabels = new Set([
+        "IP Filter Verdict",
+        "HELO/EHLO String",
+        "Spam Rules",
+        "Direction",
+        "Additional Rule IDs"
+    ]);
+
     document.getElementById("copyright-year").textContent = new Date().getFullYear();
 
     window.addEventListener("load", () => {
@@ -956,10 +964,28 @@
         const tbody = document.querySelector("#antispamTable tbody");
         tbody.innerHTML = "";
 
+        const technicalRows = [];
+
         const groups = [
             { title: "Forefront Antispam Report", rows: antispam && antispam.forefront ? antispam.forefront : [] },
             { title: "Microsoft Antispam Header", rows: antispam && antispam.microsoft ? antispam.microsoft : [] }
         ];
+
+        function appendAntispamRow(row, extraClass = "") {
+            const tr = document.createElement("tr");
+            const status = row.status || "info";
+            tr.className = `${rowClass(status)}${extraClass ? ` ${extraClass}` : ""}`;
+            const valueHtml = row.raw
+                ? `<details class="inline-details"><summary>${escapeHtml(row.summary || "Show raw header")}</summary><code>${escapeHtml(row.value)}</code></details>`
+                : `<div class="antispam-main"><strong>${escapeHtml(row.display || row.value)}</strong>${row.description ? `<div class="antispam-description">${escapeHtml(row.description)}</div>` : ""}${row.technical ? `<div class="auth-technical">${escapeHtml(row.technical)}</div>` : ""}</div>`;
+            tr.innerHTML = `
+                <td class="antispam-field"><strong>${escapeHtml(row.label)}</strong></td>
+                <td class="antispam-details">${valueHtml}</td>
+                <td class="status-cell">${renderStatusResult(status, statusDisplayLabel(status))}</td>
+            `;
+            tbody.appendChild(tr);
+            return tr;
+        }
 
         groups.forEach((group) => {
             const groupRow = document.createElement("tr");
@@ -976,20 +1002,54 @@
             }
 
             group.rows.forEach((row) => {
-                const tr = document.createElement("tr");
-                const status = row.status || "info";
-                tr.className = rowClass(status);
-                const valueHtml = row.raw
-                    ? `<details class="inline-details"><summary>${escapeHtml(row.summary || "Show raw header")}</summary><code>${escapeHtml(row.value)}</code></details>`
-                    : `<div class="antispam-main"><strong>${escapeHtml(row.display || row.value)}</strong>${row.description ? `<div class="antispam-description">${escapeHtml(row.description)}</div>` : ""}${row.technical ? `<div class="auth-technical">${escapeHtml(row.technical)}</div>` : ""}</div>`;
-                tr.innerHTML = `
-                    <td class="antispam-field"><strong>${escapeHtml(row.label)}</strong></td>
-                    <td class="antispam-details">${valueHtml}</td>
-                    <td class="status-cell">${renderStatusResult(status, statusDisplayLabel(status))}</td>
-                `;
-                tbody.appendChild(tr);
+                if (technicalAntispamLabels.has(row.label)) {
+                    technicalRows.push({ ...row, groupTitle: group.title });
+                    return;
+                }
+                appendAntispamRow(row);
             });
         });
+
+        if (technicalRows.length) {
+            const toggleRow = document.createElement("tr");
+            toggleRow.className = "antispam-technical-toggle-row";
+            toggleRow.innerHTML = `
+                <td colspan="3">
+                    <button type="button" class="antispam-technical-toggle" aria-expanded="false">
+                        <span class="antispam-toggle-triangle" aria-hidden="true">▶</span>
+                        <span>Show technical anti-spam details</span>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(toggleRow);
+
+            let previousGroup = "";
+            technicalRows.forEach((row) => {
+                if (row.groupTitle !== previousGroup) {
+                    const subheading = document.createElement("tr");
+                    subheading.className = "antispam-technical-row antispam-technical-subheading";
+                    subheading.hidden = true;
+                    subheading.innerHTML = `<th colspan="3" scope="rowgroup">${escapeHtml(row.groupTitle)}</th>`;
+                    tbody.appendChild(subheading);
+                    previousGroup = row.groupTitle;
+                }
+                const tr = appendAntispamRow(row, "antispam-technical-row");
+                tr.hidden = true;
+            });
+
+            const button = toggleRow.querySelector(".antispam-technical-toggle");
+            button.addEventListener("click", () => {
+                const expanded = button.getAttribute("aria-expanded") === "true";
+                const nextExpanded = !expanded;
+                button.setAttribute("aria-expanded", String(nextExpanded));
+                button.querySelector("span:last-child").textContent = nextExpanded
+                    ? "Hide technical anti-spam details"
+                    : "Show technical anti-spam details";
+                tbody.querySelectorAll(".antispam-technical-row").forEach((row) => {
+                    row.hidden = !nextExpanded;
+                });
+            });
+        }
     }
 
     function renderAdvanced(rows) {
@@ -1146,17 +1206,27 @@
         lines.push("");
 
         lines.push("4. Anti-spam");
+        const visibleForefront = analysis.antispam.forefront.filter((row) => !technicalAntispamLabels.has(row.label));
+        const visibleMicrosoft = analysis.antispam.microsoft.filter((row) => !technicalAntispamLabels.has(row.label));
+        const technicalAntispam = [
+            ...analysis.antispam.forefront.filter((row) => technicalAntispamLabels.has(row.label)),
+            ...analysis.antispam.microsoft.filter((row) => technicalAntispamLabels.has(row.label))
+        ];
         lines.push("Forefront Antispam Report:");
         if (analysis.antispam.forefront.length) {
-            analysis.antispam.forefront.forEach((row) => lines.push(`- ${row.label}: ${row.display || row.value}`));
+            visibleForefront.forEach((row) => lines.push(`- ${row.label}: ${row.display || row.value}`));
         } else {
             lines.push("- Not found in this header.");
         }
         lines.push("Microsoft Antispam Header:");
         if (analysis.antispam.microsoft.length) {
-            analysis.antispam.microsoft.forEach((row) => lines.push(`- ${row.label}: ${row.display || row.value}`));
+            visibleMicrosoft.forEach((row) => lines.push(`- ${row.label}: ${row.display || row.value}`));
         } else {
             lines.push("- Not found in this header.");
+        }
+        if (technicalAntispam.length) {
+            lines.push("Technical anti-spam details:");
+            technicalAntispam.forEach((row) => lines.push(`- ${row.label}: ${row.display || row.value}`));
         }
         lines.push("");
 
@@ -1185,17 +1255,27 @@
 
     function buildHtmlExport(analysis) {
         const antiSpamRows = [];
+        const visibleForefront = analysis.antispam.forefront.filter((row) => !technicalAntispamLabels.has(row.label));
+        const visibleMicrosoft = analysis.antispam.microsoft.filter((row) => !technicalAntispamLabels.has(row.label));
+        const technicalAntispam = [
+            ...analysis.antispam.forefront.filter((row) => technicalAntispamLabels.has(row.label)),
+            ...analysis.antispam.microsoft.filter((row) => technicalAntispamLabels.has(row.label))
+        ];
         antiSpamRows.push(["Forefront Antispam Report", "", ""]);
         if (analysis.antispam.forefront.length) {
-            analysis.antispam.forefront.forEach((row) => antiSpamRows.push([row.label, row.display || row.value, row.status || "info"]));
+            visibleForefront.forEach((row) => antiSpamRows.push([row.label, row.display || row.value, row.status || "info"]));
         } else {
             antiSpamRows.push(["", "Not found in this header.", ""]);
         }
         antiSpamRows.push(["Microsoft Antispam Header", "", ""]);
         if (analysis.antispam.microsoft.length) {
-            analysis.antispam.microsoft.forEach((row) => antiSpamRows.push([row.label, row.display || row.value, row.status || "info"]));
+            visibleMicrosoft.forEach((row) => antiSpamRows.push([row.label, row.display || row.value, row.status || "info"]));
         } else {
             antiSpamRows.push(["", "Not found in this header.", ""]);
+        }
+        if (technicalAntispam.length) {
+            antiSpamRows.push(["Technical anti-spam details", "", ""]);
+            technicalAntispam.forEach((row) => antiSpamRows.push([row.label, row.display || row.value, row.status || "info"]));
         }
 
         return `<!DOCTYPE html>
