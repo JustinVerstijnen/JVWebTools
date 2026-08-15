@@ -54,12 +54,16 @@
         <div id="emptyState" class="infobox">Ready to analyze headers.</div>
 
         <section id="resultsSection" hidden>
+            <div class="section-title-row report-block-title">
+                <h2>1. Email summary</h2>
+                <p>Key message details, delivery time and the overall filtering result at a glance.</p>
+            </div>
             <div id="messageSummary" class="message-summary"></div>
             <div id="analysisBox" class="analysis-box"></div>
 
-            <div class="section-title-row">
-                <h2>Authentication</h2>
-                <p>SPF, DKIM, DMARC and related authentication results from the receiving system.</p>
+            <div class="section-title-row report-block-title">
+                <h2>2. Authentication checks</h2>
+                <p>SPF, DKIM, DMARC, ARC and Microsoft authentication checks that help verify who sent the message.</p>
             </div>
             <div class="table-wrapper">
                 <table id="authTable">
@@ -70,9 +74,9 @@
                 </table>
             </div>
 
-            <div class="section-title-row">
-                <h2>Received headers</h2>
-                <p>Mail server hops in delivery order, with visible IPv6 addresses hidden and preserved as tooltips.</p>
+            <div class="section-title-row report-block-title">
+                <h2>3. Email route</h2>
+                <p>The mail servers that handled the message and when each delivery step took place.</p>
             </div>
             <div class="table-wrapper wide-table">
                 <table id="receivedTable">
@@ -87,45 +91,26 @@
                 </table>
             </div>
 
-
-            <div class="section-title-row">
-                <h2>Forefront Antispam Report</h2>
-                <p>Microsoft filtering details extracted from X-Forefront-Antispam-Report.</p>
+            <div class="section-title-row report-block-title">
+                <h2>4. Anti-spam</h2>
+                <p>Microsoft spam, bulk-mail and filtering verdicts, combined into one readable overview.</p>
             </div>
             <div class="table-wrapper">
-                <table id="forefrontTable" class="antispam-table">
+                <table id="antispamTable" class="antispam-table">
                     <thead><tr><th>Field</th><th>Details</th><th>Status</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
 
-            <div class="section-title-row">
-                <h2>Microsoft Antispam Header</h2>
-                <p>Bulk and additional Microsoft antispam values extracted from X-Microsoft-Antispam.</p>
+            <div class="section-title-row report-block-title">
+                <h2>5. Advanced details</h2>
+                <p>Additional security, transport and message headers for troubleshooting and deeper technical analysis.</p>
             </div>
-            <div class="table-wrapper">
-                <table id="microsoftAntispamTable" class="antispam-table">
-                    <thead><tr><th>Field</th><th>Details</th><th>Status</th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-
-            <div class="section-title-row">
-                <h2>Security headers</h2>
-                <p>Security and filtering headers extracted from the pasted message.</p>
-            </div>
-            <div class="table-wrapper">
-                <table id="securityTable">
-                    <thead><tr><th>Header</th><th>Value</th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-
-            <details class="raw-details">
-                <summary>Other headers</summary>
-                <div class="table-wrapper">
-                    <table id="otherTable">
-                        <thead><tr><th>#</th><th>Header</th><th>Value</th></tr></thead>
+            <details id="advancedDetails" class="advanced-details">
+                <summary>Show advanced header details</summary>
+                <div class="table-wrapper advanced-table-wrapper">
+                    <table id="advancedTable">
+                        <thead><tr><th>Header</th><th>Value</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>

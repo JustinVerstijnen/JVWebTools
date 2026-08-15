@@ -205,15 +205,16 @@
         const metrics = buildMetrics(headers, received, auth);
         const summary = buildMessageSummary(byName, metrics);
         const antispam = buildAntispamTables(byName);
-        const specializedSecurityHeaders = new Set(["x-forefront-antispam-report", "x-microsoft-antispam"]);
+        const specializedAntispamHeaders = new Set(["x-forefront-antispam-report", "x-microsoft-antispam"]);
         const security = securityHeaderNames
-            .filter((name) => !specializedSecurityHeaders.has(name.toLowerCase()))
+            .filter((name) => !specializedAntispamHeaders.has(name.toLowerCase()))
             .flatMap((name) => (byName.get(name.toLowerCase()) || []).map((header) => ({ name: header.name, value: header.value })));
         const other = headers
             .filter((header) => !summaryHeaders.some((name) => equalsHeader(name, header.name)))
             .filter((header) => !securityHeaderNames.some((name) => equalsHeader(name, header.name)))
             .filter((header) => !equalsHeader("Received", header.name))
-            .map((header, index) => ({ number: index + 1, name: header.name, value: header.value }));
+            .map((header) => ({ name: header.name, value: header.value }));
+        const advanced = [...security, ...other];
         const findings = buildFindings(headers, received, auth, byName);
 
         return {
@@ -224,6 +225,7 @@
             antispam,
             security,
             other,
+            advanced,
             received,
             auth,
             findings,
@@ -868,10 +870,8 @@
         renderFindings(analysis.findings);
         renderAuth(analysis.auth);
         renderReceived(analysis.received);
-        renderAntispamTable("forefrontTable", analysis.antispam.forefront);
-        renderAntispamTable("microsoftAntispamTable", analysis.antispam.microsoft);
-        renderKeyValueTable("securityTable", analysis.security);
-        renderOther(analysis.other);
+        renderAntispamCombined(analysis.antispam);
+        renderAdvanced(analysis.advanced);
     }
 
     function renderMessageSummary(summary) {
@@ -952,53 +952,56 @@
         });
     }
 
-    function renderAntispamTable(tableId, rows) {
-        const tbody = document.querySelector(`#${tableId} tbody`);
+    function renderAntispamCombined(antispam) {
+        const tbody = document.querySelector("#antispamTable tbody");
         tbody.innerHTML = "";
-        if (!rows || !rows.length) {
-            tbody.innerHTML = `<tr class="row-warning"><td colspan="3">Not found in this header.</td></tr>`;
-            return;
-        }
-        rows.forEach((row) => {
-            const tr = document.createElement("tr");
-            const status = row.status || "info";
-            tr.className = rowClass(status);
-            const valueHtml = row.raw
-                ? `<details class="inline-details"><summary>${escapeHtml(row.summary || "Show raw header")}</summary><code>${escapeHtml(row.value)}</code></details>`
-                : `<div class="antispam-main"><strong>${escapeHtml(row.display || row.value)}</strong>${row.description ? `<div class="antispam-description">${escapeHtml(row.description)}</div>` : ""}${row.technical ? `<div class="auth-technical">${escapeHtml(row.technical)}</div>` : ""}</div>`;
-            tr.innerHTML = `
-                <td class="antispam-field"><strong>${escapeHtml(row.label)}</strong></td>
-                <td class="antispam-details">${valueHtml}</td>
-                <td class="status-cell">${renderStatusResult(status, statusDisplayLabel(status))}</td>
-            `;
-            tbody.appendChild(tr);
+
+        const groups = [
+            { title: "Forefront Antispam Report", rows: antispam && antispam.forefront ? antispam.forefront : [] },
+            { title: "Microsoft Antispam Header", rows: antispam && antispam.microsoft ? antispam.microsoft : [] }
+        ];
+
+        groups.forEach((group) => {
+            const groupRow = document.createElement("tr");
+            groupRow.className = "antispam-group-row";
+            groupRow.innerHTML = `<th colspan="3" scope="rowgroup">${escapeHtml(group.title)}</th>`;
+            tbody.appendChild(groupRow);
+
+            if (!group.rows.length) {
+                const emptyRow = document.createElement("tr");
+                emptyRow.className = "antispam-empty-row";
+                emptyRow.innerHTML = `<td colspan="3">Not found in this header.</td>`;
+                tbody.appendChild(emptyRow);
+                return;
+            }
+
+            group.rows.forEach((row) => {
+                const tr = document.createElement("tr");
+                const status = row.status || "info";
+                tr.className = rowClass(status);
+                const valueHtml = row.raw
+                    ? `<details class="inline-details"><summary>${escapeHtml(row.summary || "Show raw header")}</summary><code>${escapeHtml(row.value)}</code></details>`
+                    : `<div class="antispam-main"><strong>${escapeHtml(row.display || row.value)}</strong>${row.description ? `<div class="antispam-description">${escapeHtml(row.description)}</div>` : ""}${row.technical ? `<div class="auth-technical">${escapeHtml(row.technical)}</div>` : ""}</div>`;
+                tr.innerHTML = `
+                    <td class="antispam-field"><strong>${escapeHtml(row.label)}</strong></td>
+                    <td class="antispam-details">${valueHtml}</td>
+                    <td class="status-cell">${renderStatusResult(status, statusDisplayLabel(status))}</td>
+                `;
+                tbody.appendChild(tr);
+            });
         });
     }
 
-    function renderKeyValueTable(tableId, rows) {
-        const tbody = document.querySelector(`#${tableId} tbody`);
+    function renderAdvanced(rows) {
+        const tbody = document.querySelector("#advancedTable tbody");
         tbody.innerHTML = "";
-        if (!rows.length) {
-            tbody.innerHTML = `<tr class="row-warning"><td colspan="2">Not found.</td></tr>`;
+        if (!rows || !rows.length) {
+            tbody.innerHTML = `<tr class="advanced-empty-row"><td colspan="2">Not found in this header.</td></tr>`;
             return;
         }
         rows.forEach((row) => {
             const tr = document.createElement("tr");
             tr.innerHTML = `<td><strong>${escapeHtml(row.name)}</strong></td><td>${renderValue(row.value)}</td>`;
-            tbody.appendChild(tr);
-        });
-    }
-
-    function renderOther(rows) {
-        const tbody = document.querySelector("#otherTable tbody");
-        tbody.innerHTML = "";
-        if (!rows.length) {
-            tbody.innerHTML = `<tr><td colspan="3">No other headers.</td></tr>`;
-            return;
-        }
-        rows.forEach((row) => {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `<td>${row.number}</td><td><strong>${escapeHtml(row.name)}</strong></td><td>${renderValue(row.value)}</td>`;
             tbody.appendChild(tr);
         });
     }
@@ -1120,27 +1123,49 @@
         lines.push("Mail Header Analyzer");
         lines.push(`Generated: ${analysis.generatedAt}`);
         lines.push("");
-        lines.push("Message summary:");
+
+        lines.push("1. Email summary");
         if (analysis.summary.spam) {
             lines.push(`- ${analysis.summary.spam.level.toUpperCase()}: ${analysis.summary.spam.title}`);
             lines.push(`- ${analysis.summary.spam.detail}`);
         }
         analysis.summary.rows.forEach((row) => lines.push(`- ${row.label}: ${row.value}`));
-        lines.push("");
-        lines.push("Findings:");
         analysis.findings.forEach((finding) => lines.push(`- ${finding.level}: ${finding.text}`));
         lines.push("");
-        lines.push("Authentication:");
+
+        lines.push("2. Authentication checks");
         analysis.auth.forEach((row) => lines.push(`- ${row.check}: ${row.status} (${row.details})`));
         lines.push("");
-        lines.push("Received:");
-        analysis.received.forEach((row) => lines.push(`- ${row.from} -> ${row.by}; ${row.date}`));
+
+        lines.push("3. Email route");
+        if (analysis.received.length) {
+            analysis.received.forEach((row) => lines.push(`- ${row.from} -> ${row.by}; ${row.date}`));
+        } else {
+            lines.push("- Not found in this header.");
+        }
         lines.push("");
+
+        lines.push("4. Anti-spam");
         lines.push("Forefront Antispam Report:");
-        analysis.antispam.forefront.forEach((row) => lines.push(`- ${row.label}: ${row.display || row.value}`));
-        lines.push("");
+        if (analysis.antispam.forefront.length) {
+            analysis.antispam.forefront.forEach((row) => lines.push(`- ${row.label}: ${row.display || row.value}`));
+        } else {
+            lines.push("- Not found in this header.");
+        }
         lines.push("Microsoft Antispam Header:");
-        analysis.antispam.microsoft.forEach((row) => lines.push(`- ${row.label}: ${row.display || row.value}`));
+        if (analysis.antispam.microsoft.length) {
+            analysis.antispam.microsoft.forEach((row) => lines.push(`- ${row.label}: ${row.display || row.value}`));
+        } else {
+            lines.push("- Not found in this header.");
+        }
+        lines.push("");
+
+        lines.push("5. Advanced details");
+        if (analysis.advanced.length) {
+            analysis.advanced.forEach((row) => lines.push(`- ${row.name}: ${row.value}`));
+        } else {
+            lines.push("- Not found in this header.");
+        }
         return lines.join("\n");
     }
 
@@ -1159,6 +1184,20 @@
     }
 
     function buildHtmlExport(analysis) {
+        const antiSpamRows = [];
+        antiSpamRows.push(["Forefront Antispam Report", "", ""]);
+        if (analysis.antispam.forefront.length) {
+            analysis.antispam.forefront.forEach((row) => antiSpamRows.push([row.label, row.display || row.value, row.status || "info"]));
+        } else {
+            antiSpamRows.push(["", "Not found in this header.", ""]);
+        }
+        antiSpamRows.push(["Microsoft Antispam Header", "", ""]);
+        if (analysis.antispam.microsoft.length) {
+            analysis.antispam.microsoft.forEach((row) => antiSpamRows.push([row.label, row.display || row.value, row.status || "info"]));
+        } else {
+            antiSpamRows.push(["", "Not found in this header.", ""]);
+        }
+
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1167,7 +1206,8 @@
 <style>
 body{font-family:Segoe UI,Arial,sans-serif;background:#f6f6f6;color:#111827;margin:24px}
 .wrap{max-width:1100px;margin:auto;background:#fff;border-radius:10px;padding:24px;box-shadow:0 0 15px rgba(0,0,0,.08)}
-table{width:100%;border-collapse:collapse;margin:16px 0;table-layout:fixed}
+h2{text-align:center;margin:34px 0 4px}.sub{text-align:center;color:#666;margin:0 0 12px}
+table{width:100%;border-collapse:collapse;margin:12px 0;table-layout:fixed}
 th,td{border:1px solid #ddd;padding:9px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
 th{background:#f2f2f2}.row-success{background:#eef8f1}.row-warning{background:#fff7e6}.row-error{background:#fdeeee}
 </style>
@@ -1175,20 +1215,23 @@ th{background:#f2f2f2}.row-success{background:#eef8f1}.row-warning{background:#f
 <body><div class="wrap">
 <h1>Mail Header Analysis</h1>
 <p><strong>Generated:</strong> ${escapeHtml(analysis.generatedAt)}</p>
-<h2>Message Summary</h2>
+<h2>1. Email summary</h2><p class="sub">Key message details, delivery time and the overall filtering result at a glance.</p>
 ${analysis.summary.spam ? `<p><strong>${escapeHtml(analysis.summary.spam.level.toUpperCase())}: ${escapeHtml(analysis.summary.spam.title)}</strong><br>${escapeHtml(analysis.summary.spam.detail)}</p>` : ""}
-${tableHtml("Summary", ["Header", "Value"], analysis.summary.rows.map((row) => [row.label, row.value]))}
-<h2>Findings</h2>
-<ul>${analysis.findings.map((f) => `<li><strong>${escapeHtml(f.level)}:</strong> ${escapeHtml(f.text)}</li>`).join("")}</ul>
-${tableHtml("Authentication", ["Check", "Details", "Status"], analysis.auth.map((row) => [row.check, row.details, row.status]))}
-${tableHtml("Received", ["From", "By", "Time"], analysis.received.map((row) => [removeIpv6Addresses(row.from), removeIpv6Addresses(row.by), row.date]))}
-${tableHtml("Forefront Antispam Report", ["Field", "Result"], analysis.antispam.forefront.map((row) => [row.label, row.display || row.value]))}
-${tableHtml("Microsoft Antispam Header", ["Field", "Result"], analysis.antispam.microsoft.map((row) => [row.label, row.display || row.value]))}
+${tableHtml("", ["Header", "Value"], analysis.summary.rows.map((row) => [row.label, row.value]))}
+<h2>2. Authentication checks</h2><p class="sub">SPF, DKIM, DMARC, ARC and Microsoft authentication checks.</p>
+${tableHtml("", ["Check", "Details", "Status"], analysis.auth.map((row) => [row.check, row.details, row.status]))}
+<h2>3. Email route</h2><p class="sub">The mail servers that handled the message and when each delivery step took place.</p>
+${tableHtml("", ["Submitting host", "Receiving host", "Time"], analysis.received.length ? analysis.received.map((row) => [removeIpv6Addresses(row.from), removeIpv6Addresses(row.by), row.date]) : [["", "Not found in this header.", ""]])}
+<h2>4. Anti-spam</h2><p class="sub">Microsoft spam, bulk-mail and filtering verdicts in one overview.</p>
+${tableHtml("", ["Field", "Details", "Status"], antiSpamRows)}
+<h2>5. Advanced details</h2><p class="sub">Additional security, transport and message headers.</p>
+${tableHtml("", ["Header", "Value"], analysis.advanced.length ? analysis.advanced.map((row) => [row.name, row.value]) : [["Not found in this header.", ""]])}
 </div></body></html>`;
     }
 
     function tableHtml(title, headers, rows) {
-        return `<h2>${escapeHtml(title)}</h2><table><thead><tr>${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+        const titleHtml = title ? `<h2>${escapeHtml(title)}</h2>` : "";
+        return `${titleHtml}<table><thead><tr>${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
     }
 
     function download(content, filename, type) {

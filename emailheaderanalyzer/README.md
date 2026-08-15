@@ -7,7 +7,7 @@ Static, client-side Mail Header Analyzer in the same visual style as DNS MEGAtoo
 - Header input with autofocus on page load.
 - Paste analyzes automatically; Enter analyzes when headers are present.
 - Parses folded RFC 5322 headers.
-- Shows message summary, SPF, DKIM, DMARC, ARC, Composite Auth, DKIM-Signature, Received hops and other headers.
+- Presents the analysis as five end-user friendly blocks: Email summary, Authentication checks, Email route, Anti-spam, and Advanced details.
 - Colors SPF/DKIM/DMARC green for pass, red for fail and orange for unknown or other statuses.
 - Calculates mail flow delays between Received hops.
 - Hides IPv6 addresses in visible Received tables while keeping them in tooltips.
@@ -38,5 +38,6 @@ Reference: Microsoft Learn, "Anti-spam message headers in cloud organizations".
 - Message Summary includes a separate delivery-time value based on the message Date header to the final Received timestamp when available, with the Received chain span as fallback.
 - After analysis, the pasted-header field collapses with an animated disclosure triangle and can be expanded again without separate New header / Show header buttons.
 - Received headers focus on submitting host, receiving host, and timestamp; the transport Type column is omitted from the main table.
-- Microsoft `X-Forefront-Antispam-Report` and `X-Microsoft-Antispam` values are parsed into dedicated compact tables; long rule lists and raw source values remain available as technical details.
+- Microsoft `X-Forefront-Antispam-Report` and `X-Microsoft-Antispam` values are combined into one Anti-spam table with clear sub-sections; missing headers are shown as a centered “Not found in this header.” row.
+- Security headers and other non-summary headers are combined into one collapsed Advanced details section.
 
