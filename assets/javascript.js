@@ -77,18 +77,18 @@ const tools = [
     image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-azuredeploymenttemplates.jpg"
   },
   {
-    title: "Markdown Editor",
-    description: "The Markdown Editor tool which can be used to write articles, documentation and other information into clear readable text.",
-    toolUrl: "https://tools.justinverstijnen.nl/markdowneditor",
-    github: "https://github.com/JustinVerstijnen/MarkdownEditor",
-    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-markdowneditor.png"
-  },
-  {
     title: "Microsoft Naming Tool",
     description: "This tool is a name generator for various Microsoft services like Intune, Entra ID and Azure.",
     toolUrl: "https://tools.justinverstijnen.nl/microsoftnamingtool",
     github: "https://github.com/JustinVerstijnen/MicrosoftNamingTool",
     image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-microsoftnamingtool.jpg"
+  },
+  {
+    title: "Markdown Editor",
+    description: "The Markdown Editor tool which can be used to write articles, documentation and other information into clear readable text.",
+    toolUrl: "https://tools.justinverstijnen.nl/markdowneditor",
+    github: "https://github.com/JustinVerstijnen/MarkdownEditor",
+    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-markdowneditor.png"
   }
 ];
 
