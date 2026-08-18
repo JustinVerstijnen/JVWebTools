@@ -11,7 +11,7 @@ const tools = [
     description: "A simple and effective tool to check the details of email message headers.",
     toolUrl: "https://tools.justinverstijnen.nl/emailheaderanalyzer/",
     github: "https://github.com/JustinVerstijnen/EmailHeaderAnalyzer",
-    image: "" // TODO: afbeelding-URL toevoegen
+    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-emailheaderanalyzer.png"
   },
   {
     title: "365 Tenant Lookup",
