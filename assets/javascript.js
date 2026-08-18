@@ -7,11 +7,11 @@ const tools = [
     image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-dnsmegatool.png"
   },
   {
-    title: "Microsoft Naming Tool",
-    description: "This tool is a name generator for various Microsoft services like Intune, Entra ID and Azure.",
-    toolUrl: "https://tools.justinverstijnen.nl/microsoftnamingtool",
-    github: "https://github.com/JustinVerstijnen/MicrosoftNamingTool",
-    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-microsoftnamingtool.jpg"
+    title: "Email Header Analyzer",
+    description: "A simple and effective tool to check the details of email message headers.",
+    toolUrl: "https://tools.justinverstijnen.nl/emailheaderanalyzer/",
+    github: "https://github.com/JustinVerstijnen/EmailHeaderAnalyzer",
+    image: "" // TODO: afbeelding-URL toevoegen
   },
   {
     title: "365 Tenant Lookup",
@@ -82,6 +82,13 @@ const tools = [
     toolUrl: "https://tools.justinverstijnen.nl/markdowneditor",
     github: "https://github.com/JustinVerstijnen/MarkdownEditor",
     image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-markdowneditor.png"
+  },
+  {
+    title: "Microsoft Naming Tool",
+    description: "This tool is a name generator for various Microsoft services like Intune, Entra ID and Azure.",
+    toolUrl: "https://tools.justinverstijnen.nl/microsoftnamingtool",
+    github: "https://github.com/JustinVerstijnen/MicrosoftNamingTool",
+    image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-microsoftnamingtool.jpg"
   }
 ];
 
@@ -97,21 +104,16 @@ function createToolCard(tool) {
   const article = document.createElement("article");
   article.className = "tool-card";
 
+  const imageHtml = tool.image
+    ? `
+      <a class="tool-image-link" href="${tool.toolUrl}" target="_blank" rel="noopener noreferrer" aria-label="Open ${tool.title}">
+        <img class="tool-image" src="${tool.image}" alt="${tool.title} preview" loading="lazy" />
+      </a>
+    `
+    : "";
+
   article.innerHTML = `
-    <a
-      class="tool-image-link"
-      href="${tool.toolUrl}"
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Open ${tool.title}"
-    >
-      <img
-        class="tool-image"
-        src="${tool.image}"
-        alt="${tool.title} preview"
-        loading="lazy"
-      />
-    </a>
+    ${imageHtml}
 
     <div class="tool-content">
       <h2 class="tool-title">${tool.title}</h2>
