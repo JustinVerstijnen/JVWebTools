@@ -8,7 +8,7 @@ ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
  bh=ZXhhbXBsZS1ib2R5LWhhc2gt01==
  b=ZXhhbXBsZS1zaWduYXR1cmUtZm9yLWRvY3VtZW50YXRpb24t02==
 ARC-Authentication-Results: i=2; mx.microsoft.com 1; spf=pass (sender ip is
- 2001:db8::2) smtp.rcpttodomain=example.net
+ 2001:db8::2) smtp.rcpttodomain=cloudmysteries.nl
  smtp.mailfrom=mailer.example.org; dmarc=fail (p=quarantine sp=quarantine pct=100)
  action=quarantine header.from=justinverstijnen.nl; dkim=pass (signature was verified)
  header.d=mailer.example.org; arc=pass (0 oda=1 ltdi=1
@@ -57,13 +57,12 @@ Received: from BESP194MB2832.EURP194.PROD.OUTLOOK.COM
  ([2001:db8::8]) by BESP194MB2832.EURP194.PROD.OUTLOOK.COM
  ([2001:db8::9]) with mapi id 15.21.0339.007; Fri, 24 Jul 2026 19:21:36 +0000
 From: Business | Justin Verstijnen <info@justinverstijnen.nl>
-To: "reports@example.net" <reports@example.net>
-Subject: Lesvoorbeeld - DMARC FAIL
-Thread-Topic: Lesvoorbeeld - DMARC FAIL
+To: Justin <justin@cloudmysteries.nl>
+Subject: Just testing
+Thread-Topic: Just testing
 Thread-Index: AQHJVDMARCFAILSyntheticTrainingExample==
 Date: Fri, 24 Jul 2026 19:21:36 +0000
 Message-ID:
-
  <JVDMARCFAIL2026@AMBPR09MB8182.EURP09.PROD.OUTLOOK.COM>
 References:
  <example-message-004@mail.example>
@@ -127,7 +126,7 @@ Content-Type: multipart/mixed;
 	boundary="_example_boundary_001_"
 MIME-Version: 1.0
 X-MS-Exchange-Transport-CrossTenantHeadersStamped: PAWP194MB2078
-Return-Path: bounce@mailer.example.org
+Return-Path: info@justinverstijnen.nl
 X-MS-Exchange-Organization-ExpirationStartTime: 24 Jul 2026 19:21:39.2562
  (UTC)
 X-MS-Exchange-Organization-ExpirationStartTimeReason: OriginalSubmit
@@ -150,10 +149,9 @@ X-MS-Office365-Filtering-Correlation-Id-Prvs:
  00000000-0000-4000-8000-000000000003
 X-MS-Exchange-AtpMessageProperties: SA|SL
 X-MS-Exchange-Organization-SCL: 5
-X-Microsoft-Antispam:
- BCL:0;ARA:13230040|35042699022|39142699007|6073799003|6049299003|6113799003|31052699007|56012099006|10067099003|5063699009|6133799003|19002099009|55112099003|8096899003|4143699003|18002099003|22082099003|16102099003|4053099003;
-X-Forefront-Antispam-Report:
- CIP:2001:db8:ffff::10;CTRY:;LANG:nl;SCL:5;SRV:;IPV:NLI;SFV:SPM;H:AM0PR02CU008.outbound.protection.outlook.com;PTR:mail-westeuropeazlp170130006.outbound.protection.outlook.com;CAT:SPOOF;SFS:(13230040)(35042699022)(39142699007)(6073799003)(6049299003)(6113799003)(31052699007)(56012099006)(10067099003)(5063699009)(6133799003)(19002099009)(55112099003)(8096899003)(4143699003)(18002099003)(22082099003)(16102099003)(4053099003);DIR:INB;
+X-Microsoft-Antispam: BCL:0;ARA:13230040|35042699022|39142699007;
+X-Forefront-Antispam-Report: CIP:2001:db8:ffff::10;CTRY:NL;LANG:nl;SCL:5;SRV:;IPV:NLI;SFV:SPM;H:AM0PR02CU008.outbound.protection.outlook.com;PTR:mail-westeuropeazlp.example.invalid;CAT:SPOOF;SFS:(13230040)(35042699022)(39142699007);DIR:INB;
+X-Message-Delivery: Vj0xLjE7dXM9MDtsPTA7YT0wO0Q9MjtHRD0xO1NDTD01
 X-MS-Exchange-CrossTenant-OriginalArrivalTime: 24 Jul 2026 19:21:39.0804
  (UTC)
 X-MS-Exchange-CrossTenant-Network-Message-Id: 00000000-0000-4000-8000-000000000001
@@ -166,8 +164,7 @@ X-MS-Exchange-Transport-CrossTenantHeadersStamped: GV2P189MB2504
 X-MS-Exchange-Transport-EndToEndLatency: 00:00:08.2500000
 X-MS-Exchange-Processed-By-BccFoldering: 15.21.0339.004
 X-MS-Exchange-ExternalInOutlookResult: NotEnabled
-X-Microsoft-Antispam-Mailbox-Delivery:
-	ucf:0;jmr:0;auth:0;dest:J;ENG:(910005)(944506478)(944626604)(920097)(930201)(20251009189)(140003)(1420198);
+X-Microsoft-Antispam-Mailbox-Delivery: ucf:0;jmr:0;ex:0;auth:0;dest:J;OFR:SpamFilterAuthJ;ENG:(5062000308)(90000117)(90005022)(91005020)(91035115)(9050020)(9100341);RF:JunkEmail;
 X-Microsoft-Antispam-Message-Info:
 	=?us-ascii?Q?0v9TjjRIKE22f75vdtnXGvA1DM1jry24qCHh90WhUzWdZeDT1nSY3Li+R/qk?=
  =?us-ascii?Q?Fy7ma9laEG4x7B3eXlIczLkAoBFv4zVtEvt5K7pipXUUkbph1VC3Vu8v922/?=

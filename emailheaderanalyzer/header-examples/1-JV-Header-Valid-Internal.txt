@@ -13,8 +13,8 @@ Received: from DU4P194MB2969.EURP194.PROD.OUTLOOK.COM (2001:db8:11::7)
  Wed, 5 Aug 2026 10:17:46 +0000
 From: Business | Justin Verstijnen <info@justinverstijnen.nl>
 To: Reports | Justin Verstijnen <reports@justinverstijnen.nl>
-Subject: Interne testmail
-Thread-Topic: Interne testmail
+Subject: Just testing
+Thread-Topic: Just testing
 Thread-Index: AQHJVInternalExample20260805AAAAAA==
 Date: Wed, 5 Aug 2026 10:17:42 +0000
 Message-ID:
@@ -25,13 +25,11 @@ MIME-Version: 1.0
 Content-Type: multipart/alternative;
  boundary="_000_JV_INTERNAL_EXAMPLE_20260805_101742_"
 Return-Path: info@justinverstijnen.nl
-
 Authentication-Results:
  spf=none (sender IP is internal) smtp.mailfrom=justinverstijnen.nl;
  dkim=none (message not signed) header.d=none;
  dmarc=none action=none header.from=justinverstijnen.nl;
  compauth=pass
-
 X-MS-Exchange-Organization-AuthSource:
  AMBPR09MB8182.EURP09.PROD.OUTLOOK.COM
 X-MS-Exchange-Organization-AuthAs: Internal
@@ -49,21 +47,14 @@ X-MS-Office365-Filtering-Correlation-Id:
  11111111-2222-4333-8444-555555555555
 X-MS-Exchange-Transport-EndToEndLatency: 00:00:04.1250000
 X-MS-Exchange-Processed-By-BccFoldering: 15.21.0339.004
-
 X-Microsoft-Antispam-Untrusted:
  BCL:0;
-X-Forefront-Antispam-Report:
- CIP:255.255.255.255;CTRY:;LANG:nl;SCL:-1;SRV:;IPV:NLI;
- SFV:SFE;H:AMBPR09MB8182.EURP09.PROD.OUTLOOK.COM;PTR:;
- CAT:NONE;
-X-Microsoft-Antispam:
- BCL:0;
-X-Microsoft-Antispam-Mailbox-Delivery:
- wl:1;pcwl:1;ucf:0;jmr:0;auth:1;dest:I;
- ENG:(910005)(944506478)(944626604)(920097)(930201)(140003);
+X-Forefront-Antispam-Report: CIP:255.255.255.255;CTRY:;LANG:nl;SCL:-1;SRV:;IPV:NLI;SFV:SKN;H:AMBPR09MB8182.EURP09.PROD.OUTLOOK.COM;PTR:;CAT:NONE;SFS:;DIR:OUT;
+X-Microsoft-Antispam: BCL:0;ARA:13230040|35042699022|39142699007;
+X-Microsoft-Antispam-Mailbox-Delivery: ucf:0;jmr:0;ex:0;auth:1;dest:I;ENG:(910005)(944506478)(944626604)(920097)(930201)(140003);
 X-Microsoft-Antispam-Message-Info:
  =?us-ascii?Q?JVInternalSyntheticHeaderForTrainingOnly1234567890?=
-
 X-MS-Exchange-Transport-CrossTenantHeadersStamped: DU4P194MB2969
 X-MS-Exchange-ExternalInOutlookResult: NotEnabled
 X-MS-Exchange-AtpMessageProperties: SA|SL
+X-Message-Delivery: Vj0xLjE7dXM9MDtsPTA7YT0wO0Q9MjtHRD0xO1NDTD0tMQ==
