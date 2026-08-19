@@ -1,6 +1,6 @@
 # Mail Header Analyzer
 
-Static, client-side Mail Header Analyzer in the same visual style as DNS MEGAtool.
+Static, client-side Mail Header Analyzer tool.
 
 ## Features
 
