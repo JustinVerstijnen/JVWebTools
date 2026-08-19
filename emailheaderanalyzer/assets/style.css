@@ -447,7 +447,7 @@ td {
 }
 
 th {
-    text-align: center;
+    text-align: left;
 }
 
 tbody tr:nth-child(even):not(.row-success):not(.row-warning):not(.row-error):not(.row-info) {
@@ -519,7 +519,7 @@ tbody tr.row-info:nth-child(even) {
 }
 
 .status-cell {
-    text-align: right;
+    text-align: left;
 }
 
 .status-icon {
@@ -562,7 +562,7 @@ tbody tr.row-info:nth-child(even) {
 .status-result {
     display: inline-flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: flex-start;
     gap: 8px;
     white-space: nowrap;
 }
@@ -574,7 +574,7 @@ tbody tr.row-info:nth-child(even) {
 #authTable th:last-child,
 #authTable td:last-child {
     width: 82px;
-    text-align: right;
+    text-align: left;
 }
 
 #authTable th:first-child,
@@ -600,7 +600,7 @@ tbody tr.row-info:nth-child(even) {
 .antispam-table th:last-child,
 .antispam-table td:last-child {
     width: 120px;
-    text-align: right;
+    text-align: left;
 }
 
 .antispam-table .antispam-details {
@@ -711,7 +711,7 @@ summary {
 #authTable th:last-child,
 #authTable td:last-child {
     width: 120px;
-    text-align: right;
+    text-align: left;
 }
 
 #authTable .auth-check {
@@ -779,7 +779,7 @@ summary {
 /* Combined anti-spam report */
 .antispam-group-row th {
     padding: 10px 12px;
-    text-align: center !important;
+    text-align: left !important;
     background: #eef1f4;
     color: #374151;
     font-size: 13px;
@@ -790,7 +790,7 @@ summary {
 .antispam-empty-row td,
 .advanced-empty-row td {
     padding: 18px 12px;
-    text-align: center;
+    text-align: left;
     vertical-align: middle;
     color: #6b7280;
     background: #fafafa;
@@ -866,7 +866,7 @@ summary {
 /* Collapsible technical anti-spam rows */
 .antispam-technical-toggle-row td {
     padding: 0;
-    text-align: center;
+    text-align: left;
     background: #fafafa;
     border-top: 1px solid #e5e7eb;
 }
@@ -900,7 +900,7 @@ summary {
 
 .antispam-technical-subheading th {
     padding: 8px 12px;
-    text-align: center !important;
+    text-align: left !important;
     background: #f7f8fa;
     color: #6b7280;
     font-size: 12px;

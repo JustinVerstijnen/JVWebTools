@@ -1517,16 +1517,16 @@ th{background:#f2f2f2}.row-success{background:#eef8f1}.row-warning{background:#f
 <body><div class="wrap">
 <h1>Mail Header Analysis</h1>
 <p><strong>Generated:</strong> ${escapeHtml(analysis.generatedAt)}</p>
-<h2>1. Email summary</h2><p class="sub">Key message details, delivery time and the overall filtering result at a glance.</p>
+<h2>1. Email summary</h2><p class="sub">Key message details, delivery time, spam filtering actions and possible spoofing results at a glance.</p>
 ${tableHtml("", ["Header", "Value"], [
     analysis.summary.delivery ? ["Delivery", `${analysis.summary.delivery.title} — ${analysis.summary.delivery.detail}${analysis.summary.delivery.technical ? ` · ${analysis.summary.delivery.technical}` : ""}`] : null,
     analysis.summary.spam ? ["Spam filtering", `${analysis.summary.spam.title} — ${analysis.summary.spam.detail}${analysis.summary.spam.technical ? ` · ${analysis.summary.spam.technical}` : ""}`] : null,
     ...analysis.summary.rows.map((row) => [row.label, `${row.value || ""}${row.technical ? ` · ${row.technicalLabel || "Technical"}: ${row.technical}` : ""}`])
 ].filter(Boolean))}
 <div class="found-problems found-problems-${findingsLevel}"><strong>Found problems</strong>${findingsHtml}</div>
-<h2>2. Authentication checks</h2><p class="sub">SPF, DKIM, DMARC, ARC and Microsoft authentication checks.</p>
+<h2>2. Authentication checks</h2><p class="sub">SPF, DKIM, DMARC, ARC and Microsoft authentication checks that helps you verify who sent the message and using which protocols.</p>
 ${tableHtml("", ["Check", "Details", "Status"], analysis.auth.map((row) => [row.check, row.details, row.status]))}
-<h2>3. Email route</h2><p class="sub">The mail servers that handled the message and when each delivery step took place.</p>
+<h2>3. Email route</h2><p class="sub">The mail servers/hops that handled the message and when each delivery step took place, explaining the full route of your message.</p>
 ${tableHtml("", ["Submitting host", "Receiving host", "Time"], analysis.received.length ? analysis.received.map((row) => [removeIpv6Addresses(row.from), removeIpv6Addresses(row.by), row.date]) : [["", MISSING_HEADER_INFO, ""]])}
 <h2>4. Anti-spam</h2><p class="sub">Microsoft spam, bulk-mail and filtering verdicts in one overview.</p>
 ${tableHtml("", ["Field", "Details", "Status"], antiSpamRows)}
