@@ -364,12 +364,15 @@
         const date = firstValue(byName, "Date");
         const subject = firstValue(byName, "Subject");
         const messageId = firstValue(byName, "Message-ID");
+        const returnPath = firstValue(byName, "Return-Path");
+        const from = firstValue(byName, "From");
+        const spoofingWarning = buildReturnPathFromComparison(returnPath, from);
         const rows = [
             { label: "Subject", value: subject, url: summaryLinks.Subject, technicalLabel: "Message ID", technical: messageId },
             { label: "Creation time", value: date, url: summaryLinks["Creation time"] },
             { label: "Delivery time", value: metrics.totalDelivery, url: summaryLinks["Creation time"] },
-            { label: "Return-Path", value: firstValue(byName, "Return-Path"), url: summaryLinks["Return-Path"] },
-            { label: "From", value: firstValue(byName, "From"), url: summaryLinks.From },
+            { label: "Return-Path", value: returnPath, url: summaryLinks["Return-Path"], status: spoofingWarning ? "error" : "", technicalLabel: "Warning", technical: spoofingWarning ? spoofingWarning.text : "" },
+            { label: "From", value: from, url: summaryLinks.From, status: spoofingWarning ? "error" : "", technicalLabel: "Warning", technical: spoofingWarning ? spoofingWarning.text : "" },
             { label: "To", value: firstValue(byName, "To"), url: summaryLinks.To }
         ].filter((row) => row.value || row.technical);
 
@@ -378,6 +381,25 @@
             delivery: buildDeliverySummary(byName),
             spam: buildSpamSummary(byName)
         };
+    }
+
+    function buildReturnPathFromComparison(returnPathValue, fromValue) {
+        const returnPathEmail = extractEmailAddress(returnPathValue);
+        const fromEmail = extractEmailAddress(fromValue);
+        if (!returnPathEmail || !fromEmail) return null;
+        if (returnPathEmail.toLowerCase() === fromEmail.toLowerCase()) return null;
+        return {
+            level: "error",
+            text: "Return-Path and From email addresses do not match; possible spoofing.",
+            technical: `Return-Path: ${returnPathEmail} · From: ${fromEmail}`
+        };
+    }
+
+    function extractEmailAddress(value) {
+        const text = String(value || "").trim();
+        const angleMatch = text.match(/<\s*([^<>\s]+@[^<>\s]+)\s*>/);
+        const email = angleMatch ? angleMatch[1] : (text.match(/[^\s<>"'(),;:]+@[^\s<>"'(),;:]+/) || [])[0];
+        return email ? email.replace(/^mailto:/i, "").replace(/[.]+$/, "") : "";
     }
 
     function buildAntispamTables(byName) {
@@ -561,7 +583,7 @@
 
         if (cat && cat !== "NONE" && categoryVerdicts[cat]) {
             const [level, title, detail] = categoryVerdicts[cat];
-            return { level, title, detail: `${detail} (${context})` };
+            return { level, title, detail, technical: context };
         }
 
         const sfvVerdicts = {
@@ -579,14 +601,15 @@
 
         if (sfvVerdicts[sfv]) {
             const [level, title, detail] = sfvVerdicts[sfv];
-            return { level, title, detail: `${detail} (${context})` };
+            return { level, title, detail, technical: context };
         }
 
         if (cat === "NONE") {
             return {
                 level: "success",
                 title: "No Microsoft Threat Category",
-                detail: `Microsoft reported CAT:NONE; no documented threat category was applied.${context ? ` (${context})` : ""}`
+                detail: "Microsoft reported CAT:NONE; no documented threat category was applied.",
+                technical: context
             };
         }
 
@@ -594,7 +617,8 @@
             return {
                 level: "info",
                 title: "Microsoft Filtering Result",
-                detail: `Filtering headers were found, but this tool does not map the result to spam without a documented spam/threat verdict.${context ? ` (${context})` : ""}`
+                detail: "Filtering headers were found, but this tool does not map the result to spam without a documented spam/threat verdict.",
+                technical: context
             };
         }
 
@@ -1021,9 +1045,13 @@
         const warnRows = findingAuth.filter((row) => ["softfail", "temperror", "neutral", "none", "unknown"].includes(row.status));
         const longDelays = received.filter((row) => !Number.isNaN(row.delayMs) && row.delayMs > 5 * 60 * 1000);
         const negativeDelays = received.filter((row) => !Number.isNaN(row.delayMs) && row.delayMs < 0);
+        const identityComparison = buildReturnPathFromComparison(firstValue(byName, "Return-Path"), firstValue(byName, "From"));
 
         if (failRows.length) {
             findings.push({ level: "error", text: `${failRows.map((row) => row.check).join(", ")} returned a fail result. Check spoofing, forwarding or DNS policy.` });
+        }
+        if (identityComparison) {
+            findings.push({ level: identityComparison.level, text: `${identityComparison.text} ${identityComparison.technical}` });
         }
         if (warnRows.length) {
             findings.push({ level: "warning", text: `${warnRows.map((row) => row.check).join(", ")} is unknown or inconclusive. Interpret this together with the receiving system headers.` });
@@ -1096,7 +1124,7 @@
         `).join("");
 
         const headerRows = summary.rows.map((row) => `
-            <tr>
+            <tr${row.status ? ` class="${rowClass(row.status)}"` : ""}>
                 <td><a class="summary-link" href="${escapeHtml(row.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.label)}</a></td>
                 <td>
                     ${row.value ? `<div>${escapeHtml(row.value)}</div>` : ""}
