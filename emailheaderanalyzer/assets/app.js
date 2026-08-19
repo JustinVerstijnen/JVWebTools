@@ -14,6 +14,7 @@
     const resultsSection = document.getElementById("resultsSection");
 
     let lastAnalysis = null;
+    const MISSING_HEADER_INFO = "This information is not included in the header.";
 
     const summaryHeaders = [
         "Subject", "Message-ID", "Archived-At", "Date", "From", "Reply-To", "To", "CC", "Return-Path"
@@ -49,7 +50,9 @@
         "HELO/EHLO String",
         "Spam Rules",
         "Direction",
-        "Additional Rule IDs"
+        "Additional Rule IDs",
+        "PTR Record",
+        "Source header"
     ]);
 
     window.addEventListener("load", () => {
@@ -503,8 +506,8 @@
             level: "info",
             badge: "Unknown",
             title: "Delivery destination not recorded",
-            detail: "This header does not contain a mailbox-delivery field that proves whether the message ended up in Inbox or Junk / Spam.",
-            technical: "No supported mailbox destination header found."
+            detail: MISSING_HEADER_INFO,
+            technical: MISSING_HEADER_INFO
         };
     }
 
@@ -514,8 +517,8 @@
             return {
                 level: "info",
                 title: "Spam verdict not recorded",
-                detail: "This header does not contain an X-Forefront-Antispam-Report verdict that proves whether Microsoft marked the message as spam or non-spam.",
-                technical: "No X-Forefront-Antispam-Report verdict found."
+                detail: MISSING_HEADER_INFO,
+                technical: MISSING_HEADER_INFO
             };
         }
 
@@ -802,8 +805,8 @@
             check: label,
             status: "unknown",
             result: "Not found",
-            description: "No result was found in the pasted headers.",
-            details: "Not found in the pasted headers.",
+            description: MISSING_HEADER_INFO,
+            details: MISSING_HEADER_INFO,
             source: fallbackSource
         };
     }
@@ -1102,7 +1105,7 @@
             </tr>
         `).join("");
 
-        const tableRows = statusHtml + headerRows || `<tr class="row-warning"><td colspan="2">No summary headers found.</td></tr>`;
+        const tableRows = statusHtml + headerRows || `<tr class="row-warning"><td colspan="2">${MISSING_HEADER_INFO}</td></tr>`;
 
         messageSummary.innerHTML = `
             <div class="table-wrapper">
@@ -1147,7 +1150,7 @@
         const tbody = document.querySelector("#receivedTable tbody");
         tbody.innerHTML = "";
         if (!rows.length) {
-            tbody.innerHTML = `<tr class="row-warning"><td colspan="3">No Received headers found.</td></tr>`;
+            tbody.innerHTML = `<tr class="row-warning"><td colspan="3">${MISSING_HEADER_INFO}</td></tr>`;
             return;
         }
         rows.forEach((row) => {
@@ -1168,9 +1171,9 @@
 
         const technicalRows = [];
 
-        const groups = [
-            { title: "Forefront Antispam Report", rows: antispam && antispam.forefront ? antispam.forefront : [] },
-            { title: "Microsoft Antispam Header", rows: antispam && antispam.microsoft ? antispam.microsoft : [] }
+        const rowGroups = [
+            antispam && antispam.forefront ? antispam.forefront : [],
+            antispam && antispam.microsoft ? antispam.microsoft : []
         ];
 
         function appendAntispamRow(row, extraClass = "") {
@@ -1189,28 +1192,23 @@
             return tr;
         }
 
-        groups.forEach((group) => {
-            const groupRow = document.createElement("tr");
-            groupRow.className = "antispam-group-row";
-            groupRow.innerHTML = `<th colspan="3" scope="rowgroup">${escapeHtml(group.title)}</th>`;
-            tbody.appendChild(groupRow);
-
-            if (!group.rows.length) {
-                const emptyRow = document.createElement("tr");
-                emptyRow.className = "antispam-empty-row";
-                emptyRow.innerHTML = `<td colspan="3">Not found in this header.</td>`;
-                tbody.appendChild(emptyRow);
-                return;
-            }
-
-            group.rows.forEach((row) => {
+        rowGroups.forEach((rows) => {
+            rows.forEach((row) => {
                 if (technicalAntispamLabels.has(row.label)) {
-                    technicalRows.push({ ...row, groupTitle: group.title });
+                    technicalRows.push(row);
                     return;
                 }
                 appendAntispamRow(row);
             });
         });
+
+        if (!tbody.children.length && !technicalRows.length) {
+            const emptyRow = document.createElement("tr");
+            emptyRow.className = "antispam-empty-row";
+            emptyRow.innerHTML = `<td colspan="3">${MISSING_HEADER_INFO}</td>`;
+            tbody.appendChild(emptyRow);
+            return;
+        }
 
         if (technicalRows.length) {
             const toggleRow = document.createElement("tr");
@@ -1225,16 +1223,7 @@
             `;
             tbody.appendChild(toggleRow);
 
-            let previousGroup = "";
             technicalRows.forEach((row) => {
-                if (row.groupTitle !== previousGroup) {
-                    const subheading = document.createElement("tr");
-                    subheading.className = "antispam-technical-row antispam-technical-subheading";
-                    subheading.hidden = true;
-                    subheading.innerHTML = `<th colspan="3" scope="rowgroup">${escapeHtml(row.groupTitle)}</th>`;
-                    tbody.appendChild(subheading);
-                    previousGroup = row.groupTitle;
-                }
                 const tr = appendAntispamRow(row, "antispam-technical-row");
                 tr.hidden = true;
             });
@@ -1258,7 +1247,7 @@
         const tbody = document.querySelector("#advancedTable tbody");
         tbody.innerHTML = "";
         if (!rows || !rows.length) {
-            tbody.innerHTML = `<tr class="advanced-empty-row"><td colspan="2">Not found in this header.</td></tr>`;
+            tbody.innerHTML = `<tr class="advanced-empty-row"><td colspan="2">${MISSING_HEADER_INFO}</td></tr>`;
             return;
         }
         rows.forEach((row) => {
@@ -1402,28 +1391,22 @@
         if (analysis.received.length) {
             analysis.received.forEach((row) => lines.push(`- ${row.from} -> ${row.by}; ${row.date}`));
         } else {
-            lines.push("- Not found in this header.");
+            lines.push(`- ${MISSING_HEADER_INFO}`);
         }
         lines.push("");
 
         lines.push("4. Anti-spam");
         const visibleForefront = analysis.antispam.forefront.filter((row) => !technicalAntispamLabels.has(row.label));
         const visibleMicrosoft = analysis.antispam.microsoft.filter((row) => !technicalAntispamLabels.has(row.label));
+        const visibleAntispam = [...visibleForefront, ...visibleMicrosoft];
         const technicalAntispam = [
             ...analysis.antispam.forefront.filter((row) => technicalAntispamLabels.has(row.label)),
             ...analysis.antispam.microsoft.filter((row) => technicalAntispamLabels.has(row.label))
         ];
-        lines.push("Forefront Antispam Report:");
-        if (analysis.antispam.forefront.length) {
-            visibleForefront.forEach((row) => lines.push(`- ${row.label}: ${row.display || row.value}`));
-        } else {
-            lines.push("- Not found in this header.");
-        }
-        lines.push("Microsoft Antispam Header:");
-        if (analysis.antispam.microsoft.length) {
-            visibleMicrosoft.forEach((row) => lines.push(`- ${row.label}: ${row.display || row.value}`));
-        } else {
-            lines.push("- Not found in this header.");
+        if (visibleAntispam.length) {
+            visibleAntispam.forEach((row) => lines.push(`- ${row.label}: ${row.display || row.value}`));
+        } else if (!technicalAntispam.length) {
+            lines.push(`- ${MISSING_HEADER_INFO}`);
         }
         if (technicalAntispam.length) {
             lines.push("Technical anti-spam details:");
@@ -1435,7 +1418,7 @@
         if (analysis.advanced.length) {
             analysis.advanced.forEach((row) => lines.push(`- ${row.name}: ${row.value}`));
         } else {
-            lines.push("- Not found in this header.");
+            lines.push(`- ${MISSING_HEADER_INFO}`);
         }
         return lines.join("\n");
     }
@@ -1458,21 +1441,15 @@
         const antiSpamRows = [];
         const visibleForefront = analysis.antispam.forefront.filter((row) => !technicalAntispamLabels.has(row.label));
         const visibleMicrosoft = analysis.antispam.microsoft.filter((row) => !technicalAntispamLabels.has(row.label));
+        const visibleAntispam = [...visibleForefront, ...visibleMicrosoft];
         const technicalAntispam = [
             ...analysis.antispam.forefront.filter((row) => technicalAntispamLabels.has(row.label)),
             ...analysis.antispam.microsoft.filter((row) => technicalAntispamLabels.has(row.label))
         ];
-        antiSpamRows.push(["Forefront Antispam Report", "", ""]);
-        if (analysis.antispam.forefront.length) {
-            visibleForefront.forEach((row) => antiSpamRows.push([row.label, row.display || row.value, row.status || "info"]));
-        } else {
-            antiSpamRows.push(["", "Not found in this header.", ""]);
-        }
-        antiSpamRows.push(["Microsoft Antispam Header", "", ""]);
-        if (analysis.antispam.microsoft.length) {
-            visibleMicrosoft.forEach((row) => antiSpamRows.push([row.label, row.display || row.value, row.status || "info"]));
-        } else {
-            antiSpamRows.push(["", "Not found in this header.", ""]);
+        if (visibleAntispam.length) {
+            visibleAntispam.forEach((row) => antiSpamRows.push([row.label, row.display || row.value, row.status || "info"]));
+        } else if (!technicalAntispam.length) {
+            antiSpamRows.push(["", MISSING_HEADER_INFO, ""]);
         }
         if (technicalAntispam.length) {
             antiSpamRows.push(["Technical anti-spam details", "", ""]);
@@ -1505,11 +1482,11 @@ ${tableHtml("", ["Header", "Value"], [
 <h2>2. Authentication checks</h2><p class="sub">SPF, DKIM, DMARC, ARC and Microsoft authentication checks.</p>
 ${tableHtml("", ["Check", "Details", "Status"], analysis.auth.map((row) => [row.check, row.details, row.status]))}
 <h2>3. Email route</h2><p class="sub">The mail servers that handled the message and when each delivery step took place.</p>
-${tableHtml("", ["Submitting host", "Receiving host", "Time"], analysis.received.length ? analysis.received.map((row) => [removeIpv6Addresses(row.from), removeIpv6Addresses(row.by), row.date]) : [["", "Not found in this header.", ""]])}
+${tableHtml("", ["Submitting host", "Receiving host", "Time"], analysis.received.length ? analysis.received.map((row) => [removeIpv6Addresses(row.from), removeIpv6Addresses(row.by), row.date]) : [["", MISSING_HEADER_INFO, ""]])}
 <h2>4. Anti-spam</h2><p class="sub">Microsoft spam, bulk-mail and filtering verdicts in one overview.</p>
 ${tableHtml("", ["Field", "Details", "Status"], antiSpamRows)}
 <h2>5. Advanced details</h2><p class="sub">Additional security, transport and message headers.</p>
-${tableHtml("", ["Header", "Value"], analysis.advanced.length ? analysis.advanced.map((row) => [row.name, row.value]) : [["Not found in this header.", ""]])}
+${tableHtml("", ["Header", "Value"], analysis.advanced.length ? analysis.advanced.map((row) => [row.name, row.value]) : [[MISSING_HEADER_INFO, ""]])}
 </div></body></html>`;
     }
 
