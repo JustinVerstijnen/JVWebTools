@@ -313,8 +313,27 @@ button svg {
     gap: 8px;
 }
 
+.analysis-box strong {
+    display: block;
+}
+
 .analysis-box p {
     margin: 0;
+}
+
+.analysis-box-success {
+    background-color: #eef8f1;
+    border-color: #b7dfc2;
+}
+
+.analysis-box-warning {
+    background-color: #fff7e6;
+    border-color: #ffe0a3;
+}
+
+.analysis-box-error {
+    background-color: #fdeeee;
+    border-color: #f2b8b8;
 }
 
 .message-summary {

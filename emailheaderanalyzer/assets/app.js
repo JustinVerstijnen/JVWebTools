@@ -1147,10 +1147,15 @@
 
     function renderFindings(findings) {
         const analysisBox = document.getElementById("analysisBox");
-        analysisBox.hidden = !findings.length;
-        analysisBox.innerHTML = findings.map((finding) => `
-            <p><span class="badge ${badgeClass(finding.level)}">${escapeHtml(finding.level)}</span> ${escapeHtml(finding.text)}</p>
-        `).join("");
+        const level = findings.some((finding) => finding.level === "error") ? "error" : findings.length ? "warning" : "success";
+        analysisBox.hidden = false;
+        analysisBox.className = `analysis-box analysis-box-${level}`;
+        analysisBox.innerHTML = `
+            <strong>Found problems</strong>
+            ${findings.length
+                ? findings.map((finding) => `<p><span class="badge ${badgeClass(finding.level)}">${escapeHtml(finding.level)}</span> ${escapeHtml(finding.text)}</p>`).join("")
+                : "<p>No problems found.</p>"}
+        `;
     }
 
     function renderAuth(rows) {
@@ -1408,7 +1413,12 @@
             lines.push(`- ${row.label}: ${row.value || ""}`);
             if (row.technical) lines.push(`  ${row.technicalLabel || "Technical"}: ${row.technical}`);
         });
-        analysis.findings.forEach((finding) => lines.push(`- ${finding.level}: ${finding.text}`));
+        lines.push("Found problems");
+        if (analysis.findings.length) {
+            analysis.findings.forEach((finding) => lines.push(`- ${finding.level}: ${finding.text}`));
+        } else {
+            lines.push("- No problems found.");
+        }
         lines.push("");
 
         lines.push("2. Authentication checks");
@@ -1467,6 +1477,10 @@
 
     function buildHtmlExport(analysis) {
         const antiSpamRows = [];
+        const findingsLevel = analysis.findings.some((finding) => finding.level === "error") ? "error" : analysis.findings.length ? "warning" : "success";
+        const findingsHtml = analysis.findings.length
+            ? analysis.findings.map((finding) => `<p><strong>${escapeHtml(finding.level)}:</strong> ${escapeHtml(finding.text)}</p>`).join("")
+            : "<p>No problems found.</p>";
         const visibleForefront = analysis.antispam.forefront.filter((row) => !technicalAntispamLabels.has(row.label));
         const visibleMicrosoft = analysis.antispam.microsoft.filter((row) => !technicalAntispamLabels.has(row.label));
         const visibleAntispam = [...visibleForefront, ...visibleMicrosoft];
@@ -1496,6 +1510,8 @@ h2{text-align:center;margin:34px 0 4px}.sub{text-align:center;color:#666;margin:
 table{width:100%;border-collapse:collapse;margin:12px 0;table-layout:fixed}
 th,td{border:1px solid #ddd;padding:9px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
 th{background:#f2f2f2}.row-success{background:#eef8f1}.row-warning{background:#fff7e6}.row-error{background:#fdeeee}
+.found-problems{border:1px solid #ddd;border-radius:6px;padding:12px;margin:12px 0 20px}.found-problems p{margin:6px 0 0}
+.found-problems-success{background:#eef8f1;border-color:#b7dfc2}.found-problems-warning{background:#fff7e6;border-color:#ffe0a3}.found-problems-error{background:#fdeeee;border-color:#f2b8b8}
 </style>
 </head>
 <body><div class="wrap">
@@ -1507,6 +1523,7 @@ ${tableHtml("", ["Header", "Value"], [
     analysis.summary.spam ? ["Spam filtering", `${analysis.summary.spam.title} — ${analysis.summary.spam.detail}${analysis.summary.spam.technical ? ` · ${analysis.summary.spam.technical}` : ""}`] : null,
     ...analysis.summary.rows.map((row) => [row.label, `${row.value || ""}${row.technical ? ` · ${row.technicalLabel || "Technical"}: ${row.technical}` : ""}`])
 ].filter(Boolean))}
+<div class="found-problems found-problems-${findingsLevel}"><strong>Found problems</strong>${findingsHtml}</div>
 <h2>2. Authentication checks</h2><p class="sub">SPF, DKIM, DMARC, ARC and Microsoft authentication checks.</p>
 ${tableHtml("", ["Check", "Details", "Status"], analysis.auth.map((row) => [row.check, row.details, row.status]))}
 <h2>3. Email route</h2><p class="sub">The mail servers that handled the message and when each delivery step took place.</p>
