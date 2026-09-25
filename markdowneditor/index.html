@@ -53,6 +53,7 @@
       </aside>
 
       <section class="workspace">
+        <div class="workspace-controls">
         <div class="workspace-head">
           <input id="projectName" type="text" placeholder="Post title / file name" />
           <div class="workspace-status">
@@ -84,6 +85,7 @@
           <button type="button" data-format="delete-block" title="Remove block" aria-label="Remove block"><i class="fa-solid fa-trash-can"></i> Remove block</button>
         </div>
 
+        </div>
         <div class="workspace-body">
           <article id="visualEditor" class="visual-editor" contenteditable="true" spellcheck="true" aria-label="Editable document"></article>
           <div id="markdownCodeShell" class="code-editor-shell">
@@ -189,9 +191,10 @@
   <div class="modal-panel" id="sourcesPanel" role="dialog" aria-label="Sources">
     <div class="modal-card panel-animate">
       <h2>Sources 🕮</h2>
-      <p>Paste one URL per line. The editor creates a numbered list inside a Docsy info alert.</p>
-      <div class="field"><label for="sourcesLinks">Source links</label><textarea id="sourcesLinks" rows="7" spellcheck="false" placeholder="https://example.com/article&#10;https://example.com/documentation"></textarea></div>
-      <div class="field-help">Enter adds a new line. Ctrl+Enter (⌘+Enter on Mac) saves the sources.</div>
+      <p>Add a URL for each source. The editor creates a numbered list inside a Docsy info alert.</p>
+      <div id="sourcesLinks" class="sources-link-list"></div>
+      <div class="quiz-builder-actions"><button class="pill" id="addSourceBtn" type="button"><i class="fa-solid fa-plus"></i> Add source</button></div>
+      <div class="field-help">Ctrl+Enter (⌘+Enter on Mac) saves the sources.</div>
       <div class="panel-actions"><button class="pill" id="cancelSourcesBtn" type="button">Cancel</button><button class="pill primary" id="insertSourcesBtn" type="button">Insert sources</button></div>
     </div>
   </div>

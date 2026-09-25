@@ -121,6 +121,7 @@ const els = {
   insertDrawioBtn: document.getElementById("insertDrawioBtn"),
   sourcesPanel: document.getElementById("sourcesPanel"),
   sourcesLinks: document.getElementById("sourcesLinks"),
+  addSourceBtn: document.getElementById("addSourceBtn"),
   insertSourcesBtn: document.getElementById("insertSourcesBtn"),
   cancelSourcesBtn: document.getElementById("cancelSourcesBtn"),
   youtubePanel: document.getElementById("youtubePanel"),
@@ -1485,10 +1486,19 @@ function parseSourcesBody(body) {
 function openSourcesPanel(options = {}) {
   preparePanelInsertion(options, !!options.editCard);
   pendingSourcesEditCard = options.editCard || null;
-  els.sourcesLinks.value = options.editCard ? getSourcesLinks(options.editCard).join('\n') : '';
+  renderSourcesFields(options.editCard ? getSourcesLinks(options.editCard) : ['']);
   els.insertSourcesBtn.textContent = options.editCard ? 'Update sources' : 'Insert sources';
   els.sourcesPanel.classList.add('open');
-  setTimeout(() => els.sourcesLinks.focus(), 80);
+  setTimeout(() => els.sourcesLinks.querySelector('input')?.focus(), 80);
+}
+function renderSourcesFields(links) {
+  els.sourcesLinks.innerHTML = links.map((link, index) => `<div class="source-link-row">
+    <div class="field"><label for="sourceLink${index}">Source ${index + 1}</label><input id="sourceLink${index}" type="url" value="${escapeHtml(link)}" placeholder="https://example.com/article" spellcheck="false" /></div>
+    <button class="pill source-remove" type="button" aria-label="Remove source ${index + 1}" title="Remove source"><i class="fa-solid fa-trash-can"></i></button>
+  </div>`).join('');
+}
+function getSourcesFieldValues() {
+  return Array.from(els.sourcesLinks.querySelectorAll('input')).map(input => input.value.trim());
 }
 function closeSourcesPanel() {
   els.sourcesPanel.classList.remove('open');
@@ -1498,8 +1508,8 @@ function closeSourcesPanel() {
 }
 function saveSourcesFromPanel() {
   let links;
-  try { links = parseSourcesLinks(els.sourcesLinks.value); }
-  catch (error) { showToast(error.message); els.sourcesLinks.focus(); return; }
+  try { links = parseSourcesLinks(getSourcesFieldValues().join('\n')); }
+  catch (error) { showToast(error.message); els.sourcesLinks.querySelector('input')?.focus(); return; }
   const html = sourcesBlockHtml(links);
   els.sourcesPanel.classList.remove('open');
   if (pendingSourcesEditCard?.isConnected) {
@@ -2001,31 +2011,29 @@ function preToMarkdown(node) {
   const code = node.querySelector("code")?.textContent || node.textContent || "";
   return `\n\n\`\`\`\n${code.replace(/\n$/, "")}\n\`\`\`\n\n`;
 }
-function listToMarkdown(node, ordered, level = 0) {
+function listToMarkdown(node, ordered, indent = "") {
   const checklist = node.dataset.checklist === "true";
   const items = Array.from(node.children).filter(child => child.tagName.toLowerCase() === "li");
-  const indent = "\t".repeat(level);
   const lines = [];
 
   items.forEach((item, index) => {
-    const parts = [];
-    Array.from(item.childNodes).forEach(child => {
-      if (child.nodeType === Node.ELEMENT_NODE && ["ul", "ol"].includes(child.tagName.toLowerCase())) return;
-      if (child.nodeType === Node.ELEMENT_NODE && child.tagName.toLowerCase() === "input") return;
-      const part = nodesToMarkdown([child]).trim();
-      if (part) parts.push(part);
-    });
-    const content = parts.join(" ").replace(/\s+/g, " ").trim() || " ";
-    lines.push(`${indent}${ordered ? index + 1 + "." : "-"} ${checklist ? (item.querySelector(":scope > input")?.checked ? "[x] " : "[ ] ") : ""}${content}`.trimEnd());
+    const clone = item.cloneNode(true);
+    clone.querySelectorAll('ul, ol, input').forEach(child => child.remove());
+    const content = nodesToMarkdown(clone.childNodes).replace(/\s+/g, " ").trim();
+    const number = Number(node.getAttribute('start') || 1) + index;
+    const marker = ordered ? `${number}.` : '-';
+    lines.push(`${indent}${marker} ${checklist ? (item.querySelector(":scope > input")?.checked ? "[x] " : "[ ] ") : ""}${content}`.trimEnd());
 
-    Array.from(item.children).forEach(child => {
+    // Also accept lists wrapped in a div by contenteditable/pasted HTML.
+    Array.from(item.querySelectorAll('ul, ol')).filter(child => child.parentElement.closest('li') === item).forEach(child => {
       const tag = child.tagName.toLowerCase();
-      if (tag === "ul") lines.push(listToMarkdown(child, false, level + 1).trimEnd());
-      if (tag === "ol") lines.push(listToMarkdown(child, true, level + 1).trimEnd());
+      const childIndent = indent + ' '.repeat(Math.max(4, marker.length + 1));
+      lines.push(listToMarkdown(child, tag === 'ol', childIndent).trimEnd());
     });
   });
 
-  return `\n${lines.filter(Boolean).join("\n")}\n\n`;
+  const body = lines.join("\n");
+  return indent ? body : `\n${body}\n\n`;
 }
 function tableToMarkdown(table) {
   const rows = Array.from(table.querySelectorAll("tr"));
@@ -2090,12 +2098,12 @@ function getListLineInfo(rawLine = "") {
   if (!match) return null;
 
   const indentToken = match[1] || "";
-  const indentSpaces = Array.from(indentToken).reduce((total, char) => total + (char === "	" ? 2 : 1), 0);
-  const level = Math.min(2, Math.floor(indentSpaces / 2));
+  const indentSpaces = Array.from(indentToken).reduce((total, char) => char === "\t" ? total + 4 - total % 4 : total + 1, 0);
+  const level = indentSpaces;
   const ordered = Boolean(match[4]);
   const body = ordered ? (match[5] || "") : (match[3] || "");
 
-  return { level, ordered, body };
+  return { level, ordered, body, start: ordered ? Number(match[4]) : 1 };
 }
 
 function isMarkdownListLine(rawLine = "") {
@@ -2108,6 +2116,7 @@ function buildListHtml(lines, startIndex) {
 
   let index = startIndex;
   const root = document.createElement(first.ordered ? "ol" : "ul");
+  if (first.ordered && first.start !== 1) root.setAttribute('start', first.start);
   const stack = [{ list: root, level: first.level, ordered: first.ordered }];
   let currentLi = null;
 
@@ -2126,14 +2135,18 @@ function buildListHtml(lines, startIndex) {
     while (stack.length > 1 && info.level < stack[stack.length - 1].level) stack.pop();
 
     if (info.level > stack[stack.length - 1].level) {
-      if (!currentLi || info.level > 2) break;
+      currentLi = stack[stack.length - 1].list.lastElementChild;
+      if (!currentLi) break;
       const nested = document.createElement(info.ordered ? "ol" : "ul");
+      if (info.ordered && info.start !== 1) nested.setAttribute('start', info.start);
       currentLi.appendChild(nested);
       stack.push({ list: nested, level: info.level, ordered: info.ordered });
     } else if (info.ordered !== stack[stack.length - 1].ordered) {
-      const parentLi = stack[stack.length - 1].list.lastElementChild;
-      if (!parentLi) break;
+      if (stack.length === 1) break;
+      const previous = stack.pop();
+      const parentLi = previous.list.parentElement;
       const nested = document.createElement(info.ordered ? "ol" : "ul");
+      if (info.ordered && info.start !== 1) nested.setAttribute('start', info.start);
       parentLi.appendChild(nested);
       stack.push({ list: nested, level: info.level, ordered: info.ordered });
     }
@@ -2388,11 +2401,14 @@ function getPanelInsertionRange(options = {}) {
   return null;
 }
 function restoreSelection(options = {}) {
-  els.visualEditor.focus({ preventScroll: true });
-  const selection = window.getSelection();
+  // Focusing the outer editor first resets the caret in nested editing hosts.
   const currentRange = getCurrentEditorRange();
   const allowOldSelection = options.allowOldSelection !== false;
-  const range = currentRange || (allowOldSelection && hasFreshSavedRange() ? savedRange : createEndRange());
+  const range = (currentRange || (allowOldSelection && hasFreshSavedRange() ? savedRange : createEndRange())).cloneRange();
+  const container = range.startContainer.nodeType === Node.TEXT_NODE ? range.startContainer.parentElement : range.startContainer;
+  const host = container.closest?.('[contenteditable="true"]') || els.visualEditor;
+  host.focus({ preventScroll: true });
+  const selection = window.getSelection();
   selection.removeAllRanges();
   selection.addRange(range);
 }
@@ -4258,6 +4274,8 @@ function createLinkAtSelection(url) {
   return true;
 }
 async function handlePaste(event) {
+  // Native controls and code fields must keep their plain-text paste behavior.
+  if (event.target.closest?.('input, textarea, select, pre, .block-settings')) return;
   const source = getImageSourceFromClipboard(event);
   if ((source?.type === "file" && source.value) || (source?.type === "text" && /^data:image\//i.test(source.value))) {
     event.preventDefault();
@@ -4719,6 +4737,20 @@ els.insertDrawioBtn.addEventListener("click", saveDrawioFromPanel);
 els.drawioPanel.addEventListener("click", event => { if (event.target === els.drawioPanel) { els.drawioPanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingDrawioEditCard = null; els.insertDrawioBtn.textContent = "Insert draw.io"; } });
 els.drawioPanel.addEventListener("keydown", handlePanelKeydown);
 els.cancelSourcesBtn.addEventListener('click', closeSourcesPanel);
+els.addSourceBtn.addEventListener('click', () => {
+  renderSourcesFields([...getSourcesFieldValues(), '']);
+  els.sourcesLinks.querySelector('.source-link-row:last-child input')?.focus();
+});
+els.sourcesLinks.addEventListener('click', event => {
+  const button = event.target.closest('.source-remove');
+  if (!button) return;
+  const rows = Array.from(els.sourcesLinks.children);
+  const index = rows.indexOf(button.closest('.source-link-row'));
+  const links = getSourcesFieldValues();
+  links.splice(index, 1);
+  renderSourcesFields(links.length ? links : ['']);
+  els.sourcesLinks.querySelectorAll('input')[Math.min(index, els.sourcesLinks.children.length - 1)]?.focus();
+});
 els.insertSourcesBtn.addEventListener('click', saveSourcesFromPanel);
 els.sourcesPanel.addEventListener('click', event => { if (event.target === els.sourcesPanel) closeSourcesPanel(); });
 els.sourcesPanel.addEventListener('keydown', event => {
