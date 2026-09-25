@@ -1583,3 +1583,8 @@ select:hover,
   border-radius: 16px;
   background: #ffffff;
 }
+
+/* Docsy Sources */
+.sources-preview { padding: 14px 18px; overflow-wrap: anywhere; }
+.sources-preview p { margin-top: 0; }
+#sourcesLinks { min-height: 170px; }

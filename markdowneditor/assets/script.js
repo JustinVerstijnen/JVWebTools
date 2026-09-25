@@ -119,6 +119,10 @@ const els = {
   drawioEmbed: document.getElementById("drawioEmbed"),
   cancelDrawioBtn: document.getElementById("cancelDrawioBtn"),
   insertDrawioBtn: document.getElementById("insertDrawioBtn"),
+  sourcesPanel: document.getElementById("sourcesPanel"),
+  sourcesLinks: document.getElementById("sourcesLinks"),
+  insertSourcesBtn: document.getElementById("insertSourcesBtn"),
+  cancelSourcesBtn: document.getElementById("cancelSourcesBtn"),
   youtubePanel: document.getElementById("youtubePanel"),
   youtubeUrl: document.getElementById("youtubeUrl"),
   cancelYoutubeBtn: document.getElementById("cancelYoutubeBtn"),
@@ -191,6 +195,7 @@ let pendingGitHubButtonEditAnchor = null;
 let pendingImageEditFigure = null;
 let pendingTableEditTarget = null;
 let pendingDrawioEditCard = null;
+let pendingSourcesEditCard = null;
 let pendingYoutubeEditCard = null;
 let pendingIframeEditCard = null;
 let pendingQuizEditCard = null;
@@ -1350,15 +1355,16 @@ function getYouTubeEmbedSrc(value = DEFAULT_YOUTUBE_URL) {
 function buildYouTubeIframe(value = DEFAULT_YOUTUBE_URL) {
   const src = getYouTubeEmbedSrc(value);
   if (!src) return "";
-  return `<iframe
-width="960"
-height="540"
-src="${src}"
-title="JV video player"
-frameborder="0"
-allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-allowfullscreen>
-</iframe>`;
+  return `<div style="width: 100%; max-width: 960px; aspect-ratio: 16 / 9;">
+  <iframe
+    src="${src}"
+    title="JV video player"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    allowfullscreen
+    style="display: block; width: 100%; height: 100%; border: 0;">
+  </iframe>
+</div>`;
 }
 function isYouTubeHtml(html = "") {
   return /<iframe[\s\S]+(?:youtube(?:-nocookie)?\.com\/embed\/|youtu\.be\/)/i.test(String(html || ""));
@@ -1434,6 +1440,83 @@ function markdownFragmentToHtml(markdown) {
   if (!value) return "";
   return markdownToHtml(value).replace(/(?:<p><br><\/p>\s*)+$/i, "").trim();
 }
+
+const SOURCES_INTRO = "These sources helped me by writing and research for this post;";
+function parseSourcesLinks(value) {
+  const links = String(value || "").split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  if (!links.length) throw new Error("Paste at least one source URL, one per line");
+  links.forEach((link, index) => {
+    try {
+      const url = new URL(link);
+      if (!/^https?:$/.test(url.protocol) || /\s/.test(link)) throw new Error();
+    } catch { throw new Error('Enter a valid http or https URL on line ' + (index + 1)); }
+  });
+  return links;
+}
+function sourceMarkdownUrl(link) {
+  return link.replace(/[\\<>\[\]()]/g, character => '%' + character.charCodeAt(0).toString(16).toUpperCase());
+}
+function buildSourcesShortcode(links) {
+  return '{{% alert title="Sources 🕮" color="info" %}}\n' + SOURCES_INTRO + '\n\n'
+    + links.map((link, index) => (index + 1) + '. [' + sourceMarkdownUrl(link) + '](' + sourceMarkdownUrl(link) + ')').join('\n')
+    + '\n{{% /alert %}}';
+}
+function sourcesBlockHtml(links) {
+  return '<div class="sources-card editable-card alert-info" contenteditable="false">'
+    + '<div class="block-settings"><span><i class="fa-solid fa-book"></i> Sources 🕮</span></div>'
+    + '<div class="sources-preview"><p>' + SOURCES_INTRO + '</p><ol>'
+    + links.map(link => '<li><a href="' + escapeHtml(link) + '" target="_blank" rel="noreferrer">' + escapeHtml(link) + '</a></li>').join('')
+    + '</ol></div></div><p><br></p>';
+}
+function getSourcesLinks(card) {
+  return Array.from(card.querySelectorAll('.sources-preview li a')).map(link => link.getAttribute('href'));
+}
+function parseSourcesBody(body) {
+  const lines = body.trim().split(/\r?\n/).filter(line => line.trim());
+  if (lines.shift() !== SOURCES_INTRO || !lines.length) return null;
+  const links = [];
+  for (const line of lines) {
+    const match = line.match(/^\d+\\?\.\s+\[([^\]]+)\]\((https?:\/\/.*)\)$/);
+    if (!match || match[1] !== match[2]) return null;
+    links.push(match[2]);
+  }
+  try { return parseSourcesLinks(links.join('\n')); } catch { return null; }
+}
+function openSourcesPanel(options = {}) {
+  preparePanelInsertion(options, !!options.editCard);
+  pendingSourcesEditCard = options.editCard || null;
+  els.sourcesLinks.value = options.editCard ? getSourcesLinks(options.editCard).join('\n') : '';
+  els.insertSourcesBtn.textContent = options.editCard ? 'Update sources' : 'Insert sources';
+  els.sourcesPanel.classList.add('open');
+  setTimeout(() => els.sourcesLinks.focus(), 80);
+}
+function closeSourcesPanel() {
+  els.sourcesPanel.classList.remove('open');
+  clearPendingPanelInsertion();
+  pendingSourcesEditCard = null;
+  restoreSelection();
+}
+function saveSourcesFromPanel() {
+  let links;
+  try { links = parseSourcesLinks(els.sourcesLinks.value); }
+  catch (error) { showToast(error.message); els.sourcesLinks.focus(); return; }
+  const html = sourcesBlockHtml(links);
+  els.sourcesPanel.classList.remove('open');
+  if (pendingSourcesEditCard?.isConnected) {
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = html;
+    const card = wrapper.querySelector('.sources-card');
+    pendingSourcesEditCard.replaceWith(card);
+    normalizeEditorContent(card);
+    saveProject();
+  } else {
+    insertHtmlAtCursor(html, { ...pendingPanelInsertOptions, marker: pendingInsertMarker, anchorBlock: pendingInsertAnchorBlock });
+  }
+  clearPendingPanelInsertion();
+  pendingSourcesEditCard = null;
+  showToast('Sources saved');
+}
+
 function alertBlockHtml(kind = "markdown", color = "info", text = "", customTitle = "") {
   const normalizedColor = ALERTS.find(([value]) => value === color)?.[0] || "info";
   const label = ALERTS.find(([value]) => value === normalizedColor)?.[1] || "Info";
@@ -1587,6 +1670,7 @@ const blocks = [
   { id: "failure", command: "/failure", icon: "fa-circle-xmark", category: "Alerts", sidebar: false, name: "Failure", description: "Markdown failure alert", html: alertBlockHtml("markdown", "danger") },
   { id: "error", command: "/error", icon: "fa-circle-xmark", category: "Alerts", sidebar: false, name: "Error", description: "Markdown error alert", html: alertBlockHtml("markdown", "danger") },
   { id: "success", command: "/success", icon: "fa-circle-check", category: "Alerts", sidebar: true, name: "Success", description: "Markdown success alert", html: alertBlockHtml("markdown", "success") },
+  { id: "sources", command: "/sources", icon: "fa-book", category: "Docsy", sidebar: true, name: "Sources", description: "Numbered source links in a Docsy alert", action: "sources" },
   { id: "alertdocsy", command: "/alertdocsy", icon: "fa-bell", category: "Docsy", sidebar: true, name: "Docsy Alert", description: "Docsy alert shortcode", html: alertBlockHtml("docsy", "info") },
   { id: "infodocsy", command: "/infodocsy", icon: "fa-circle-info", category: "Docsy", sidebar: false, name: "Docsy Info", description: "Docsy info alert shortcode", html: alertBlockHtml("docsy", "info") },
   { id: "warningdocsy", command: "/warningdocsy", icon: "fa-triangle-exclamation", category: "Docsy", sidebar: false, name: "Docsy Warning", description: "Docsy warning alert shortcode", html: alertBlockHtml("docsy", "warning") },
@@ -1804,6 +1888,7 @@ function alertContentToMarkdown(alertBlock) {
 function nodeToMarkdown(node) {
   if (node.nodeType === Node.TEXT_NODE) return node.textContent.replace(/\u00a0/g, " ");
   if (node.nodeType !== Node.ELEMENT_NODE) return "";
+  if (node.matches(".sources-card")) return "\n\n" + buildSourcesShortcode(getSourcesLinks(node)) + "\n\n";
   if (node.matches(".quiz-card")) return `
 
 ${buildQuizShortcode(getQuizDataFromCard(node))}
@@ -2086,7 +2171,8 @@ function markdownToHtml(markdown) {
     const color = getShortcodeAttribute(attrs, "color") || "info";
     const title = getShortcodeAttribute(attrs, "title") || getDefaultDocsyAlertTitle(color);
     const token = `__TOKEN_${tokens.length}__`;
-    tokens.push(alertBlockHtml("docsy", color, body.trim(), title));
+    const sources = title === "Sources 🕮" && color === "info" ? parseSourcesBody(body) : null;
+    tokens.push(sources ? sourcesBlockHtml(sources) : alertBlockHtml("docsy", color, body.trim(), title));
     return token;
   });
   text = text.replace(/{{<\s*quiz\s*>}}([\s\S]*?){{<\s*\/quiz\s*>}}/g, (_, body) => {
@@ -2108,6 +2194,13 @@ function markdownToHtml(markdown) {
     const token = `__TOKEN_${tokens.length}__`;
     tokens.push(shortcodeCard("Docsy Shortcode", match.trim()));
     return token;
+  });
+  // Keep multiline YouTube embeds (including their responsive wrapper) together.
+  text = text.replace(/<div\b[^>]*>\s*<iframe\b[^>]*>[\s\S]*?<\/iframe>\s*<\/div>|<iframe\b[^>]*>[\s\S]*?<\/iframe>/gi, match => {
+    if (!isYouTubeHtml(match)) return match;
+    const token = `__TOKEN_${tokens.length}__`;
+    tokens.push(youtubeBlockHtml(match));
+    return '\n' + token + '\n';
   });
   const lines = text.split("\n");
   const html = [];
@@ -2398,6 +2491,7 @@ function insertBlock(blockId, options = {}) {
   if (block.action === "buttondocsy") { openButtonPanel(insertionOptions); return; }
   if (block.action === "buttondocsygithub") { openGitHubButtonPanel(insertionOptions); return; }
   if (block.action === "drawio") { openDrawioPanel(insertionOptions); return; }
+  if (block.action === "sources") { openSourcesPanel(insertionOptions); return; }
   if (block.action === "youtube") { openYoutubePanel(insertionOptions); return; }
   if (block.action === "iframe") { openIframePanel(insertionOptions); return; }
   if (block.action === "quiz") { openQuizPanel(insertionOptions); return; }
@@ -4482,6 +4576,10 @@ els.visualEditor.addEventListener("click", event => {
       openTablePanel({ editTable: block, anchorBlock: block, allowOldSelection: true });
       return;
     }
+    if (block?.matches?.(".sources-card")) {
+      openSourcesPanel({ editCard: block, anchorBlock: block, allowOldSelection: true });
+      return;
+    }
     if (block?.matches?.('.quiz-card[data-quiz="true"]')) {
       openQuizPanel({ editCard: block, anchorBlock: block, allowOldSelection: true });
       return;
@@ -4620,6 +4718,13 @@ els.cancelDrawioBtn.addEventListener("click", () => { els.drawioPanel.classList.
 els.insertDrawioBtn.addEventListener("click", saveDrawioFromPanel);
 els.drawioPanel.addEventListener("click", event => { if (event.target === els.drawioPanel) { els.drawioPanel.classList.remove("open"); pendingInsertAnchorBlock = null; if (pendingInsertMarker && pendingInsertMarker.isConnected) pendingInsertMarker.remove(); pendingInsertMarker = null; pendingDrawioEditCard = null; els.insertDrawioBtn.textContent = "Insert draw.io"; } });
 els.drawioPanel.addEventListener("keydown", handlePanelKeydown);
+els.cancelSourcesBtn.addEventListener('click', closeSourcesPanel);
+els.insertSourcesBtn.addEventListener('click', saveSourcesFromPanel);
+els.sourcesPanel.addEventListener('click', event => { if (event.target === els.sourcesPanel) closeSourcesPanel(); });
+els.sourcesPanel.addEventListener('keydown', event => {
+  if (event.key === 'Escape') { event.preventDefault(); closeSourcesPanel(); }
+  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); saveSourcesFromPanel(); }
+});
 els.cancelYoutubeBtn.addEventListener("click", () => { els.youtubePanel.classList.remove("open"); clearPendingPanelInsertion(); pendingYoutubeEditCard = null; els.insertYoutubeBtn.textContent = "Insert YouTube video"; });
 els.insertYoutubeBtn.addEventListener("click", saveYoutubeFromPanel);
 els.youtubePanel.addEventListener("click", event => { if (event.target === els.youtubePanel) { els.youtubePanel.classList.remove("open"); clearPendingPanelInsertion(); pendingYoutubeEditCard = null; els.insertYoutubeBtn.textContent = "Insert YouTube video"; } });
