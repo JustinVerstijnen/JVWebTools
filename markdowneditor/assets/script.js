@@ -1904,7 +1904,7 @@ function alertContentToMarkdown(alertBlock) {
   return nodesToMarkdown(content.childNodes).replace(/\n{3,}/g, "\n\n").trim();
 }
 function nodeToMarkdown(node) {
-  if (node.nodeType === Node.TEXT_NODE) return node.textContent.replace(/\u00a0/g, " ");
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent.replace(/\u00a0/g, " ").replace(/\u200B/g, "");
   if (node.nodeType !== Node.ELEMENT_NODE) return "";
   if (node.matches(".sources-card")) return "\n\n" + buildSourcesShortcode(getSourcesLinks(node)) + "\n\n";
   if (node.matches(".quiz-card")) return `
@@ -4197,6 +4197,26 @@ function handleEditorKeydown(event) {
     saveProject();
   }
 }
+function autoFormatInlineCode(event) {
+  if (event.isComposing || event.inputType !== "insertText" || event.data !== "`") return;
+  const selection = window.getSelection();
+  if (!selection?.rangeCount || !selection.isCollapsed) return;
+  const range = selection.getRangeAt(0);
+  const node = range.startContainer;
+  if (node.nodeType !== Node.TEXT_NODE || !els.visualEditor.contains(node)) return;
+  if (node.parentElement.closest('pre, code, textarea, input, .block-settings, [contenteditable="false"]')) return;
+  const before = node.textContent.slice(0, range.startOffset);
+  const match = before.match(/(?<![`\\])`([^`\n]+)`$/);
+  if (!match) return;
+  const codeRange = range.cloneRange();
+  codeRange.setStart(node, range.startOffset - match[0].length);
+  selection.removeAllRanges();
+  selection.addRange(codeRange);
+  // Keep this replacement in the browser's undo history. The invisible text
+  // after the label gives the caret a position outside the code element.
+  document.execCommand("insertHTML", false, `<code>${escapeHtml(match[1])}</code>&#8203;`);
+  saveSelection();
+}
 function autoLinkCurrentText(event) {
   const shouldAutolink = event?.inputType === "insertParagraph" || (event?.inputType === "insertText" && /\s/.test(event.data || ""));
   if (!shouldAutolink) return;
@@ -4552,6 +4572,7 @@ els.visualEditor.addEventListener("input", event => {
     updateTableToolbarVisibility();
     return;
   }
+  autoFormatInlineCode(event);
   autoLinkCurrentText(event);
   updateSlashMenu();
   scheduleNormalizeEditorContent(event.target);
