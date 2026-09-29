@@ -77,6 +77,7 @@ const els = {
   fmTags: document.getElementById("fmTags"),
   fmCategories: document.getElementById("fmCategories"),
   fmHidden: document.getElementById("fmHidden"),
+  fmWeight: document.getElementById("fmWeight"),
   imagePanel: document.getElementById("imagePanel"),
   imageUrl: document.getElementById("imageUrl"),
   imageAlt: document.getElementById("imageAlt"),
@@ -167,7 +168,8 @@ const state = {
     tags: "",
     categories: "",
     description: "",
-    hidden: "false"
+    hidden: "false",
+    weight: ""
   }
 };
 
@@ -403,8 +405,8 @@ function highlightFrontMatterLine(line = "") {
   return highlightInlineTokens(line);
 }
 function highlightMarkdownBodyLine(line = "") {
-  if (/^\s{0,3}(#{1,6})\s+/.test(line)) return `<span class="hl-heading">${escapeHtml(line)}</span>`;
-  if (/^\s*(?:[-*+]|\d+\.)\s+/.test(line)) return `<span class="hl-list">${escapeHtml(line)}</span>`;
+  if (/^\s{0,3}(#{1,6})\s+/.test(line)) return `<span class="hl-heading">${highlightInlineTokens(line)}</span>`;
+  if (/^\s*(?:[-*+]|\d+\.)\s+/.test(line)) return `<span class="hl-list">${highlightInlineTokens(line)}</span>`;
   if (/^\s*(```|~~~)/.test(line)) return `<span class="hl-fence">${escapeHtml(line)}</span>`;
   return highlightShortcodesInLine(line);
 }
@@ -1710,6 +1712,8 @@ function buildFrontMatter() {
   appendYamlList(lines, "categories", m.categories);
   lines.push(`description: "${yamlEscape(m.description || "")}"`);
   lines.push(`hidden: ${m.hidden === "true" ? "true" : "false"}`);
+  if (m.hidden === "true") lines.push("build:", "  render: always", "  list: never");
+  if (String(m.weight ?? "").trim() !== "" && Number.isSafeInteger(Number(m.weight))) lines.push(`weight: ${Number(m.weight)}`);
   lines.push("---");
   return lines.join("\n");
 }
@@ -1783,7 +1787,7 @@ function parseYamlListBlock(lines, startIndex, rawValue) {
 }
 function applyParsedFrontMatter(frontMatter) {
   if (!frontMatter) return;
-  const nextMetadata = { ...state.metadata };
+  const nextMetadata = { ...state.metadata, weight: "" };
   const lines = String(frontMatter || "").split(/\r?\n/);
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
@@ -1801,6 +1805,10 @@ function applyParsedFrontMatter(frontMatter) {
     }
     if (normalizedKey === "description") nextMetadata.description = parseYamlScalar(rawValue);
     if (normalizedKey === "hidden") nextMetadata.hidden = parseYamlScalar(rawValue) === "true" ? "true" : "false";
+    if (normalizedKey === "weight") {
+      const weight = parseYamlScalar(rawValue);
+      nextMetadata.weight = weight !== "" && Number.isSafeInteger(Number(weight)) ? String(Number(weight)) : "";
+    }
   }
   state.metadata = nextMetadata;
   if (nextMetadata.title) {
@@ -1980,7 +1988,13 @@ ${txt}
     case "br": return "\n";
     case "hr": return "\n---\n\n";
     case "pre": return preToMarkdown(node);
-    case "code": return node.textContent;
+    case "code": {
+      const text = node.textContent;
+      const runs = text.match(/`+/g) || [];
+      const fence = "`".repeat(Math.max(0, ...runs.map(run => run.length)) + 1);
+      const pad = /^[` ]|[` ]$/.test(text) && !/^ +$/.test(text) ? " " : "";
+      return `${fence}${pad}${text}${pad}${fence}`;
+    }
     case "blockquote": return `\n${node.textContent.split("\n").map(line => `> ${line}`).join("\n")}\n\n`;
     case "ul": return listToMarkdown(node, false);
     case "ol": return listToMarkdown(node, true);
@@ -2269,6 +2283,20 @@ function markdownToHtml(markdown) {
   return html.join("\n").replace(/__TOKEN_(\d+)__/g, (_, number) => tokens[Number(number)] || "");
 }
 function inlineMarkdown(value) {
+  // Parse code first so Markdown punctuation inside code remains literal.
+  const source = String(value || "");
+  let html = "";
+  let cursor = 0;
+  for (const match of source.matchAll(/(?<!`)(`+)(?!`)([\s\S]*?)(?<!`)\1(?!`)/g)) {
+    html += inlineMarkdownText(source.slice(cursor, match.index));
+    let text = match[2].replace(/\r?\n/g, " ");
+    if (/^ .* $/.test(text) && /[^ ]/.test(text)) text = text.slice(1, -1);
+    html += `<code>${escapeHtml(text)}</code>`;
+    cursor = match.index + match[0].length;
+  }
+  return html + inlineMarkdownText(source.slice(cursor));
+}
+function inlineMarkdownText(value) {
   const normalizedValue = String(value || "")
     .replace(/\\([<>])/g, "$1")
     .replace(/\\\[([^\]]+)\\\]\(([^)]+)\)/g, "[$1]($2)");
@@ -3277,8 +3305,10 @@ function fillPostInfoForm() {
   els.fmCategories.value = yamlScalar(m.categories);
   els.fmDescription.value = m.description || "";
   els.fmHidden.value = m.hidden === "true" ? "true" : "false";
+  els.fmWeight.value = m.weight ?? "";
 }
 function savePostInfoForm() {
+  if (!els.fmWeight.reportValidity()) return;
   state.rawFrontMatter = "";
   state.metadata = {
     title: els.fmTitle.value.trim(),
@@ -3287,7 +3317,8 @@ function savePostInfoForm() {
     tags: els.fmTags.value.trim(),
     categories: els.fmCategories.value.trim(),
     description: els.fmDescription.value.trim(),
-    hidden: els.fmHidden.value
+    hidden: els.fmHidden.value,
+    weight: els.fmWeight.value.trim()
   };
   state.projectName = state.metadata.title || state.projectName || "markdown-page";
   els.projectName.value = state.projectName;
