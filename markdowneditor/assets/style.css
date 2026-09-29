@@ -1531,6 +1531,9 @@ select:hover,
 .quiz-builder-actions {
   margin: 12px 0 0;
 }
+#sourcesPanel .quiz-builder-actions + .field-help {
+  margin-top: 16px;
+}
 @media (max-width: 860px) {
   .quiz-reference-grid,
   .quiz-answer-editor {
