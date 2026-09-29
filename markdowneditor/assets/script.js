@@ -15,7 +15,7 @@ const DEFAULT_BLOB_SETTINGS = {
   folderPath: "",
   postId: ""
 };
-const FRONT_MATTER_HIGHLIGHT_KEYS = new Set(["title", "slug", "tags", "date", "categories", "description", "hidden", "weight"]);
+const FRONT_MATTER_HIGHLIGHT_KEYS = new Set(["title", "slug", "tags", "date", "categories", "description", "hidden", "weight", "build", "render", "list"]);
 const IMAGE_MIME_EXTENSIONS = {
   "image/png": ".png",
   "image/jpeg": ".jpg",
