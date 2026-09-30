@@ -1,0 +1,24 @@
+[hidden] { display: none !important; }
+.modal-card.connections-card { height: min(860px, calc(100dvh - 36px)); display: flex; flex-direction: column; overflow: hidden; }
+.connections-card > h2, .connections-card > p, .connections-card > .panel-actions, .connection-tabs { flex-shrink: 0; }
+.connection-tab-panel { flex: 1; min-height: 0; overflow: auto; padding: 16px 4px 8px 0; }
+.connection-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); padding-top: 8px; }
+.connection-tabs button { flex: 1; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--muted); padding: 12px 16px; font: inherit; font-weight: 700; cursor: pointer; }
+.connection-tabs button[aria-selected="true"] { color: #163d74; border-bottom-color: #61a8db; background: #e0edff; border-radius: 10px 10px 0 0; }
+.connection-tabs button:focus-visible { outline: 2px solid #163d74; outline-offset: -3px; }
+.connections-card h3 { margin: 0 0 12px; }
+.connections-card .field input { width: 100%; }
+.modal-card.repo-browser-card { height: min(760px, calc(100dvh - 36px)); display: flex; flex-direction: column; overflow: hidden; }
+#repoBrowser { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+#repoBrowser > :not(#repoFiles) { flex-shrink: 0; }
+.github-article-picker { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+#repoIdentity, #repoActive, #commitTarget { overflow-wrap: anywhere; }
+.repo-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+#repoSearch { width: 100%; margin: 12px 0 0; padding: 9px; border: 1px solid var(--border); border-radius: 8px; }
+#repoBreadcrumbs { margin-top: 12px; font-size: 12px; overflow-wrap: anywhere; }
+#repoBreadcrumbs button { border: 0; background: transparent; color: inherit; cursor: pointer; text-decoration: underline; padding: 3px; }
+#repoFiles { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--border); border-radius: 10px; padding: 6px; }
+.repo-entry { display: block; width: 100%; text-align: left; border: 0; border-radius: 8px; background: transparent; color: inherit; padding: 10px 8px; overflow-wrap: anywhere; cursor: pointer; }
+.repo-entry:hover, .repo-entry[aria-current] { background: #e0edff; color: #163d74; }
+.repo-entry:disabled { opacity: .5; cursor: default; }
+#commitMessage { width: 100%; min-height: 100px; }

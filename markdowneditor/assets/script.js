@@ -623,11 +623,13 @@ function readBlobSettingsForm() {
   });
 }
 function openBlobSettingsPanel() {
+  if (window.editorConnections) { window.editorConnections.openAzure(); return; }
   fillBlobSettingsForm();
   els.blobSettingsPanel?.classList.add("open");
   setTimeout(() => els.blobAccountName?.focus(), 80);
 }
 function closeBlobSettingsPanel() {
+  window.editorConnections?.close();
   els.blobSettingsPanel?.classList.remove("open");
   setBlobSettingsStatus("");
 }
@@ -1701,6 +1703,7 @@ const blocks = [
 const sidebarCategoryOrder = ["Text", "Content", "Code", "Alerts", "Docsy"];
 
 function buildFrontMatter() {
+  if (state.rawFrontMatter) return `---\n${state.rawFrontMatter}\n---`;
   const m = state.metadata || {};
   const title = m.title || state.projectName || "New Markdown page";
   const slug = m.slug || slugify(title);
@@ -1754,6 +1757,13 @@ function setMetadataTitleFromProjectName() {
   state.projectName = nextTitle;
   state.metadata.title = nextTitle;
   if (shouldUpdateSlug) state.metadata.slug = slugify(nextTitle);
+  if (state.rawFrontMatter && nextTitle !== previousTitle) {
+    for (const key of shouldUpdateSlug ? ["title", "slug"] : ["title"]) {
+      const line = `${key}: "${yamlEscape(state.metadata[key])}"`;
+      const pattern = new RegExp(`^${key}:.*$`, "m");
+      state.rawFrontMatter = pattern.test(state.rawFrontMatter) ? state.rawFrontMatter.replace(pattern, () => line) : `${state.rawFrontMatter}\n${line}`;
+    }
+  }
   if (els.fmTitle) els.fmTitle.value = state.metadata.title || "";
   if (els.fmSlug && shouldUpdateSlug) {
     els.fmSlug.value = state.metadata.slug || "";
@@ -1818,6 +1828,7 @@ function applyParsedFrontMatter(frontMatter) {
 }
 function importMarkdownFile(file) {
   if (!file) return;
+  if (window.editorConnections && !window.editorConnections.detach()) return;
   file.text().then(text => {
     const preferredView = state.view === "markdown" ? "markdown" : "editor";
     const match = String(text || "").match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
@@ -2332,7 +2343,6 @@ function saveProject() {
   updateEditorPlaceholder();
   updateHeadingOutline();
   if (document.activeElement === els.projectName) setMetadataTitleFromProjectName();
-  syncMarkdownEditorFrontMatter();
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     state.projectName = els.projectName.value.trim() || "markdown-page";
@@ -2391,7 +2401,13 @@ function render() {
   updateTableToolbarVisibility();
   updateBlobSettingsButton();
   applyCodeTheme();
-  setView("editor");
+  if (state.view === "markdown") {
+    els.markdownEditor.value = state.markdownCache || "";
+    applyViewChrome("markdown");
+    updateMarkdownHighlight();
+  } else {
+    applyViewChrome("editor");
+  }
   saveProject();
 }
 
@@ -2639,6 +2655,7 @@ function applyViewChrome(view) {
   if (view === "markdown") updateMarkdownHighlight();
 }
 function setView(view) {
+  if (state.view === view) return;
   if (view === "editor") {
     const markdownValue = els.markdownEditor.value.trim();
     if (markdownValue && els.markdownEditor.style.display === "block") {
@@ -2836,6 +2853,10 @@ function removeTableColumn() {
 }
 function handlePanelKeydown(event) {
   const panel = event.currentTarget;
+  if (panel === els.blobSettingsPanel) {
+    if (event.key === "Escape") { event.preventDefault(); closeBlobSettingsPanel(); return; }
+    if (event.target.closest("button") || event.target.tagName === "SELECT") return;
+  }
   if (event.key === "Escape") {
     event.preventDefault();
     panel.classList.remove("open");
@@ -3343,6 +3364,7 @@ function exportMarkdown() {
 }
 function resetProject() {
   if (!window.confirm("Delete the locally saved project and start over?")) return;
+  if (window.editorConnections && !window.editorConnections.detach()) return;
   const preferredView = state.view === "markdown" ? "markdown" : "editor";
   clearTimeout(saveTimer);
   [STORAGE_KEY, ...PREVIOUS_STORAGE_KEYS].forEach(key => localStorage.removeItem(key));
@@ -4863,7 +4885,7 @@ document.addEventListener("keydown", event => {
   if (els.slashMenu.classList.contains("open") && (selectionInsideEditor() || els.visualEditor.contains(active) || els.slashMenu.contains(active) || active === document.body)) {
     if (handleSlashMenuKey(event)) return;
   }
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); saveProject(); showToast("Project saved"); }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); window.editorConnections ? window.editorConnections.save() : saveProject(); }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "e") { event.preventDefault(); exportMarkdown(); }
 });
 document.addEventListener("click", event => {

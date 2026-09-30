@@ -1,5 +1,12 @@
 # MarkdownEditor
 
+## Connections extension
+
+Azure and GitHub connections, repository browsing and commits with a required message are included in this version. See [Nederlandse handleiding](CONNECTIONS-NL.md) for setup, behavior and limitations.
+
+Browser regression tests: install Playwright with `npm install --no-save playwright`, install Chromium with `npx playwright install chromium`, then run `node tests/connections.cjs`. Tests mock GitHub; they do not contact a live repository.
+
+
 Markdown Editor is a simple and web-based tool to create Markdown content created by Justin Verstijnen. This tool has the focus on creating articles for GitHub Pages with the Docsy Shortcodes built into it.
 
 ## Main features
@@ -69,3 +76,4 @@ At this moment, this tool has no known issues.
 This project is licensed under the **MIT license**. This means that the software is open source and can be used to run the tool yourself.
 
 Use at your own risk. No guarantees or official support are provided.
+

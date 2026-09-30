@@ -17,7 +17,7 @@
   <meta name="twitter:description" content="A visual Markdown editor with Docsy blocks, local browser saving, and Markdown export." />
   <link rel="canonical" href="https://justinverstijnen.nl/markdowneditor/" />
   <link rel="icon" href="https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/logo.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="assets/style.css" />
+  <link rel="stylesheet" href="assets/style.css" /><link rel="stylesheet" href="assets/connections.css" />
   <script defer src="https://cloud.umami.is/script.js" data-website-id="3ce7d7a4-539b-4d3c-981e-e96189fa5ac8"></script>
   <script src="assets/vendor/msal-browser.min.js"></script>
 </head>
@@ -37,9 +37,10 @@
       </div>
       <div class="top-actions">
         <button class="pill" id="postInfoBtn" type="button"><i class="fa-solid fa-circle-info"></i> Post</button>
-        <button class="pill" id="blobSettingsBtn" type="button"><i class="fa-solid fa-cloud-arrow-up"></i> Blob</button>
+        <button class="pill" id="connectionsBtn" type="button"><i class="fa-solid fa-cloud-arrow-up"></i> Connections</button>
         <button class="pill" id="importBtn" type="button"><i class="fa-solid fa-file-import"></i> Import</button>
         <input id="importFile" type="file" accept=".md,.markdown,text/markdown,text/plain" hidden />
+        <button class="pill primary" id="commitBtn" type="button" hidden>Commit</button>
         <button class="pill primary" id="exportBtn" type="button"><i class="fa-solid fa-file-export"></i> Export</button>
         <button class="pill danger" id="resetBtn" type="button"><i class="fa-solid fa-trash"></i> Delete</button>
       </div>
@@ -130,44 +131,6 @@
     </div>
   </div>
 
-  <div class="modal-panel" id="blobSettingsPanel" role="dialog" aria-label="Blob settings">
-    <div class="modal-card panel-animate blob-modal">
-      <h2>Blob settings</h2>
-      <div class="field"><label for="blobAccountName">Storage account</label><input id="blobAccountName" type="text" placeholder="Name of storage account" autocomplete="off" /></div>
-      <div class="field">
-        <label for="blobAuthMode">Authentication</label>
-        <select id="blobAuthMode">
-          <option value="accessKey">Access key</option>
-          <option value="entraId">Entra ID</option>
-        </select>
-      </div>
-      <div class="field blob-auth-access-key"><label for="blobAccessKey">Access key</label><input id="blobAccessKey" type="password" placeholder="Storage account key" autocomplete="off" /></div>
-      <div class="blob-auth-entra-id">
-        <div class="field"><label for="blobTenantId">Tenant ID</label><input id="blobTenantId" type="text" placeholder="organizations or tenant ID" autocomplete="off" /></div>
-        <div class="field"><label for="blobClientId">App client ID</label><input id="blobClientId" type="text" placeholder="Application (client) ID" autocomplete="off" /></div>
-        <div class="field-help">Use a Single-page application registration with this page URL as redirect URI. Tokens are requested for https://storage.azure.com/user_impersonation.</div>
-        <div class="panel-actions panel-actions-left"><button class="pill" id="signInBlobBtn" type="button"><i class="fa-solid fa-user-check"></i> Sign in</button><button class="pill" id="signOutBlobBtn" type="button"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button><span class="blob-account" id="blobSignedInAccount"></span></div>
-      </div>
-      <div class="panel-actions panel-actions-left"><button class="pill" id="connectBlobBtn" type="button"><i class="fa-solid fa-cloud-arrow-up"></i> Connect</button></div>
-      <div class="field"><label for="blobContainer">Container</label><input id="blobContainer" type="text" list="blobContainerOptions" placeholder="blog" autocomplete="off" /><datalist id="blobContainerOptions"></datalist></div>
-      <div class="field"><label for="blobFolderPath">Folder / blob prefix</label><input id="blobFolderPath" type="text" list="blobFolderOptions" placeholder="tools-2375" autocomplete="off" /><datalist id="blobFolderOptions"></datalist></div>
-      <div class="blob-folder-browser" id="blobFolderBrowser" hidden>
-        <div class="blob-browser-head">
-          <div class="blob-breadcrumbs" id="blobFolderBreadcrumbs" aria-label="Current blob folder"></div>
-          <button class="pill" id="selectBlobFolderBtn" type="button"><i class="fa-solid fa-circle-check"></i> Use this folder</button>
-        </div>
-        <div class="field blob-folder-search"><label for="blobFolderSearch">Search folders</label><input id="blobFolderSearch" type="search" placeholder="Search in loaded folders" autocomplete="off" /></div>
-        <div class="blob-folder-list" id="blobFolderList" role="listbox" aria-label="Blob folders"></div>
-        <div class="field-help" id="blobFolderBrowserMeta"></div>
-      </div>
-      <div class="panel-actions panel-actions-left"><button class="pill" id="loadBlobFoldersBtn" type="button"><i class="fa-solid fa-folder-tree"></i> Load folders</button></div>
-      <div class="field"><label for="blobPostId">Post ID</label><input id="blobPostId" type="text" inputmode="numeric" placeholder="7000" autocomplete="off" /></div>
-      <div class="field-help cors-help">Pasted image files use jv-media-{postId}-{sha256}.ext convention. Blob settings are stored in this browser until "Delete" button is used or cache is deleted. Configure Azure CORS in the storage account to allow your endpoint/host with allowed headers authorization, content-type, x-ms-* and exposed headers to be x-ms-*.</div>
-      <div class="field-help blob-settings-status" id="blobSettingsStatus" aria-live="polite"></div>
-      <div class="panel-actions"><button class="pill danger" id="clearBlobSettingsBtn" type="button">Clear</button><button class="pill" id="cancelBlobSettingsBtn" type="button">Cancel</button><button class="pill primary" id="saveBlobSettingsBtn" type="button">Save settings</button></div>
-    </div>
-  </div>
-
   <div class="modal-panel" id="tablePanel" role="dialog" aria-label="Insert table">
     <div class="modal-card panel-animate">
       <h2>Insert table</h2>
@@ -254,9 +217,86 @@
     </div>
   </div>
 
+  <div class="modal-panel" id="connectionsPanel" role="dialog" aria-modal="true" aria-labelledby="connectionsTitle">
+    <div class="modal-card post-info-card connections-card"><h2 id="connectionsTitle">Connections</h2>
+      <p>Connect Azure for images and GitHub for articles. Both connections are optional.</p>
+      <div class="connection-tabs" role="tablist" aria-label="Connection provider">
+        <button id="azureConnection" type="button" role="tab" aria-selected="true" aria-controls="blobSettingsPanel">Azure</button>
+        <button id="githubConnection" type="button" role="tab" aria-selected="false" aria-controls="githubConnectionPanel" tabindex="-1">GitHub</button>
+      </div>
+      <section id="blobSettingsPanel" class="connection-tab-panel" role="tabpanel" aria-labelledby="azureConnection">
+      <div class="field"><label for="blobAccountName">Storage account</label><input id="blobAccountName" type="text" placeholder="Name of storage account" autocomplete="off" /></div>
+      <div class="field">
+        <label for="blobAuthMode">Authentication</label>
+        <select id="blobAuthMode">
+          <option value="accessKey">Access key</option>
+          <option value="entraId">Entra ID</option>
+        </select>
+      </div>
+      <div class="field blob-auth-access-key"><label for="blobAccessKey">Access key</label><input id="blobAccessKey" type="password" placeholder="Storage account key" autocomplete="off" /></div>
+      <div class="blob-auth-entra-id">
+        <div class="field"><label for="blobTenantId">Tenant ID</label><input id="blobTenantId" type="text" placeholder="organizations or tenant ID" autocomplete="off" /></div>
+        <div class="field"><label for="blobClientId">App client ID</label><input id="blobClientId" type="text" placeholder="Application (client) ID" autocomplete="off" /></div>
+        <div class="field-help">Use a Single-page application registration with this page URL as redirect URI. Tokens are requested for https://storage.azure.com/user_impersonation.</div>
+        <div class="panel-actions panel-actions-left"><button class="pill" id="signInBlobBtn" type="button"><i class="fa-solid fa-user-check"></i> Sign in</button><button class="pill" id="signOutBlobBtn" type="button"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button><span class="blob-account" id="blobSignedInAccount"></span></div>
+      </div>
+      <div class="panel-actions panel-actions-left"><button class="pill" id="connectBlobBtn" type="button"><i class="fa-solid fa-cloud-arrow-up"></i> Connect</button></div>
+      <div class="field"><label for="blobContainer">Container</label><input id="blobContainer" type="text" list="blobContainerOptions" placeholder="blog" autocomplete="off" /><datalist id="blobContainerOptions"></datalist></div>
+      <div class="field"><label for="blobFolderPath">Folder / blob prefix</label><input id="blobFolderPath" type="text" list="blobFolderOptions" placeholder="tools-2375" autocomplete="off" /><datalist id="blobFolderOptions"></datalist></div>
+      <div class="blob-folder-browser" id="blobFolderBrowser" hidden>
+        <div class="blob-browser-head">
+          <div class="blob-breadcrumbs" id="blobFolderBreadcrumbs" aria-label="Current blob folder"></div>
+          <button class="pill" id="selectBlobFolderBtn" type="button"><i class="fa-solid fa-circle-check"></i> Use this folder</button>
+        </div>
+        <div class="field blob-folder-search"><label for="blobFolderSearch">Search folders</label><input id="blobFolderSearch" type="search" placeholder="Search in loaded folders" autocomplete="off" /></div>
+        <div class="blob-folder-list" id="blobFolderList" role="listbox" aria-label="Blob folders"></div>
+        <div class="field-help" id="blobFolderBrowserMeta"></div>
+      </div>
+      <div class="panel-actions panel-actions-left"><button class="pill" id="loadBlobFoldersBtn" type="button"><i class="fa-solid fa-folder-tree"></i> Load folders</button></div>
+      <div class="field"><label for="blobPostId">Post ID</label><input id="blobPostId" type="text" inputmode="numeric" placeholder="7000" autocomplete="off" /></div>
+      <div class="field-help cors-help">Pasted image files use jv-media-{postId}-{sha256}.ext convention. Blob settings are stored in this browser until "Delete" button is used or cache is deleted. Configure Azure CORS in the storage account to allow your endpoint/host with allowed headers authorization, content-type, x-ms-* and exposed headers to be x-ms-*.</div>
+      <div class="field-help blob-settings-status" id="blobSettingsStatus" aria-live="polite"></div>
+      <div class="panel-actions"><button class="pill danger" id="clearBlobSettingsBtn" type="button">Clear</button><button class="pill" id="cancelBlobSettingsBtn" type="button">Cancel</button><button class="pill primary" id="saveBlobSettingsBtn" type="button">Save settings</button></div>
+</section>
+      <section id="githubConnectionPanel" class="connection-tab-panel" role="tabpanel" aria-labelledby="githubConnection" hidden><h3>GitHub</h3>
+        <div class="field"><label for="ghRepo">Repository (owner/name)</label><input id="ghRepo" placeholder="owner/repository" autocomplete="off" /></div>
+        <div class="field"><label for="ghBranch">Branch</label><input id="ghBranch" placeholder="Default branch" autocomplete="off" /></div>
+        <div class="field"><label for="ghToken">Personal access token</label><input id="ghToken" type="password" autocomplete="off" /></div>
+        <p>Use a fine-grained token with access to this repository and Contents: read and write. Your token, repository and branch are saved in this browser’s localStorage after connecting. Disconnect removes the saved token.</p>
+        <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Create a GitHub token</a>
+        <p id="ghStatus" role="status" class="field-help">Standalone mode</p>
+        <div class="panel-actions"><button class="pill" id="ghDisconnect" type="button">Disconnect</button><button class="pill primary" id="ghConnect" type="button">Connect GitHub</button></div>
+        <div class="github-article-picker"><h3>Articles</h3><p id="ghArticleStatus">Connect to GitHub to browse your repository.</p><button class="pill primary" id="openArticleBtn" type="button" disabled>Open article</button></div>
+      </section><div class="panel-actions"><button class="pill" id="closeConnections" type="button">Close</button></div>
+    </div>
+  </div>
+  <div class="modal-panel" id="repoBrowserPanel" role="dialog" aria-modal="true" aria-labelledby="repoBrowserTitle">
+    <div class="modal-card post-info-card repo-browser-card">
+        <section id="repoBrowser" aria-label="GitHub repository browser">
+          <h2 id="repoBrowserTitle">Open article</h2><p id="repoIdentity" class="field-help"></p>
+          <div class="repo-actions"><button class="pill" id="repoUp" type="button">↑ Parent</button><button class="pill" id="repoRefresh" type="button">Refresh</button></div>
+          <nav id="repoBreadcrumbs" aria-label="Repository path"></nav>
+          <input id="repoSearch" type="search" placeholder="Filter this folder" aria-label="Filter this folder" />
+          <p id="repoStatus" class="field-help" role="status"></p><div id="repoFiles"></div>
+          <p id="repoActive" class="field-help"></p>
+        </section>
+      <div class="panel-actions"><button class="pill" id="closeRepoBrowser" type="button">Back to Connections</button></div>
+    </div>
+  </div>
+  <div class="modal-panel" id="commitPanel" role="dialog" aria-modal="true" aria-labelledby="commitTitle">
+    <form class="modal-card" id="commitForm"><h2 id="commitTitle">Commit to GitHub</h2>
+      <p id="commitTarget"></p><p>This writes the current article directly to the selected branch.</p>
+      <div class="field"><label for="commitMessage">Commit message</label><textarea id="commitMessage" required maxlength="2000" placeholder="Describe your changes" aria-describedby="commitShortcut"></textarea></div>
+      <p id="commitShortcut" class="field-help">Ctrl+Enter / Cmd+Enter to commit.</p>
+      <p id="commitStatus" role="status" class="field-help"></p>
+      <div class="panel-actions"><button class="pill" id="cancelCommit" type="button">Cancel</button><button class="pill primary" id="confirmCommit" type="submit">Commit changes</button></div>
+    </form>
+  </div>
   <div class="slash-menu" id="slashMenu" role="listbox" aria-label="Command menu"></div>
   <div class="toast" id="toast"></div>
 
   <script src="assets/script.js"></script>
+  <script src="assets/connections.js"></script>
 </body>
 </html>
+
