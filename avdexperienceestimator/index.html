@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Compare Azure Virtual Desktop regions directly from your device.">
-  <title>AVD Experience Tool - justinverstijnen.nl</title>
+  <meta name="description" content="Estimate Azure Virtual Desktop region latency and compare HTTPS round-trip times from your browser.">
+  <title>AVD Experience Estimator - justinverstijnen.nl</title>
 
   <!-- Relative paths work on both user and project GitHub Pages sites. -->
   <link rel="stylesheet" href="./assets/style.css">
@@ -20,15 +20,15 @@
       </a>
     </div>
 
-    <h1>AVD Experience Tool</h1>
-    <p class="subtitle">Compare various Azure Virtual Desktop regions performance (Latency/RTT) directly from your device.</p>
+    <h1>AVD Experience Estimator</h1>
+    <p class="subtitle">Compare Azure Virtual Desktop regions using browser-based HTTPS response times and estimated latency.</p>
 
     <div class="form-group">
-      <button id="start" type="button">↻ Restart lookup</button>
+      <button id="start" type="button">↻ Start full lookup</button>
       <button id="exportBtn" type="button" disabled>↓ Export</button>
     </div>
 
-    <p id="progress" role="status" aria-live="polite">Starting lookup…</p>
+    <p id="progress" role="status" aria-live="polite">Starting lookup of 5 regions…</p>
     <div class="loading">
       <progress id="bar" value="0" max="1" aria-label="Lookup progress"></progress>
       <span id="percent" aria-hidden="true">0%</span>
@@ -38,19 +38,19 @@
       <table>
         <thead>
           <tr>
-            <th scope="col">Azure region</th>
-            <th scope="col">Response time</th>
-            <th scope="col">Result</th>
+            <th scope="col" id="regionHeader" aria-sort="none"><button class="sort-button" type="button" data-sort="region" aria-label="Sort Azure region alphabetically">Azure region <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+            <th scope="col" id="latencyHeader" aria-sort="none"><button class="sort-button" type="button" data-sort="latency" title="Estimated one-way latency: half of the measured HTTPS round-trip time. Not a direct one-way measurement.">Latency (est.) <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+            <th scope="col" id="rttHeader" aria-sort="none"><button class="sort-button" type="button" data-sort="rtt" title="Median browser HTTPS request/response timing; not ICMP ping or RDP RTT.">RTT (HTTPS) <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
     </div>
 
-    <p class="measurement-note">Measured from your browser to regional AVD gateways. HTTPS response time (median of 5 samples), not RDP RTT to your session host. A received response does not confirm service health: the HTTP status is not readable, but the results give a basic understanding of the performance from your device to the Azure region.</p>
+    <p class="measurement-note">RTT (HTTPS) is the median browser request/response timing after a warmup, not ICMP ping or RDP session RTT. Latency (est.) is calculated as half that value and is <strong>only a rough one-way estimate</strong>; it includes browser, network and gateway overhead, and is not a direct latency measurement. Results may be affected by your connection, VPN and browser. An unavailable result is shown as —. Only regions with a configured test endpoint are included.</p>
 
     <div class="footer">
-      <a href="https://justinverstijnen.nl" target="_blank" rel="noopener">© <span id="year"></span> AVD Experience Tool by Justin Verstijnen</a>
+      <a href="https://justinverstijnen.nl" target="_blank" rel="noopener">© <span id="year"></span> AVD Experience Estimator by Justin Verstijnen</a>
     </div>
   </main>
 </body>

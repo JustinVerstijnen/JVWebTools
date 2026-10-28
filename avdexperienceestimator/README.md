@@ -1,19 +1,20 @@
-# AVD Experience Tool
+# AVD Experience Estimator
 
-AVD Experience Tool is a lightweight and web-based Azure Virtual Desktop region performance tool created by Justin Verstijnen. This tool can be used to compare the response times of different AVD regions directly from your device. It measures the response times using HTTPS requests from your browser.
+AVD Experience Estimator is a lightweight and web-based Azure Virtual Desktop region performance tool created by Justin Verstijnen. This tool can be used to compare regional HTTPS response times directly from your device. It estimates the one-way latency from the measured HTTPS round-trip time.
 
 ## Main features
 
 The main features of this tool are:
 
-- Compare different Azure Virtual Desktop regions
-- Automatically measure the response time of each configured region
+- Automatically lookup the first 5 available Azure Virtual Desktop regions
+- Start a full lookup of all regions with a configured test endpoint
+- Measure multiple regions in parallel
 - Displays information like:
    - Azure region
    - Location
-   - Median HTTPS response time
-   - Measurement result
-- Restart the lookup
+   - Estimated one-way latency
+   - HTTPS round-trip time (RTT)
+- Sort regions alphabetically or by lowest/highest timing using the table headers
 - Export the lookup information to JSON
 
 ## Hosting
@@ -35,9 +36,9 @@ Feature requests can be done by submitting issues into GitHub.
 
 ## Issues
 
-It's possible to submit any issues using the GitHub issues system.
+Its possible to submit any issues using the GitHub issues system.
 
-The tool measures HTTPS response times, not actual RDP or ICMP latency. Results can be affected by the browser, network connection, VPN or proxy. Some regions do not have a verified test endpoint. The logo and background image are loaded from an external host.
+The tool measures HTTPS request/response timing, not actual RDP RTT or ICMP ping. Estimated latency is calculated as half of the HTTPS timing, and is not a direct one-way measurement. Results can be affected by browser behavior, VPN, proxies, DNS and TLS connection setup. The regional gateway addresses are not a documented public benchmarking API, so measurements can stop working if those endpoints change. Only regions with configured test endpoints are included. The logo and background image are loaded from an external host.
 
 ## License
 
