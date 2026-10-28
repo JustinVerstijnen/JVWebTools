@@ -1,38 +1,48 @@
 # IPLookupTool
 
-IPLookupTool is a lightweight, browser-based tool created by Justin Verstijnen. It displays public IPv4 / IPv6 address information and exports it to a report page. Original project and MIT license have been retained.
+IPLookupTool is a lightweight and web-based IP address Lookup tool created by Justin Verstijnen. This tool can be used to lookup different IPv4 and IPv6 addresses and get their details. It discovers the IP addresses using a 3rd party API.
 
-## What was fixed (October 2026)
+## Main features
 
-- Replaced direct calls to **ipapi.is** with **ipwho.is**. ipapi.is reduced its keyless tier to 30 lookups per IP per UTC day and changed response fields in September 2026.
-- Adjusted all result and export fields to the same `ipwho.is` JSON response (`country`, `connection.isp`, `timezone.id`, etc.).
-- Replaced the Cloudflare trace request for detecting the user's IP with `api64.ipify.org?format=json` (IPv4/IPv6).
-- Added input validation, network timeout, rate-limit and invalid-response handling.
-- Prevented HTML injection by rendering third-party data using `textContent`.
-- Improved mobile layout and made export unavailable until a lookup succeeds.
-- Kept the optional Azure Function proxy and made it forward meaningful HTTP errors.
+The main features of this tool are:
 
-## Deployment — GitHub Pages / static hosting
+- Lookup IPv4 and IPv6 addresses
+- Lookup your current IP addresss
+- Displays information like:
+   - IP version
+   - Country
+   - Region
+   - City
+   - GPS coordinates of location
+   - ISP
+   - Timezone
+- Export the lookup information
 
-1. Extract all files and folders **without changing the directory structure**.
-2. Upload or commit the whole folder contents to your static website / GitHub repository (including `assets/shared.js`, `assets/app.js` and `assets/export.js`).
-3. Open `index.html` via an HTTP(S) website. Hard-refresh with **Ctrl+F5** if the old version remains cached.
-4. Test `8.8.8.8`, an IPv6 address such as `2606:4700:4700::1111`, **Use my IP**, and **Export**.
+## Hosting
 
-No npm install, server-side secret or API key is required for the static version. The optional `api/` folder is not used by GitHub Pages; it is for Microsoft Azure Static Web Apps deployments. Browser access to external services `ipwho.is` and `api64.ipify.org` is required.
+This tool is currently hosted on GitHub Pages. Configuration changes are pushed and built using the default deployment method.
 
-The free `ipwho.is` tier is limited to **1,000 requests per day**, shared by the domain for browser CORS calls; after the limit, an HTTP 429 response is displayed as a rate-limit error. Limits, service terms and supported fields may change. Currency and security fields may be unavailable on the free tier.
+## Technical Architecture
 
-## Documentation
+- **Languages** : HTML, CSS, Javascript
+- **Platform** : GitHub Pages
+- **Runtime model** : Serverless
+- **Dependencies** : None
 
-- https://ipwhois.io/documentation
-- https://www.ipify.org/
-- https://ipapi.is/free-tier.html
+## Changelog/new features
+
+New features to this tool are added when needed or if the tool is broken.
+
+Feature request can be done by submitting issues into GitHub.
+
+## Issues
+
+Its possible to submit any issues using the GitHub issues system.
+
+At this moment, this tool has no known issues.
 
 ## License
 
-MIT, copyright 2025 Justin Verstijnen — see `LICENSE`.
+This project is licensed under the **MIT license**. This means that the software is open source and can be used to run the tool yourself.
 
-## Quick code tests
-
-Run `node tests/smoke-test.js` to test IP validation, display-field normalization and the optional Azure proxy with simulated API responses.
+Use at your own risk. No guarantees or official support are provided.
