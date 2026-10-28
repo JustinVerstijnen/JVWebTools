@@ -168,7 +168,7 @@ async function start(full = false) {
     $('percent').textContent = `${percentage}%`;
     $('progress').textContent = document.hidden
       ? `Lookup paused while this tab is hidden (${finishedRegions}/${selected.length} regions)`
-      : `Checking ${selected.length} regions in parallel · ${finishedRegions}/${selected.length} finished`;
+      : `Checking ${selected.length} regions... · ${finishedRegions}/${selected.length} finished`;
   };
   progress();
 
