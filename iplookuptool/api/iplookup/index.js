@@ -1,69 +1,54 @@
+// Optional Azure Static Web Apps proxy endpoint. GitHub Pages uses the direct
+// browser call in assets/app.js; this endpoint is kept for SWA deployments.
 const { isIP } = require('node:net');
 
-function respond(context, status, body, headers = {}) {
+function respond(context, status, body, extraHeaders = {}) {
   context.res = {
     status,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      // Same-origin in Azure Static Web Apps, but useful for local testing.
       'Access-Control-Allow-Origin': '*',
-      ...headers,
+      ...extraHeaders,
     },
     body,
   };
 }
 
 module.exports = async function (context, req) {
+  const ip = req && req.query && typeof req.query.ip === 'string' ? req.query.ip.trim() : '';
+  if (!ip) return respond(context, 400, { success: false, error: 'Missing query parameter: ip' });
+  if (isIP(ip) === 0) return respond(context, 400, { success: false, error: 'Invalid IPv4 or IPv6 address' });
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
   try {
-    const ip = (req && req.query && req.query.ip ? String(req.query.ip) : '').trim();
-
-    if (!ip) {
-      respond(context, 400, { success: false, error: 'Missing required query parameter: ip' });
-      return;
-    }
-
-    if (isIP(ip) === 0) {
-      respond(context, 400, { success: false, error: 'Invalid IP address' });
-      return;
-    }
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-
-    let upstreamResponse;
-    try {
-      upstreamResponse = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`, {
-        method: 'GET',
-        signal: controller.signal,
-        headers: {
-          'User-Agent': 'IPLookupTool-SWA/1.0',
-          'Accept': 'application/json',
-        },
-      });
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    const text = await upstreamResponse.text();
-
+    const upstream = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`, { signal: controller.signal });
+    const retryAfter = upstream.headers.get('retry-after');
     let data;
     try {
-      data = JSON.parse(text);
-    } catch {
-      respond(context, 502, { success: false, error: 'Upstream did not return valid JSON' });
-      return;
+      data = await upstream.json();
+    } catch (_) {
+      return respond(context, 502, { success: false, error: 'IP provider returned invalid JSON' });
     }
 
-    // Keep response stable for the frontend; ipwho.is indicates errors via { success: false, ... }
-    respond(context, 200, data, {
-      // Small cache to reduce upstream calls.
-      'Cache-Control': 'public, max-age=60',
-    });
-  } catch (err) {
-    respond(context, 500, {
+    if (upstream.status === 429) {
+      const headers = retryAfter ? { 'Retry-After': retryAfter } : {};
+      return respond(context, 429, { success: false, error: 'IP provider rate limit reached' }, headers);
+    }
+    if (!upstream.ok) {
+      return respond(context, 502, { success: false, error: `IP provider returned HTTP ${upstream.status}` });
+    }
+    if (!data || typeof data !== 'object') {
+      return respond(context, 502, { success: false, error: 'IP provider returned an invalid response' });
+    }
+    return respond(context, 200, data, { 'Cache-Control': 'public, max-age=3600' });
+  } catch (error) {
+    const timedOut = error && error.name === 'AbortError';
+    return respond(context, timedOut ? 504 : 502, {
       success: false,
-      error: 'Internal server error',
-      detail: err && err.message ? err.message : String(err),
+      error: timedOut ? 'IP provider request timed out' : 'Unable to contact IP provider'
     });
+  } finally {
+    clearTimeout(timer);
   }
 };

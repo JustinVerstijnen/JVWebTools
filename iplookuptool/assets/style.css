@@ -224,3 +224,13 @@ body {
 .container {
     background: rgba(255, 255, 255, 0.85);
 }
+
+/* Keep controls legible and usable on narrow screens. */
+.form-group { flex-wrap: wrap; }
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+button:focus-visible, input:focus-visible { outline: 2px solid #2d65a8; outline-offset: 2px; }
+@media (max-width: 550px) {
+  .container { margin: 12px; padding: 16px; }
+  .form-group input { width: 100%; }
+  td { padding: 10px; }
+}
