@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Compare Azure Virtual Desktop regions directly from your device.">
+  <title>AVD Experience Tool - justinverstijnen.nl</title>
+
+  <!-- Relative paths work on both user and project GitHub Pages sites. -->
+  <link rel="stylesheet" href="./assets/style.css">
+  <link rel="stylesheet" href="./assets/avd.css">
+  <link rel="icon" type="image/svg+xml" href="https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/logo.svg">
+  <script type="module" src="./assets/app.js"></script>
+</head>
+<body>
+  <main class="container">
+    <div class="logo">
+      <a href="https://justinverstijnen.nl" target="_blank" rel="noopener">
+        <img src="https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/logo.svg" width="50" height="50" alt="Justin Verstijnen">
+      </a>
+    </div>
+
+    <h1>AVD Experience Tool</h1>
+    <p class="subtitle">Compare various Azure Virtual Desktop regions performance (Latency/RTT) directly from your device.</p>
+
+    <div class="form-group">
+      <button id="start" type="button">↻ Restart lookup</button>
+      <button id="exportBtn" type="button" disabled>↓ Export</button>
+    </div>
+
+    <p id="progress" role="status" aria-live="polite">Starting lookup…</p>
+    <div class="loading">
+      <progress id="bar" value="0" max="1" aria-label="Lookup progress"></progress>
+      <span id="percent" aria-hidden="true">0%</span>
+    </div>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Azure region</th>
+            <th scope="col">Response time</th>
+            <th scope="col">Result</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+    <p class="measurement-note">Measured from your browser to regional AVD gateways. HTTPS response time (median of 5 samples), not RDP RTT to your session host. A received response does not confirm service health: the HTTP status is not readable, but the results give a basic understanding of the performance from your device to the Azure region.</p>
+
+    <div class="footer">
+      <a href="https://justinverstijnen.nl" target="_blank" rel="noopener">© <span id="year"></span> AVD Experience Tool by Justin Verstijnen</a>
+    </div>
+  </main>
+</body>
+</html>

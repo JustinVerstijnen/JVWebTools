@@ -1,0 +1,226 @@
+:root{
+  --control-height: 44px;
+}
+
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f2f2f2;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  position: relative;
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.logo {
+  margin-bottom: 10px;
+}
+
+h1 {
+  margin-bottom: 10px;
+  margin-top: 10px;
+  color: #333;
+}
+
+.subtitle {
+  color: #777;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+input[type="text"] {
+  height: var(--control-height);
+  padding: 0 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  width: 300px;
+  max-width: 100%;
+  line-height: normal;
+}
+
+button {
+  height: var(--control-height);
+  padding: 0 20px;
+  font-size: 16px;
+  background-color: #8EAFDA;
+  color: #fff;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#lookupBtn:hover {
+  filter: brightness(0.95);
+}
+
+#exportBtn {
+  background-color: #92dba5;
+}
+
+#exportBtn:hover {
+  background-color: #7ccf95;
+}
+
+.result {
+  margin-top: 20px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  margin-top: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  background: #fff;
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 10px;
+  text-align: left;
+}
+
+td {
+  padding: 15px;
+  vertical-align: top;
+  word-break: break-word;
+  border-bottom: 1px solid #eee;
+}
+
+tbody tr:nth-child(even) {
+  background-color: #f6f6f6;
+}
+
+.error {
+  color: red;
+  font-weight: bold;
+}
+
+.fade-in {
+  animation: fadeIn 0.8s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tooltip {
+  position: relative;
+  font-weight: bold;
+  cursor: help;
+}
+
+.tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #d6eaff;
+  color: #333;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  box-shadow: 0px 0px 6px rgba(0,0,0,0.15);
+  z-index: 10;
+}
+
+.tooltip:hover::after {
+  opacity: 1;
+}
+
+.tooltip {
+  position: relative;
+  cursor: help;
+  font-weight: normal;
+}
+
+.tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #88B0DC;
+  color: #FFFFFF;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  box-shadow: 0px 0px 6px rgba(0,0,0,0.15);
+  z-index: 10;
+}
+
+.tooltip:hover::after {
+  opacity: 1;
+}
+
+.orange-btn {
+  background-color: #ffbc6a;
+}
+
+.orange-btn:hover {
+  filter: brightness(0.95);
+}
+
+.footer {
+  text-align: center;
+  font-size: 9px;
+  color: #777;
+  margin-top: 40px;
+}
+
+.footer a {
+  color: #777;
+  text-decoration: none;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/featured-background_blur.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.69;
+    z-index: -1;
+}
+
+body {
+    position: relative;
+    min-height: 100vh;
+}
+
+.container {
+    background: rgba(255, 255, 255, 0.85);
+}
