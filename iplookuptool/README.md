@@ -1,4 +1,4 @@
-# IPLookupTool — repaired edition
+# IPLookupTool
 
 IPLookupTool is a lightweight, browser-based tool created by Justin Verstijnen. It displays public IPv4 / IPv6 address information and exports it to a report page. Original project and MIT license have been retained.
 
