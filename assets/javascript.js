@@ -80,10 +80,10 @@ const tools = [
     title: "Microsoft Naming Tool",
     description: "This tool is a name generator for various Microsoft services like Intune, Entra ID and Azure.",
     toolUrl: "https://tools.justinverstijnen.nl/microsoftnamingtool",
-    github: "https://github.com/JustinVerstijnen/MicrosoftNamingTool",https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-avdexperienceestimator.png
+    github: "https://github.com/JustinVerstijnen/MicrosoftNamingTool",
     image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-microsoftnamingtool.jpg"
   },
-   {
+  {
     title: "AVD Experience Estimator",
     description: "This tool is a new iteration of the old discontinued Microsoft AVD Experience Estimator.",
     toolUrl: "https://tools.justinverstijnen.nl/avdexperienceestimator/",
