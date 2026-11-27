@@ -15,7 +15,7 @@ const tools = [
   },
   {
     title: "365 Tenant Lookup",
-    description: "Search Microsoft 365 tenants by custom domain or .onmicrosoft.com domain to find the associated tenant ID and location.",
+    description: "Search Microsoft 365 tenants by Tenant ID, custom domain or .onmicrosoft.com domain to find the associated tenant ID, domain and location.",
     toolUrl: "https://tools.justinverstijnen.nl/tenantlookuptool",
     github: "https://github.com/JustinVerstijnen/TenantLookupTool",
     image: "https://sajvwebsiteblobstorage.blob.core.windows.net/blog/tools-2375/tool-tenantlookuptool.png"
